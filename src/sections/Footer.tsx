@@ -3,8 +3,7 @@ import classes from "./Footer.module.css";
 const Footer = () => (
   <footer>
     <p>
-      A project of the{" "}
-      <strong>Department of Gastroenterology</strong>,{" "}
+      A project of the <strong>Gastroenterology Laboratory</strong>,{" "}
       <a href="https://www.cmu.edu.cn" target="_blank" rel="noreferrer">
         China Medical University
       </a>
@@ -16,13 +15,16 @@ const Footer = () => (
         href="https://www.cmu.edu.cn"
         target="_blank"
         rel="noreferrer"
-        data-tooltip="China Medical University · Department of Gastroenterology"
+        data-tooltip="China Medical University · Gastroenterology Laboratory"
         className={classes.logoBlock}
       >
+        <div className={classes.logoMark} aria-hidden="true">
+          <span>CMU</span>
+        </div>
         <div className={classes.logoText}>
           <span className={classes.logoEn}>China Medical University</span>
           <span className={classes.logoCn}>中国医科大学</span>
-          <span className={classes.logoDept}>Department of Gastroenterology</span>
+          <span className={classes.logoDept}>Gastroenterology Laboratory</span>
         </div>
       </a>
     </div>

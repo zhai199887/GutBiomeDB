@@ -160,17 +160,14 @@ const makeMap = () => {
       .attr("stroke", darkGray)
       .attr("stroke-width", 0.5);
 
-    /** GeoJSON uses "code" field (e.g. "CN") — match against country_stats */
     const countryStats = summary?.country_stats ?? {};
 
-    /** use samples already stored in GeoJSON (correct counts), enrich only for color */
     const enriched = {
       ...byCountry,
       features: byCountry.features.map((f) => ({
         ...f,
         properties: {
           ...f.properties,
-          /** GeoJSON already has samples; keep as-is */
         },
       })),
     };
@@ -195,7 +192,7 @@ const makeMap = () => {
       .select(".features")
       .selectAll(".feature")
       .data(enriched.features, (d) => {
-        const { region, country } = (d as Datum).properties;
+        const { region, country } = d.properties;
         return region + "|" + country;
       })
       .join("path")
@@ -210,26 +207,29 @@ const makeMap = () => {
       .attr("role", "graphics-symbol")
       .attr("data-tooltip", ({ properties }) => {
         const { country, region, code, samples } = properties;
-
-        /** look up per-country stats by ISO code */
         const stat = countryStats[code ?? ""];
 
         let sexInfo: string | undefined;
-        let top3diseases: string[] | undefined;
-        let top3ages: string[] | undefined;
+        let topDiseases: string[] = [];
+        let topAges: string[] = [];
 
         if (stat) {
           if (stat.sex.female_pct !== null && stat.sex.male_pct !== null) {
-            sexInfo = `${stat.sex.female_pct}% F / ${stat.sex.male_pct}% M`;
+            sexInfo = `${stat.sex.female_pct}% Female / ${stat.sex.male_pct}% Male`;
           }
-          top3diseases = Object.entries(stat.top_diseases)
+
+          topDiseases = Object.entries(stat.top_diseases)
             .sort((a, b) => b[1] - a[1])
             .slice(0, 3)
-            .map(([d, n]) => `${d} (${formatNumber(n, false)})`);
-          top3ages = Object.entries(stat.top_ages)
+            .map(([name, count]) => `${name} (${formatNumber(count, false)})`);
+
+          topAges = Object.entries(stat.top_ages)
             .sort((a, b) => b[1] - a[1])
             .slice(0, 3)
-            .map(([g, n]) => `${g.replace(/_/g, " ")} (${formatNumber(n, false)})`);
+            .map(
+              ([group, count]) =>
+                `${group.replace(/_/g, " ")} (${formatNumber(count, false)})`,
+            );
         }
 
         return renderToString(
@@ -252,16 +252,16 @@ const makeMap = () => {
                 <span>{sexInfo}</span>
               </>
             )}
-            {top3ages && top3ages.length > 0 && (
+            {topAges.length > 0 && (
               <>
                 <span>Top age groups</span>
-                <span>{top3ages.join(" · ")}</span>
+                <span>{topAges.join(" · ")}</span>
               </>
             )}
-            {top3diseases && top3diseases.length > 0 && (
+            {topDiseases.length > 0 && (
               <>
                 <span>Top diseases</span>
-                <span>{top3diseases.join(" · ")}</span>
+                <span>{topDiseases.join(" · ")}</span>
               </>
             )}
           </div>,

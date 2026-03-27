@@ -28,3 +28,4 @@ C:/Users/
 *.tmp
 
 # Keep public/data/ tracked (our generated data files)
+.vercel
