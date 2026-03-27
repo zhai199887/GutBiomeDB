@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(Rscript --version)",
+      "Read(//c/Program Files/**)",
+      "Read(//c/Program Files \\(x86\\)/**)",
+      "Bash(cmd /c \"where Rscript 2>nul\")",
+      "Bash(RSCRIPT=\"/d/Program Files/R/R-4.5.2/bin/Rscript.exe\")",
+      "Bash(__NEW_LINE_f20d733d8aaf3157__ \"$RSCRIPT\":*)",
+      "Bash(\"/d/Program Files/R/R-4.5.2/bin/Rscript.exe\" \"C:/Users/10595/Desktop/run_GSE193957.R\")"
+    ]
+  }
+}
