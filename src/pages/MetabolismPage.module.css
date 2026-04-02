@@ -1,0 +1,303 @@
+/* MetabolismPage.module.css – Metabolic function browser styles */
+
+.page {
+  min-height: 100vh;
+  background: var(--black);
+  color: var(--white);
+}
+
+.loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 60vh;
+  color: var(--light-gray);
+}
+
+/* Header */
+.header {
+  padding: 32px 40px 24px;
+  background: color-mix(in hsl, var(--black), var(--white) 6%);
+  border-bottom: 1px solid var(--dark-gray);
+  position: relative;
+}
+
+.back {
+  color: var(--primary);
+  text-decoration: none;
+  font-size: 0.85rem;
+  opacity: 0.8;
+  transition: opacity var(--fast);
+  display: inline-block;
+  margin-bottom: 10px;
+}
+.back:hover { opacity: 1; }
+
+.header h1 {
+  margin: 0 0 6px;
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+.header p {
+  margin: 0 0 16px;
+  color: var(--light-gray);
+  font-size: 0.9rem;
+}
+
+/* Search box / 搜索框 */
+.searchBox {
+  position: relative;
+  max-width: 440px;
+}
+
+.searchInput {
+  width: 100%;
+  background: var(--dark-gray);
+  border: 1px solid var(--gray);
+  color: var(--white);
+  border-radius: 6px;
+  padding: 8px 14px;
+  font-size: 0.88rem;
+  font-family: inherit;
+  transition: border-color var(--fast);
+}
+.searchInput:focus { outline: none; border-color: var(--primary); }
+
+.searchResults {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  background: var(--dark-gray);
+  border: 1px solid var(--gray);
+  border-radius: 6px;
+  padding: 10px;
+  z-index: 100;
+  box-shadow: var(--shadow);
+}
+
+.searchHint {
+  font-size: 0.82rem;
+  color: var(--light-gray);
+  margin: 0 0 8px;
+}
+
+.searchResultItem {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: none;
+  color: var(--white);
+  padding: 6px 8px;
+  font-size: 0.88rem;
+  font-family: inherit;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: background var(--fast);
+}
+.searchResultItem:hover { background: var(--gray); }
+
+/* Layout */
+.layout {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  min-height: calc(100vh - 160px);
+}
+
+@media (max-width: 768px) {
+  .layout { grid-template-columns: 1fr; }
+}
+
+/* Sidebar / 左侧栏 */
+.sidebar {
+  background: color-mix(in hsl, var(--black), var(--white) 4%);
+  border-right: 1px solid var(--dark-gray);
+  padding: 20px 12px;
+  overflow-y: auto;
+}
+
+.sideTitle {
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--light-gray);
+  margin: 0 0 12px 6px;
+}
+
+.categoryCard {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--white);
+  border-radius: var(--rounded);
+  padding: 10px 12px;
+  margin-bottom: 4px;
+  cursor: pointer;
+  transition: all var(--fast);
+  font-family: inherit;
+}
+
+.categoryCard:hover {
+  background: color-mix(in hsl, var(--black), var(--white) 8%);
+  border-color: var(--gray);
+}
+
+.categoryCard[data-active="true"] {
+  background: color-mix(in hsl, var(--primary), var(--black) 75%);
+  border-color: var(--primary);
+}
+
+.categoryCard[data-highlighted="true"] {
+  border-color: var(--secondary);
+}
+
+.catIcon { font-size: 1.3rem; margin-top: 2px; }
+
+.catInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.catName {
+  font-size: 0.85rem;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.catZh {
+  font-size: 0.78rem;
+  color: var(--light-gray);
+}
+
+.catCount {
+  font-size: 0.75rem;
+  color: var(--gray);
+}
+
+/* Detail panel / 详情面板 */
+.detail {
+  padding: 32px 40px;
+  overflow-y: auto;
+}
+
+.detailPanel {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  max-width: 860px;
+}
+
+.catHeader {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.detailIcon { font-size: 2.4rem; }
+
+.detailName {
+  font-size: 1.4rem;
+  font-weight: 700;
+  margin: 0 0 4px;
+}
+
+.detailZh {
+  font-size: 0.95rem;
+  color: var(--light-gray);
+  margin: 0;
+}
+
+.detailDesc {
+  color: var(--light-gray);
+  font-size: 0.9rem;
+  line-height: 1.6;
+  margin: 0;
+}
+
+/* Info blocks / 信息块 */
+.infoBlock, .relevanceBlock, .chartBlock, .refBlock {
+  background: color-mix(in hsl, var(--black), var(--white) 4%);
+  border: 1px solid var(--dark-gray);
+  border-radius: var(--rounded);
+  padding: 16px 20px;
+}
+
+.infoBlock h4, .relevanceBlock h4, .chartBlock h4, .refBlock h4 {
+  margin: 0 0 12px;
+  font-size: 0.82rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--light-gray);
+}
+
+.taxaGrid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.taxonTag {
+  background: color-mix(in hsl, var(--secondary), var(--black) 70%);
+  border: 1px solid var(--secondary);
+  color: var(--secondary-light);
+  border-radius: 4px;
+  padding: 3px 8px;
+  font-size: 0.82rem;
+}
+
+.metaboliteList, .pathwayList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.metaboliteTag {
+  background: color-mix(in hsl, var(--primary), var(--black) 70%);
+  border: 1px solid var(--primary);
+  color: var(--primary-light);
+  border-radius: 4px;
+  padding: 3px 10px;
+  font-size: 0.82rem;
+}
+
+.pathwayTag {
+  background: color-mix(in hsl, var(--black), var(--white) 8%);
+  border: 1px solid var(--gray);
+  color: var(--light-gray);
+  border-radius: 4px;
+  padding: 3px 10px;
+  font-size: 0.82rem;
+}
+
+.relevanceBlock p {
+  margin: 0;
+  font-size: 0.88rem;
+  color: var(--white);
+  line-height: 1.5;
+}
+
+.metaChart {
+  width: 100%;
+  height: auto;
+  max-width: 600px;
+}
+
+.refBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.ref {
+  font-size: 0.78rem;
+  color: var(--light-gray);
+  font-family: monospace;
+}

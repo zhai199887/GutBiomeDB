@@ -26,3 +26,68 @@
 .tile svg {
   height: 1.5em;
 }
+
+/* Version badge / 版本徽章 */
+.versionBadge {
+  font-size: 0.78rem;
+  color: var(--light-gray);
+  margin: 0;
+  text-align: center;
+}
+
+/* Feature cards / 功能卡片 */
+.featureGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  width: 100%;
+}
+
+@media (max-width: 700px) {
+  .featureGrid { grid-template-columns: 1fr; }
+}
+
+.featureCard {
+  position: relative;
+  background: color-mix(in hsl, var(--black), var(--white) 5%);
+  border: 1px solid var(--dark-gray);
+  border-radius: var(--rounded);
+  padding: 20px;
+  text-decoration: none;
+  color: var(--white);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  transition: border-color var(--fast), background var(--fast);
+  overflow: hidden;
+}
+.featureCard:hover {
+  border-color: var(--gray);
+  background: color-mix(in hsl, var(--black), var(--white) 8%);
+}
+
+.featureAccent {
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 3px;
+  border-radius: var(--rounded) var(--rounded) 0 0;
+}
+
+.featureTitle {
+  margin: 4px 0 0;
+  font-size: 0.92rem;
+  font-weight: 700;
+}
+
+.featureDesc {
+  font-size: 0.82rem;
+  color: var(--light-gray);
+  margin: 0;
+  line-height: 1.5;
+  flex: 1;
+}
+
+.featureArrow {
+  font-size: 1.1rem;
+  align-self: flex-end;
+}

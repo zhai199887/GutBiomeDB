@@ -1,3 +1,5 @@
+import { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
 import BarsIcon from "@/assets/bars.svg?react";
 import EarthIcon from "@/assets/earth.svg?react";
 import MicroscopeIcon from "@/assets/microscope.svg?react";
@@ -6,8 +8,46 @@ import { useData } from "@/data";
 import { formatNumber } from "@/util/string";
 import classes from "./Overview.module.css";
 
+const API_BASE = import.meta.env.VITE_API_URL ?? "http://localhost:8000";
+
+// Quick-access feature cards / 快速入口功能卡片
+const FEATURE_CARDS = [
+  {
+    to: "/phenotype",
+    title: "Phenotype Explorer",
+    desc: "Compare microbiome composition across age groups, sexes, and diseases",
+    color: "var(--secondary)",
+  },
+  {
+    to: "/compare",
+    title: "Differential Analysis",
+    desc: "Statistical comparison between two user-defined sample groups (LEfSe, volcano, PCoA)",
+    color: "var(--primary)",
+  },
+  {
+    to: "/metabolism",
+    title: "Metabolic Functions",
+    desc: "Browse microbiota by metabolic role: SCFAs, bile acids, tryptophan, TMAO, and more",
+    color: "var(--secondary-light)",
+  },
+] as const;
+
 const Overview = () => {
   const summary = useData((state) => state.summary);
+
+  // API stats (if backend running) / 后端统计数据（后端启动后可用）
+  const [apiStats, setApiStats] = useState<{
+    last_updated?: string;
+    version?: string;
+    total_species?: number;
+  } | null>(null);
+
+  useEffect(() => {
+    fetch(`${API_BASE}/api/data-stats`)
+      .then((r) => r.json())
+      .then(setApiStats)
+      .catch(() => { /* backend not running, ignore */ });
+  }, []);
 
   const countries = summary
     ? Object.keys(summary.country_counts).filter((k) => k !== "unknown").length
@@ -83,6 +123,25 @@ const Overview = () => {
       ) : (
         <Placeholder height={150}>Loading overview...</Placeholder>
       )}
+
+      {/* Data version badge / 数据版本徽章 */}
+      {apiStats?.last_updated && (
+        <p className={classes.versionBadge}>
+          Data version: <b>{apiStats.version}</b> · Last updated: {apiStats.last_updated}
+        </p>
+      )}
+
+      {/* Quick-access cards / 快速入口卡片 */}
+      <div className={classes.featureGrid}>
+        {FEATURE_CARDS.map(({ to, title, desc, color }) => (
+          <Link key={to} to={to} className={classes.featureCard}>
+            <div className={classes.featureAccent} style={{ background: color }} />
+            <h3 className={classes.featureTitle} style={{ color }}>{title}</h3>
+            <p className={classes.featureDesc}>{desc}</p>
+            <span className={classes.featureArrow} style={{ color }}>→</span>
+          </Link>
+        ))}
+      </div>
 
       <hr />
     </section>

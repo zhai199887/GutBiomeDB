@@ -1,0 +1,61 @@
+/* SpeciesPage.module.css */
+
+.page { min-height: 100vh; background: var(--black); color: var(--white); }
+
+.loading {
+  display: flex; align-items: center; justify-content: center;
+  height: 60vh; color: var(--light-gray);
+}
+
+.header {
+  padding: 28px 40px 20px;
+  background: color-mix(in hsl, var(--black), var(--white) 6%);
+  border-bottom: 1px solid var(--dark-gray);
+}
+
+.back {
+  color: var(--primary); text-decoration: none; font-size: 0.85rem;
+  opacity: 0.8; transition: opacity var(--fast); display: inline-block; margin-bottom: 8px;
+}
+.back:hover { opacity: 1; }
+
+.header h1 { margin: 0; font-size: 1.8rem; font-weight: 700; }
+
+.notFound { color: var(--light-gray); font-size: 0.88rem; margin: 6px 0 0; }
+
+.content {
+  padding: 32px 40px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  max-width: 900px;
+}
+
+.chartCard {
+  background: color-mix(in hsl, var(--black), var(--white) 4%);
+  border: 1px solid var(--dark-gray);
+  border-radius: var(--rounded);
+  padding: 20px 24px;
+}
+
+.chartCard h3 {
+  margin: 0 0 16px;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.chart { width: 100%; height: auto; }
+
+.tagList { display: flex; flex-wrap: wrap; gap: 8px; }
+
+.metaTag {
+  background: color-mix(in hsl, var(--secondary), var(--black) 70%);
+  border: 1px solid var(--secondary);
+  color: var(--secondary-light);
+  border-radius: 4px;
+  padding: 5px 12px;
+  font-size: 0.85rem;
+  text-decoration: none;
+  transition: all var(--fast);
+}
+.metaTag:hover { background: color-mix(in hsl, var(--secondary), var(--black) 50%); }

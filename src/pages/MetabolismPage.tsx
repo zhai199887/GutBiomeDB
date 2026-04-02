@@ -1,0 +1,385 @@
+/**
+ * MetabolismPage.tsx
+ * Browse microbiota by metabolic function category
+ * 按代谢功能分类浏览微生物组成
+ */
+import { useEffect, useRef, useState } from "react";
+import { renderToString } from "react-dom/server";
+import * as d3 from "d3";
+import { useData } from "@/data";
+import "@/components/tooltip";
+import classes from "./MetabolismPage.module.css";
+
+// ── Types / 类型定义 ──────────────────────────────────────────────────────────
+
+interface MetabolismCategory {
+  id: string;
+  name_en: string;
+  name_zh: string;
+  icon: string;
+  description: string;
+  taxa: string[];
+  key_metabolites: string[];
+  related_pathways: string[];
+  health_relevance: string;
+  references: string[];
+}
+
+interface MetabolismMapping {
+  version: string;
+  last_updated: string;
+  categories: MetabolismCategory[];
+}
+
+// ── Main component / 主组件 ───────────────────────────────────────────────────
+
+const MetabolismPage = () => {
+  const [mapping, setMapping] = useState<MetabolismMapping | null>(null);
+  const [selected, setSelected] = useState<MetabolismCategory | null>(null);
+  const [search, setSearch] = useState("");
+  const abundance = useData((s) => s.abundance);
+
+  useEffect(() => {
+    fetch("data/metabolism_mapping.json")
+      .then((r) => r.json())
+      .then((data: MetabolismMapping) => {
+        setMapping(data);
+        setSelected(data.categories[0] ?? null);
+      });
+  }, []);
+
+  if (!mapping) {
+    return (
+      <div className={classes.page}>
+        <div className={classes.loading}>Loading metabolism data…</div>
+      </div>
+    );
+  }
+
+  // Find which category a taxon belongs to / 查找某物种属于哪个代谢类别
+  const taxonToCategories = (taxon: string): MetabolismCategory[] =>
+    mapping.categories.filter((c) =>
+      c.taxa.some((t) => t.toLowerCase().includes(taxon.toLowerCase())),
+    );
+
+  // Search highlighting / 搜索高亮
+  const searchResults = search.trim()
+    ? taxonToCategories(search.trim())
+    : [];
+
+  return (
+    <div className={classes.page}>
+      {/* Header / 页面标题 */}
+      <div className={classes.header}>
+        <a href="/" className={classes.back}>← Back to Atlas</a>
+        <h1>Metabolic Function Browser</h1>
+        <p>Explore gut microbiota organized by metabolic role and clinical relevance</p>
+
+        {/* Species search / 物种搜索 */}
+        <div className={classes.searchBox}>
+          <input
+            type="text"
+            placeholder="Search for a genus (e.g. Bifidobacterium)…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className={classes.searchInput}
+          />
+          {search && searchResults.length > 0 && (
+            <div className={classes.searchResults}>
+              <p className={classes.searchHint}>
+                <b>{search}</b> found in:
+              </p>
+              {searchResults.map((c) => (
+                <button
+                  key={c.id}
+                  className={classes.searchResultItem}
+                  onClick={() => { setSelected(c); setSearch(""); }}
+                >
+                  {c.icon} {c.name_en}
+                </button>
+              ))}
+            </div>
+          )}
+          {search && searchResults.length === 0 && (
+            <div className={classes.searchResults}>
+              <p className={classes.searchHint}>No category found for "<b>{search}</b>"</p>
+            </div>
+          )}
+        </div>
+      </div>
+
+      <div className={classes.layout}>
+        {/* Left panel: category cards / 左侧：类别卡片 */}
+        <aside className={classes.sidebar}>
+          <h3 className={classes.sideTitle}>Functional Categories</h3>
+          {mapping.categories.map((cat) => {
+            const isHighlighted = search
+              ? cat.taxa.some((t) => t.toLowerCase().includes(search.toLowerCase()))
+              : false;
+
+            return (
+              <button
+                key={cat.id}
+                className={classes.categoryCard}
+                data-active={selected?.id === cat.id}
+                data-highlighted={isHighlighted}
+                onClick={() => setSelected(cat)}
+              >
+                <span className={classes.catIcon}>{cat.icon}</span>
+                <div className={classes.catInfo}>
+                  <span className={classes.catName}>{cat.name_en}</span>
+                  <span className={classes.catZh}>{cat.name_zh}</span>
+                  <span className={classes.catCount}>{cat.taxa.length} genera</span>
+                </div>
+              </button>
+            );
+          })}
+        </aside>
+
+        {/* Right panel: details / 右侧：详细信息 */}
+        <main className={classes.detail}>
+          {selected && (
+            <CategoryDetail category={selected} abundance={abundance} />
+          )}
+        </main>
+      </div>
+    </div>
+  );
+};
+
+// ── Category detail component / 类别详情组件 ─────────────────────────────────
+
+const CategoryDetail = ({
+  category,
+  abundance,
+}: {
+  category: MetabolismCategory;
+  abundance: ReturnType<typeof useData.getState>["abundance"];
+}) => {
+  const barRef = useRef<SVGSVGElement>(null);
+  const heatRef = useRef<SVGSVGElement>(null);
+
+  // Draw abundance bar chart for taxa in this category
+  // 绘制该类别下各物种的平均丰度柱状图
+  useEffect(() => {
+    if (!barRef.current || !abundance) return;
+    const svg = d3.select(barRef.current);
+    svg.selectAll("*").remove();
+
+    // Find genera present in abundance data / 在丰度数据中查找该类别的属
+    const availableGenera = abundance.genera.filter((g) =>
+      category.taxa.some((t) =>
+        g.toLowerCase().includes(t.toLowerCase()) ||
+        t.toLowerCase().includes(g.toLowerCase()),
+      ),
+    );
+
+    if (availableGenera.length === 0) {
+      svg.append("text").attr("x", 10).attr("y", 30)
+        .text("No abundance data available for this category")
+        .attr("fill", "currentColor").attr("font-size", 12);
+      return;
+    }
+
+    // Compute average abundance across all diseases
+    // 计算跨所有疾病的平均丰度
+    const avgAbundance = availableGenera.map((genus) => {
+      const allVals = Object.values(abundance.by_disease).map(
+        (d) => d[genus] ?? 0,
+      );
+      return { genus, avg: d3.mean(allVals) ?? 0 };
+    }).sort((a, b) => b.avg - a.avg);
+
+    const margin = { top: 10, right: 20, bottom: 40, left: 130 };
+    const W = 480, H = Math.max(150, avgAbundance.length * 24 + 50);
+    svg.attr("viewBox", `0 0 ${W} ${H}`);
+    const g = svg.append("g").attr("transform", `translate(${margin.left},${margin.top})`);
+
+    const iW = W - margin.left - margin.right;
+    const iH = H - margin.top - margin.bottom;
+
+    const xScale = d3.scaleLinear()
+      .domain([0, d3.max(avgAbundance, (d) => d.avg) ?? 0.01])
+      .range([0, iW]);
+    const yScale = d3.scaleBand()
+      .domain(avgAbundance.map((d) => d.genus))
+      .range([0, iH])
+      .padding(0.2);
+
+    g.selectAll(".bar")
+      .data(avgAbundance)
+      .join("rect")
+      .attr("class", "bar")
+      .attr("x", 0)
+      .attr("y", (d) => yScale(d.genus) ?? 0)
+      .attr("width", (d) => xScale(d.avg))
+      .attr("height", yScale.bandwidth())
+      .attr("fill", "var(--secondary)")
+      .attr("opacity", 0.8)
+      .attr("role", "graphics-symbol")
+      .attr("data-tooltip", (d) =>
+        renderToString(
+          <div className="tooltip-table">
+            <span>Genus</span><span>{d.genus}</span>
+            <span>Avg. Abundance</span><span>{(d.avg * 100).toFixed(4)}%</span>
+          </div>
+        )
+      );
+
+    g.append("g").call(d3.axisLeft(yScale).tickFormat((d) => d.length > 14 ? d.slice(0, 13) + "…" : d))
+      .attr("font-size", 11);
+    g.append("g").attr("transform", `translate(0,${iH})`)
+      .call(d3.axisBottom(xScale).ticks(4).tickFormat((d) => `${(Number(d) * 100).toFixed(2)}%`))
+      .attr("font-size", 10);
+  }, [category, abundance]);
+
+  // Draw disease heatmap / 绘制疾病分布热图
+  useEffect(() => {
+    if (!heatRef.current || !abundance) return;
+    const svg = d3.select(heatRef.current);
+    svg.selectAll("*").remove();
+
+    const availableGenera = abundance.genera.filter((g) =>
+      category.taxa.some((t) =>
+        g.toLowerCase().includes(t.toLowerCase()) ||
+        t.toLowerCase().includes(g.toLowerCase()),
+      ),
+    );
+
+    // Top 10 diseases by sample count / 前10种疾病
+    const diseases = Object.keys(abundance.by_disease).slice(0, 12);
+    if (availableGenera.length === 0 || diseases.length === 0) return;
+
+    const margin = { top: 60, right: 20, bottom: 20, left: 120 };
+    const cellW = 44, cellH = 20;
+    const W = cellW * diseases.length + margin.left + margin.right;
+    const H = cellH * availableGenera.length + margin.top + margin.bottom;
+    svg.attr("viewBox", `0 0 ${W} ${H}`);
+
+    const g = svg.append("g").attr("transform", `translate(${margin.left},${margin.top})`);
+
+    // Build data / 构建数据矩阵
+    const flatData: { genus: string; disease: string; val: number }[] = [];
+    for (const genus of availableGenera) {
+      for (const disease of diseases) {
+        flatData.push({ genus, disease, val: abundance.by_disease[disease]?.[genus] ?? 0 });
+      }
+    }
+
+    const maxVal = d3.max(flatData, (d) => d.val) ?? 0.01;
+    const colorScale = d3.scaleSequential()
+      .domain([0, maxVal])
+      .interpolator(d3.interpolate("#1a1a2e", "var(--primary)"));
+
+    const xScale = d3.scaleBand().domain(diseases).range([0, cellW * diseases.length]).padding(0.05);
+    const yScale = d3.scaleBand().domain(availableGenera).range([0, cellH * availableGenera.length]).padding(0.05);
+
+    g.selectAll(".cell")
+      .data(flatData)
+      .join("rect")
+      .attr("class", "cell")
+      .attr("x", (d) => xScale(d.disease) ?? 0)
+      .attr("y", (d) => yScale(d.genus) ?? 0)
+      .attr("width", xScale.bandwidth())
+      .attr("height", yScale.bandwidth())
+      .attr("fill", (d) => colorScale(d.val))
+      .attr("role", "graphics-symbol")
+      .attr("data-tooltip", (d) =>
+        renderToString(
+          <div className="tooltip-table">
+            <span>Genus</span><span>{d.genus}</span>
+            <span>Disease</span><span>{d.disease}</span>
+            <span>Abundance</span><span>{(d.val * 100).toFixed(4)}%</span>
+          </div>
+        )
+      );
+
+    g.append("g").call(d3.axisLeft(yScale)).attr("font-size", 10);
+    g.append("g")
+      .call(d3.axisTop(xScale).tickFormat((d) => d.length > 8 ? d.slice(0, 7) + "…" : d))
+      .attr("font-size", 9)
+      .selectAll("text")
+      .attr("transform", "rotate(-30)")
+      .attr("text-anchor", "start");
+  }, [category, abundance]);
+
+  return (
+    <div className={classes.detailPanel}>
+      {/* Category header / 类别标题 */}
+      <div className={classes.catHeader}>
+        <span className={classes.detailIcon}>{category.icon}</span>
+        <div>
+          <h2 className={classes.detailName}>{category.name_en}</h2>
+          <p className={classes.detailZh}>{category.name_zh}</p>
+        </div>
+      </div>
+
+      <p className={classes.detailDesc}>{category.description}</p>
+
+      {/* Taxa list / 物种列表 */}
+      <div className={classes.infoBlock}>
+        <h4>Member Genera ({category.taxa.length})</h4>
+        <div className={classes.taxaGrid}>
+          {category.taxa.map((t) => (
+            <span key={t} className={classes.taxonTag}>
+              <i>{t}</i>
+            </span>
+          ))}
+        </div>
+      </div>
+
+      {/* Metabolites / 代谢物 */}
+      <div className={classes.infoBlock}>
+        <h4>Key Metabolites</h4>
+        <div className={classes.metaboliteList}>
+          {category.key_metabolites.map((m) => (
+            <span key={m} className={classes.metaboliteTag}>{m}</span>
+          ))}
+        </div>
+      </div>
+
+      {/* Pathways / 通路 */}
+      <div className={classes.infoBlock}>
+        <h4>Related Pathways</h4>
+        <div className={classes.pathwayList}>
+          {category.related_pathways.map((p) => (
+            <span key={p} className={classes.pathwayTag}>{p}</span>
+          ))}
+        </div>
+      </div>
+
+      {/* Health relevance / 临床意义 */}
+      <div className={classes.relevanceBlock}>
+        <h4>Clinical Relevance</h4>
+        <p>{category.health_relevance}</p>
+      </div>
+
+      {/* Abundance charts (only if data loaded) / 丰度图表 */}
+      {abundance && (
+        <>
+          <div className={classes.chartBlock}>
+            <h4>Average Abundance in Dataset</h4>
+            <svg ref={barRef} className={classes.metaChart} />
+          </div>
+
+          <div className={classes.chartBlock}>
+            <h4>Abundance by Disease (Heatmap)</h4>
+            <svg ref={heatRef} className={classes.metaChart} />
+          </div>
+        </>
+      )}
+
+      {/* References / 参考文献 */}
+      {category.references.length > 0 && (
+        <div className={classes.refBlock}>
+          <h4>Key References</h4>
+          {category.references.map((r) => (
+            <span key={r} className={classes.ref}>{r}</span>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default MetabolismPage;

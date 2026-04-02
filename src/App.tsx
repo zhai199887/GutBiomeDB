@@ -13,6 +13,9 @@ import MapSection from "@/sections/MapSection";
 import PhenotypeCharts from "@/sections/PhenotypeCharts";
 import Search from "@/sections/Search";
 import PhenotypePage from "@/sections/PhenotypePage";
+import ComparePage from "@/pages/ComparePage";
+import MetabolismPage from "@/pages/MetabolismPage";
+import SpeciesPage from "@/pages/SpeciesPage";
 import "@/components/tooltip";
 import "./App.css";
 
@@ -43,6 +46,9 @@ const App = () => (
     <Routes>
       <Route path="/" element={<MainPage />} />
       <Route path="/phenotype" element={<PhenotypePage />} />
+      <Route path="/compare" element={<ComparePage />} />
+      <Route path="/metabolism" element={<MetabolismPage />} />
+      <Route path="/species/:taxon" element={<SpeciesPage />} />
     </Routes>
   </BrowserRouter>
 );
