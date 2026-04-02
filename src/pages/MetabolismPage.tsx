@@ -291,10 +291,16 @@ const CategoryDetail = ({
     }
 
     const maxVal = d3.max(flatData, (d) => d.val) ?? 0.01;
-    // Use CSS variable for start color to avoid hardcoded hex / 使用CSS变量作为起始色，避免硬编码
+
+    // d3.interpolate runs at JS time — CSS variables must be resolved via getComputedStyle
+    // d3.interpolate在JS执行时运行，CSS变量需通过getComputedStyle提前解析
+    const rootStyles = getComputedStyle(document.documentElement);
+    const colorBlack = rootStyles.getPropertyValue("--black").trim() || "#101829";
+    const colorPrimary = rootStyles.getPropertyValue("--primary").trim() || "#e23fff";
+
     const colorScale = d3.scaleSequential()
       .domain([0, maxVal])
-      .interpolator(d3.interpolate("var(--black)", "var(--primary)"));
+      .interpolator(d3.interpolate(colorBlack, colorPrimary));
 
     const xScale = d3.scaleBand().domain(diseases).range([0, cellW * diseases.length]).padding(0.05);
     const yScale = d3.scaleBand().domain(availableGenera).range([0, cellH * availableGenera.length]).padding(0.05);
@@ -425,7 +431,7 @@ const CategoryDetail = ({
           {category.references.map((r) => {
             // If reference looks like a DOI or PubMed ID, make it a link
             // 如果是DOI或PMID格式，转为可点击链接
-            const doiMatch = r.match(/10\.\d{4,}\/\S+/);
+            const doiMatch = r.match(/10\.\d{4,}\/[^\s.,;)]+/);
             const pmidMatch = r.match(/PMID[:\s]*(\d+)/i);
             if (doiMatch) {
               return (

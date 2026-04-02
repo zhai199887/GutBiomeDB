@@ -110,7 +110,7 @@ const ComparePage = () => {
       });
       if (!res.ok) {
         const err = await res.json();
-        throw new Error(err.detail ?? "分析失败");
+        throw new Error(err.detail ?? "Analysis failed");
       }
       const data: DiffResult = await res.json();
       setResult(data);
@@ -439,7 +439,7 @@ const DiffBarChart = ({ result }: { result: DiffResult }) => {
     // Method note / 方法注释
     const totalW = W + margin.left + margin.right;
     svg.append("text").attr("x", totalW - 4).attr("y", H + margin.top + margin.bottom - 4)
-      .attr("text-anchor", "end").attr("font-size", 9).attr("fill", "var(--gray)")
+      .attr("text-anchor", "end").attr("font-size", 10).attr("fill", "var(--light-gray)")
       .text(`Showing taxa with adj. p < 0.05 (BH FDR) · ${result.summary.method}`);
   }, [result]);
 
@@ -494,7 +494,7 @@ const VolcanoChart = ({ result }: { result: DiffResult }) => {
       .attr("stroke", "var(--light-gray)").attr("stroke-dasharray", "4,3").attr("opacity", 0.6);
     g.append("text").attr("x", xScale(-1) - 3).attr("y", 10)
       .attr("text-anchor", "end").attr("font-size", 9).attr("fill", "var(--light-gray)")
-      .text("|FC|=2");
+      .text("|log₂FC|=1");
 
     g.append("line")
       .attr("x1", xScale(1)).attr("x2", xScale(1))
@@ -502,7 +502,7 @@ const VolcanoChart = ({ result }: { result: DiffResult }) => {
       .attr("stroke", "var(--light-gray)").attr("stroke-dasharray", "4,3").attr("opacity", 0.6);
     g.append("text").attr("x", xScale(1) + 3).attr("y", 10)
       .attr("text-anchor", "start").attr("font-size", 9).attr("fill", "var(--light-gray)")
-      .text("|FC|=2");
+      .text("|log₂FC|=1");
 
     // Points / 散点
     g.selectAll(".dot")
@@ -713,8 +713,9 @@ const AlphaBoxChart = ({ result }: { result: DiffResult }) => {
       .attr("y1", margin.top).attr("y2", margin.top + iH)
       .attr("stroke", "var(--gray)").attr("stroke-dasharray", "4,3").attr("opacity", 0.5);
 
-    // Color legend (Group A vs Group B) / 颜色图例
-    const legendX = W - margin.right + 8;
+    // Color legend — positioned inside viewBox, left-aligned at iH top-right
+    // 颜色图例 — 保持在viewBox内，放置在绘图区右侧空白中
+    const legendX = margin.left + 470;  // fits within W=620 (470+50=520, +80 text ≈600 < 620)
     const legendY = margin.top + 20;
     const legendItems = [
       { color: "var(--secondary)", label: gA.length > 10 ? gA.slice(0, 9) + "…" : gA },
