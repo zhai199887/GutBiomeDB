@@ -277,6 +277,10 @@
   background: color-mix(in hsl, var(--secondary), var(--black) 55%);
 }
 
+.taxonTag:visited {
+  color: var(--secondary-light);
+}
+
 .metaboliteList, .pathwayList {
   display: flex;
   flex-wrap: wrap;

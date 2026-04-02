@@ -355,7 +355,7 @@ const GroupFilterPanel = ({
 
 // ── Chart components / 图表组件 ───────────────────────────────────────────────
 
-/** LEfSe-style differential abundance bar chart / 类LEfSe差异丰度柱状图 */
+/** Differential abundance bar chart (log₂FC, Wilcoxon/t-test with BH FDR) / 差异丰度柱状图 */
 const DiffBarChart = ({ result }: { result: DiffResult }) => {
   const svgRef = useRef<SVGSVGElement>(null);
 
@@ -783,8 +783,8 @@ const BetaPCoAChart = ({ result }: { result: DiffResult }) => {
             <span style={{ color: d.group === "A" ? "var(--secondary)" : "var(--primary)" }}>
               {d.group === "A" ? result.summary.group_a_name : result.summary.group_b_name}
             </span>
-            <span>PC1</span><span>{d.x.toFixed(4)}</span>
-            <span>PC2</span><span>{d.y.toFixed(4)}</span>
+            <span>PCo1</span><span>{d.x.toFixed(4)}</span>
+            <span>PCo2</span><span>{d.y.toFixed(4)}</span>
           </div>
         )
       );
@@ -803,7 +803,7 @@ const BetaPCoAChart = ({ result }: { result: DiffResult }) => {
       .attr("transform", `translate(14,${H / 2}) rotate(-90)`)
       .attr("text-anchor", "middle").attr("fill", "currentColor").attr("font-size", 12)
       .text("PCo2 (Bray-Curtis)");
-    svg.append("text").attr("x", W / 2).attr("y", H - 4)
+    svg.append("text").attr("x", W / 2).attr("y", H - 8)
       .attr("text-anchor", "middle").attr("fill", "var(--light-gray)").attr("font-size", 9)
       .text("Note: % variance explained per axis not yet available");
 
