@@ -576,6 +576,17 @@ const AlphaBoxChart = ({ result }: { result: DiffResult }) => {
     ];
 
     const allVals = positions.flatMap((p) => p.data);
+
+    // Guard: no data at all (both groups have zero matched samples)
+    // 防御：两组均无匹配样本时显示空状态
+    if (allVals.length === 0) {
+      svg.attr("viewBox", `0 0 ${W} 100`);
+      svg.append("text").attr("x", 20).attr("y", 50)
+        .text("No alpha diversity data available")
+        .attr("fill", "currentColor").attr("font-size", 13);
+      return;
+    }
+
     const yScale = d3.scaleLinear()
       .domain([0, d3.max(allVals) ?? 5])
       .range([iH, 0]);   // group-relative coordinates / 组内坐标

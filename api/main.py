@@ -509,7 +509,7 @@ def _check_admin(token: str | None):
 
 
 @app.get("/api/admin/check")
-def admin_check(x_admin_token: str = Header(None)):
+def admin_check(x_admin_token: str | None = Header(None)):
     """Verify admin token. / 验证管理员token"""
     _check_admin(x_admin_token)
     return {"status": "authorized"}
@@ -518,7 +518,7 @@ def admin_check(x_admin_token: str = Header(None)):
 @app.post("/api/admin/upload-metadata")
 async def upload_metadata(
     file: UploadFile = File(...),
-    x_admin_token: str = Header(None),
+    x_admin_token: str | None = Header(None),
 ):
     """
     Upload new metadata CSV to merge into dataset. Requires admin token.
@@ -547,7 +547,7 @@ async def upload_metadata(
 @app.post("/api/admin/validate-metadata")
 async def validate_metadata_endpoint(
     file: UploadFile = File(...),
-    x_admin_token: str = Header(None),
+    x_admin_token: str | None = Header(None),
 ):
     """Validate metadata CSV format without merging. / 校验格式但不合并"""
     _check_admin(x_admin_token)
