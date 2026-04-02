@@ -269,6 +269,12 @@
   border-radius: 4px;
   padding: 3px 8px;
   font-size: 0.82rem;
+  text-decoration: none;
+  transition: background var(--fast);
+}
+
+.taxonTag:hover {
+  background: color-mix(in hsl, var(--secondary), var(--black) 55%);
 }
 
 .metaboliteList, .pathwayList {

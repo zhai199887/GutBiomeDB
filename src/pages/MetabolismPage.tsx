@@ -5,6 +5,7 @@
  */
 import { useEffect, useRef, useState } from "react";
 import { renderToString } from "react-dom/server";
+import { Link } from "react-router-dom";
 import * as d3 from "d3";
 import { useData } from "@/data";
 import "@/components/tooltip";
@@ -68,7 +69,7 @@ const MetabolismPage = () => {
     return (
       <div className={classes.page}>
         <div className={classes.header}>
-          <a href="/" className={classes.back}>← Back to Atlas</a>
+          <Link to="/" className={classes.back}>← Back to Atlas</Link>
           <h1>Metabolic Function Browser</h1>
         </div>
         <div className={classes.errorBanner}>
@@ -94,7 +95,7 @@ const MetabolismPage = () => {
     <div className={classes.page}>
       {/* Header / 页面标题 */}
       <div className={classes.header}>
-        <a href="/" className={classes.back}>← Back to Atlas</a>
+        <Link to="/" className={classes.back}>← Back to Atlas</Link>
         <h1>Metabolic Function Browser</h1>
         <p>Explore gut microbiota organized by metabolic role and clinical relevance</p>
 
@@ -341,8 +342,10 @@ const CategoryDetail = ({
     const gradId = `heatGrad-${category.id}`;
     const grad = defs.append("linearGradient").attr("id", gradId)
       .attr("x1", "0%").attr("x2", "100%");
-    grad.append("stop").attr("offset", "0%").attr("stop-color", "var(--black)");
-    grad.append("stop").attr("offset", "100%").attr("stop-color", "var(--primary)");
+    // Use already-resolved hex values (CSS variables not valid in SVG export context)
+    // 使用已解析的十六进制值（CSS变量在SVG导出时无法解析）
+    grad.append("stop").attr("offset", "0%").attr("stop-color", colorBlack);
+    grad.append("stop").attr("offset", "100%").attr("stop-color", colorPrimary);
 
     g.append("rect")
       .attr("x", 0).attr("y", legendY)
@@ -371,14 +374,19 @@ const CategoryDetail = ({
 
       <p className={classes.detailDesc}>{category.description}</p>
 
-      {/* Taxa list / 物种列表 */}
+      {/* Taxa list — each genus links to its Species page / 物种列表，每个属名链接到物种详情页 */}
       <div className={classes.infoBlock}>
         <h4>Member Genera ({category.taxa.length})</h4>
         <div className={classes.taxaGrid}>
           {category.taxa.map((t) => (
-            <span key={t} className={classes.taxonTag}>
+            <Link
+              key={t}
+              to={`/species/${encodeURIComponent(t)}`}
+              className={classes.taxonTag}
+              title={`View ${t} species detail`}
+            >
               <i>{t}</i>
-            </span>
+            </Link>
           ))}
         </div>
       </div>

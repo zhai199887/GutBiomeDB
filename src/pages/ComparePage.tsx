@@ -794,14 +794,18 @@ const BetaPCoAChart = ({ result }: { result: DiffResult }) => {
       .call(d3.axisBottom(xScale).ticks(5)).attr("font-size", 11);
     g.append("g").call(d3.axisLeft(yScale).ticks(5)).attr("font-size", 11);
 
-    // Axis labels / 坐标轴标签
-    svg.append("text").attr("x", W / 2).attr("y", H - 8)
+    // Axis labels — both labeled (Bray-Curtis) consistently; no variance explained available
+    // 两轴均注明(Bray-Curtis)，方差解释量暂不可用
+    svg.append("text").attr("x", W / 2).attr("y", H - 16)
       .attr("text-anchor", "middle").attr("fill", "currentColor").attr("font-size", 12)
-      .text("PC1 (Bray-Curtis)");
+      .text("PCo1 (Bray-Curtis)");
     svg.append("text")
       .attr("transform", `translate(14,${H / 2}) rotate(-90)`)
       .attr("text-anchor", "middle").attr("fill", "currentColor").attr("font-size", 12)
-      .text("PC2");
+      .text("PCo2 (Bray-Curtis)");
+    svg.append("text").attr("x", W / 2).attr("y", H - 4)
+      .attr("text-anchor", "middle").attr("fill", "var(--light-gray)").attr("font-size", 9)
+      .text("Note: % variance explained per axis not yet available");
 
     // Legend / 图例
     const lx = iW + 10;

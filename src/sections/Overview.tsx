@@ -21,7 +21,7 @@ const FEATURE_CARDS = [
   {
     to: "/compare",
     title: "Differential Analysis",
-    desc: "Statistical comparison between two user-defined sample groups (LEfSe, volcano, PCoA)",
+    desc: "Statistical comparison between two user-defined sample groups (differential abundance, volcano plot, PCoA)",
     color: "var(--primary)",
   },
   {
