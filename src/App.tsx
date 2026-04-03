@@ -1,5 +1,5 @@
-import { lazy, Suspense, useEffect } from "react";
-import { BrowserRouter, Route, Routes } from "react-router-dom";
+import { lazy, Suspense, useEffect, type ReactNode } from "react";
+import { BrowserRouter, Route, Routes, useLocation } from "react-router-dom";
 import {
   loadAbundance,
   loadGeoData,
@@ -31,6 +31,32 @@ const SearchPage = lazy(() => import("@/pages/SearchPage"));
 const ApiDocsPage = lazy(() => import("@/pages/ApiDocsPage"));
 const CitePage = lazy(() => import("@/pages/CitePage"));
 const NotFoundPage = lazy(() => import("@/pages/NotFoundPage"));
+
+/* ── Route-level document title / 路由级页面标题 ── */
+const ROUTE_TITLES: Record<string, string> = {
+  "/": "Home",
+  "/phenotype": "Phenotype Explorer",
+  "/compare": "Differential Analysis",
+  "/disease": "Disease Browser",
+  "/network": "Network Visualization",
+  "/metabolism": "Metabolism Pathway",
+  "/similarity": "Sample Similarity",
+  "/lifecycle": "Lifecycle Atlas",
+  "/search": "Search",
+  "/api-docs": "API Documentation",
+  "/about": "About & Cite",
+  "/admin": "Admin",
+};
+const BASE_TITLE = "Gut Microbiome Atlas";
+
+const DocumentTitle = ({ children }: { children: ReactNode }) => {
+  const { pathname } = useLocation();
+  useEffect(() => {
+    const sub = ROUTE_TITLES[pathname];
+    document.title = sub ? `${sub} | ${BASE_TITLE}` : BASE_TITLE;
+  }, [pathname]);
+  return <>{children}</>;
+};
 
 const PageLoader = () => (
   <div style={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: "60vh" }}>
@@ -64,6 +90,7 @@ const App = () => (
   <I18nProvider>
     <BrowserRouter>
       <a href="#main-content" className="skip-link">Skip to content</a>
+      <DocumentTitle>
       <Suspense fallback={<PageLoader />}>
         <Routes>
           <Route path="/" element={<MainPage />} />
@@ -82,6 +109,7 @@ const App = () => (
           <Route path="*" element={<NotFoundPage />} />
         </Routes>
       </Suspense>
+      </DocumentTitle>
     </BrowserRouter>
   </I18nProvider>
 );
