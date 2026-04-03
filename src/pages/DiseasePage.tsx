@@ -40,6 +40,13 @@ interface DiseaseProfile {
   disease: string;
   sample_count: number;
   control_count: number;
+  standard_name?: string;
+  standard_name_zh?: string;
+  abbreviation?: string;
+  mesh_id?: string;
+  icd10?: string;
+  category?: string;
+  category_zh?: string;
   top_genera: GenusEntry[];
   by_country: DemoEntry[];
   by_age_group: DemoEntry[];
@@ -177,7 +184,7 @@ const DiseasePage = () => {
           )}
 
           {/* Tab 内容 */}
-          {activeTab === "profile" && profile && <ProfileView profile={profile} dName={dName} />}
+          {activeTab === "profile" && profile && <ProfileView profile={profile} dName={dName} locale={locale} />}
           {activeTab === "biomarker" && selected && <BiomarkerPanel disease={selected} />}
           {activeTab === "lollipop" && selected && <LollipopPanel disease={selected} />}
         </div>
@@ -190,7 +197,7 @@ export default DiseasePage;
 
 // ── Profile visualization / 画像可视化 ─────────────────────────────────────
 
-const ProfileView = ({ profile, dName }: { profile: DiseaseProfile; dName: (n: string) => string }) => {
+const ProfileView = ({ profile, dName, locale }: { profile: DiseaseProfile; dName: (n: string) => string; locale: string }) => {
   const { t } = useI18n();
   const barRef = useRef<SVGSVGElement>(null);
 
@@ -229,7 +236,37 @@ const ProfileView = ({ profile, dName }: { profile: DiseaseProfile; dName: (n: s
       <div className={classes.profileHeader}>
         <div className={classes.statCard}>
           <span className={classes.statValue}>{profile.sample_count.toLocaleString("en")}</span>
-          <span className={classes.statLabel}>{dName(profile.disease)} {t("disease.samples")}</span>
+          <span className={classes.statLabel}>
+            {dName(profile.disease)}
+            {profile.standard_name && profile.standard_name !== profile.disease && (
+              <span style={{ fontSize: "0.85rem", color: "#666", marginLeft: "0.5rem" }}>
+                ({profile.standard_name})
+              </span>
+            )}
+            {" "}{t("disease.samples")}
+          </span>
+          <span style={{ display: "flex", flexWrap: "wrap", gap: "0.4rem", marginTop: "0.3rem", justifyContent: "center" }}>
+            {profile.category && (
+              <span style={{
+                fontSize: "0.75rem", padding: "0.15rem 0.5rem",
+                background: "#e8f4f8", borderRadius: "12px", color: "#2980b9",
+              }}>
+                {locale === "zh" ? profile.category_zh : profile.category}
+              </span>
+            )}
+            {profile.mesh_id && (
+              <a href={`https://meshb.nlm.nih.gov/record/ui?ui=${profile.mesh_id}`}
+                 target="_blank" rel="noopener noreferrer"
+                 style={{ fontSize: "0.75rem", color: "#888", textDecoration: "none" }}>
+                MeSH: {profile.mesh_id}
+              </a>
+            )}
+            {profile.icd10 && (
+              <span style={{ fontSize: "0.75rem", color: "#888" }}>
+                ICD-10: {profile.icd10}
+              </span>
+            )}
+          </span>
         </div>
         <div className={classes.statCard}>
           <span className={classes.statValue}>{profile.control_count.toLocaleString("en")}</span>

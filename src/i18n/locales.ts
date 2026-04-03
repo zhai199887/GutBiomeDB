@@ -321,6 +321,12 @@ const en = {
   "export.data": "Export Data",
   "export.chart": "Export Chart",
 
+  // Disease ontology
+  "disease.category": "Category",
+  "disease.meshId": "MeSH ID",
+  "disease.icd10": "ICD-10",
+  "disease.standardName": "Standard Name",
+
   // Language switch
   "lang.switch": "中文",
 } as const;
@@ -640,6 +646,12 @@ const zh: Record<keyof typeof en, string> = {
   "export.png": "导出 PNG",
   "export.data": "导出数据",
   "export.chart": "导出图表",
+
+  // Disease ontology
+  "disease.category": "疾病分类",
+  "disease.meshId": "MeSH ID",
+  "disease.icd10": "ICD-10",
+  "disease.standardName": "标准名称",
 
   // Language switch
   "lang.switch": "EN",

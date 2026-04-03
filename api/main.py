@@ -116,6 +116,12 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# ── Disease ontology / 疾病本体映射 ───────────────────────────────────────────
+ONTOLOGY_PATH = os.path.join(os.path.dirname(__file__), "disease_ontology.json")
+with open(ONTOLOGY_PATH, "r", encoding="utf-8") as f:
+    DISEASE_ONTOLOGY: dict = json.load(f)
+logging.info(f"Disease ontology loaded: {len(DISEASE_ONTOLOGY)} entries")
+
 # ── Data loading (cached) / 数据加载（缓存） ──────────────────────────────────
 
 @lru_cache(maxsize=1)
@@ -1004,6 +1010,16 @@ def species_profile(request: Request, genus: str):
     }
 
 
+# ── Disease ontology endpoint / 疾病本体端点 ──────────────────────────────────
+
+@app.get("/api/disease-ontology", tags=["Disease"],
+         summary="Disease ontology mapping",
+         description="Returns standardized disease names, MeSH IDs, ICD-10 codes, and categories for all diseases")
+@limiter.limit("120/minute")
+def disease_ontology(request: Request):
+    return DISEASE_ONTOLOGY
+
+
 # ── Disease browser endpoints / 疾病浏览端点 ─────────────────────────────────
 
 @lru_cache(maxsize=1)
@@ -1039,7 +1055,22 @@ def disease_list(request: Request, q: str = ""):
     if q and q.strip():
         q_lower = q.strip().lower()
         diseases = [d for d in diseases if q_lower in d["name"].lower()]
-    return {"diseases": diseases}
+    # Enrich each disease with ontology info / 为每个疾病附加本体信息
+    enriched = []
+    for d in diseases:
+        entry = dict(d)
+        onto = DISEASE_ONTOLOGY.get(d["name"], {})
+        entry.update({
+            "standard_name": onto.get("standard_name", ""),
+            "standard_name_zh": onto.get("standard_name_zh", ""),
+            "abbreviation": onto.get("abbreviation", ""),
+            "mesh_id": onto.get("mesh_id", ""),
+            "icd10": onto.get("icd10", ""),
+            "category": onto.get("category", ""),
+            "category_zh": onto.get("category_zh", ""),
+        })
+        enriched.append(entry)
+    return {"diseases": enriched}
 
 
 @app.get("/api/disease-profile",
@@ -1152,10 +1183,20 @@ def disease_profile(request: Request, disease: str, top_n: int = 20):
             for k, v in counts.items() if k and k != "nan"
         ][:20]
 
+    # Ontology info / 本体信息
+    onto = DISEASE_ONTOLOGY.get(disease, {})
+
     return {
         "disease": disease,
         "sample_count": len(disease_samples),
         "control_count": len(control_samples),
+        "standard_name": onto.get("standard_name", ""),
+        "standard_name_zh": onto.get("standard_name_zh", ""),
+        "abbreviation": onto.get("abbreviation", ""),
+        "mesh_id": onto.get("mesh_id", ""),
+        "icd10": onto.get("icd10", ""),
+        "category": onto.get("category", ""),
+        "category_zh": onto.get("category_zh", ""),
         "top_genera": genus_stats[:top_n],
         "by_country": count_by("country"),
         "by_age_group": count_by("age_group" if "age_group" in disease_samples.columns else "age"),
