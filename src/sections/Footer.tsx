@@ -44,7 +44,7 @@ const Footer = () => {
             <strong>{locale === "zh" ? "戴聪" : "Cong Dai"}</strong>
             {locale === "zh" ? "（通讯作者）" : " (Corresponding Author)"}
             {" · "}
-            <a href="mailto:congdai2006@sohu.com">congdai2006@sohu.com</a>
+            <a href="mailto:cdai@cmu.edu.cn">cdai@cmu.edu.cn</a>
           </span>
           <span className={classes.contactDivider}>|</span>
           <span className={classes.contactItem}>

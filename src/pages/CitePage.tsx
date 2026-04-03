@@ -8,7 +8,9 @@ import classes from "./CitePage.module.css";
 const BIBTEX = `@article{zhai2025gutmicrobiomeatlas,
   title   = {Gut Microbiome Atlas: a comprehensive platform for exploring
              human gut microbiome across diseases, geography, and lifespan},
-  author  = {Zhai, Jinxia and Dai, Cong},
+  author  = {Zhai, Jinxia and Li, Yingjie and Liu, Jiameng and Su, Xinyi
+             and Cui, Runze and Zheng, Dianyu and Sun, Yuhan and Yu, Jingsheng
+             and Dai, Cong},
   journal = {Manuscript in preparation},
   year    = {2025}
 }`;
@@ -96,8 +98,8 @@ const CitePage = () => {
           <ul className={classes.contactList}>
             <li>
               Email:{" "}
-              <a href="mailto:daicong19901025@163.com">
-                daicong19901025@163.com
+              <a href="mailto:cdai@cmu.edu.cn">
+                cdai@cmu.edu.cn
               </a>
             </li>
             <li>

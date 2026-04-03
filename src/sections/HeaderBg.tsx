@@ -1,210 +1,250 @@
-import { gsap } from "gsap";
-import PoissonDiskSampling from "poisson-disk-sampling";
-import { waitFor } from "@/util/async";
-import { getCssVariable, getMatrix } from "@/util/dom";
-import type { Point } from "@/util/math";
-import { cos, dist, normalize, scale, sin } from "@/util/math";
+import { useEffect, useRef } from "react";
 import classes from "./HeaderBg.module.css";
 
-const HeaderBg = () => <canvas className={classes.canvas}></canvas>;
+/* ── 微生物类型 ── */
+type MicrobeKind = "coccus" | "bacillus" | "spirillum";
 
-/** "oversampling" of canvas */
-const oversample = 2;
+interface Microbe {
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  size: number;
+  kind: MicrobeKind;
+  rotation: number;
+  rotSpeed: number;
+  opacity: number;
+  phase: number;        // 用于脉动动画
+  hue: number;          // 在 primary↔secondary 之间插值
+  pulseSpeed: number;
+}
+
+/* ── 颜色常量 ── */
+const PRIMARY  = { r: 226, g: 63,  b: 255 }; // #e23fff
+const SECONDARY = { r: 85,  g: 110, b: 255 }; // #556eff
+const NETWORK_COLOR = "rgba(170, 183, 255, 0.06)";
+const NETWORK_COLOR_NEAR = "rgba(170, 183, 255, 0.12)";
+
+/* ── 配置 ── */
+const PARTICLE_COUNT = 80;
+const CONNECTION_DIST = 160;
+const MOUSE_RADIUS = 200;
+const MOUSE_FORCE = 0.8;
+const DPR = Math.min(window.devicePixelRatio || 1, 2);
+
+function lerp(a: number, b: number, t: number) {
+  return a + (b - a) * t;
+}
+
+function microbeColor(hue: number, alpha: number): string {
+  const r = Math.round(lerp(PRIMARY.r, SECONDARY.r, hue));
+  const g = Math.round(lerp(PRIMARY.g, SECONDARY.g, hue));
+  const b = Math.round(lerp(PRIMARY.b, SECONDARY.b, hue));
+  return `rgba(${r},${g},${b},${alpha})`;
+}
+
+function createMicrobe(w: number, h: number): Microbe {
+  const kind: MicrobeKind = (["coccus", "bacillus", "spirillum"] as const)[
+    Math.floor(Math.random() * 3)
+  ];
+  return {
+    x: Math.random() * w,
+    y: Math.random() * h,
+    vx: (Math.random() - 0.5) * 0.4,
+    vy: (Math.random() - 0.5) * 0.4,
+    size: kind === "spirillum" ? 3 + Math.random() * 3 : 2 + Math.random() * 4,
+    kind,
+    rotation: Math.random() * Math.PI * 2,
+    rotSpeed: (Math.random() - 0.5) * 0.01,
+    opacity: 0.15 + Math.random() * 0.35,
+    phase: Math.random() * Math.PI * 2,
+    hue: Math.random(),
+    pulseSpeed: 0.005 + Math.random() * 0.015,
+  };
+}
+
+/* ── 绘制不同形态的微生物 ── */
+function drawCoccus(ctx: CanvasRenderingContext2D, m: Microbe, pulse: number) {
+  const r = m.size * (0.9 + pulse * 0.1);
+  ctx.beginPath();
+  ctx.arc(m.x, m.y, r, 0, Math.PI * 2);
+  ctx.fillStyle = microbeColor(m.hue, m.opacity * (0.8 + pulse * 0.2));
+  ctx.fill();
+  // 内部高光
+  ctx.beginPath();
+  ctx.arc(m.x - r * 0.25, m.y - r * 0.25, r * 0.4, 0, Math.PI * 2);
+  ctx.fillStyle = microbeColor(m.hue, m.opacity * 0.15);
+  ctx.fill();
+}
+
+function drawBacillus(ctx: CanvasRenderingContext2D, m: Microbe, pulse: number) {
+  const len = m.size * 2.5;
+  const w = m.size * 0.7 * (0.9 + pulse * 0.1);
+  ctx.save();
+  ctx.translate(m.x, m.y);
+  ctx.rotate(m.rotation);
+  ctx.beginPath();
+  ctx.roundRect(-len / 2, -w / 2, len, w, w);
+  ctx.fillStyle = microbeColor(m.hue, m.opacity * (0.8 + pulse * 0.2));
+  ctx.fill();
+  ctx.restore();
+}
+
+function drawSpirillum(ctx: CanvasRenderingContext2D, m: Microbe, pulse: number) {
+  const amp = m.size * 0.6;
+  const waveLen = m.size * 1.2;
+  const segments = 5;
+  ctx.save();
+  ctx.translate(m.x, m.y);
+  ctx.rotate(m.rotation);
+  ctx.beginPath();
+  ctx.moveTo(-segments * waveLen / 2, 0);
+  for (let i = 0; i < segments; i++) {
+    const x0 = -segments * waveLen / 2 + i * waveLen;
+    const dir = i % 2 === 0 ? 1 : -1;
+    ctx.quadraticCurveTo(
+      x0 + waveLen / 2, dir * amp * (0.9 + pulse * 0.1),
+      x0 + waveLen, 0
+    );
+  }
+  ctx.strokeStyle = microbeColor(m.hue, m.opacity * (0.7 + pulse * 0.3));
+  ctx.lineWidth = m.size * 0.35;
+  ctx.lineCap = "round";
+  ctx.stroke();
+  ctx.restore();
+}
+
+/* ── 主组件 ── */
+const HeaderBg = () => {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    let w = 0;
+    let h = 0;
+    let mouse = { x: -9999, y: -9999 };
+    let animId = 0;
+    const microbes: Microbe[] = [];
+
+    const resize = () => {
+      w = canvas.clientWidth;
+      h = canvas.clientHeight;
+      canvas.width = w * DPR;
+      canvas.height = h * DPR;
+      ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    };
+
+    const init = () => {
+      resize();
+      microbes.length = 0;
+      for (let i = 0; i < PARTICLE_COUNT; i++) {
+        microbes.push(createMicrobe(w, h));
+      }
+    };
+
+    const onMouseMove = (e: MouseEvent) => {
+      const rect = canvas.getBoundingClientRect();
+      mouse = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+    };
+    const onMouseLeave = () => { mouse = { x: -9999, y: -9999 }; };
+
+    const animate = () => {
+      ctx.clearRect(0, 0, w, h);
+
+      /* ── 更新粒子 ── */
+      for (const m of microbes) {
+        // 鼠标排斥
+        const dx = m.x - mouse.x;
+        const dy = m.y - mouse.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        if (dist < MOUSE_RADIUS && dist > 0) {
+          const force = (1 - dist / MOUSE_RADIUS) * MOUSE_FORCE;
+          m.vx += (dx / dist) * force;
+          m.vy += (dy / dist) * force;
+        }
+
+        // 缓慢漂浮
+        m.x += m.vx;
+        m.y += m.vy;
+        m.vx *= 0.99;
+        m.vy *= 0.99;
+        m.rotation += m.rotSpeed;
+        m.phase += m.pulseSpeed;
+
+        // 边界回弹（柔和）
+        if (m.x < -20) m.x = w + 20;
+        if (m.x > w + 20) m.x = -20;
+        if (m.y < -20) m.y = h + 20;
+        if (m.y > h + 20) m.y = -20;
+      }
+
+      /* ── 绘制网络连线 ── */
+      for (let i = 0; i < microbes.length; i++) {
+        for (let j = i + 1; j < microbes.length; j++) {
+          const a = microbes[i];
+          const b = microbes[j];
+          const dx = a.x - b.x;
+          const dy = a.y - b.y;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          if (dist < CONNECTION_DIST) {
+            const alpha = 1 - dist / CONNECTION_DIST;
+            ctx.beginPath();
+            ctx.moveTo(a.x, a.y);
+            ctx.lineTo(b.x, b.y);
+            ctx.strokeStyle = alpha > 0.5 ? NETWORK_COLOR_NEAR : NETWORK_COLOR;
+            ctx.globalAlpha = alpha * 0.5;
+            ctx.lineWidth = 0.5;
+            ctx.stroke();
+            ctx.globalAlpha = 1;
+          }
+        }
+      }
+
+      /* ── 绘制微生物 ── */
+      for (const m of microbes) {
+        const pulse = Math.sin(m.phase) * 0.5 + 0.5;
+        switch (m.kind) {
+          case "coccus":
+            drawCoccus(ctx, m, pulse);
+            break;
+          case "bacillus":
+            drawBacillus(ctx, m, pulse);
+            break;
+          case "spirillum":
+            drawSpirillum(ctx, m, pulse);
+            break;
+        }
+      }
+
+      /* ── 中心光晕 ── */
+      const grd = ctx.createRadialGradient(w / 2, h / 2, 0, w / 2, h / 2, Math.max(w, h) * 0.5);
+      grd.addColorStop(0, "rgba(226, 63, 255, 0.03)");
+      grd.addColorStop(0.4, "rgba(85, 110, 255, 0.015)");
+      grd.addColorStop(1, "rgba(0, 0, 0, 0)");
+      ctx.fillStyle = grd;
+      ctx.fillRect(0, 0, w, h);
+
+      animId = requestAnimationFrame(animate);
+    };
+
+    init();
+    canvas.addEventListener("mousemove", onMouseMove);
+    canvas.addEventListener("mouseleave", onMouseLeave);
+    window.addEventListener("resize", () => { resize(); });
+    animId = requestAnimationFrame(animate);
+
+    return () => {
+      cancelAnimationFrame(animId);
+      canvas.removeEventListener("mousemove", onMouseMove);
+      canvas.removeEventListener("mouseleave", onMouseLeave);
+    };
+  }, []);
+
+  return <canvas ref={canvasRef} className={classes.canvas} />;
+};
 
 export default HeaderBg;
-
-/** run once on app load */
-(async () => {
-  /** wait for necessary elements to load */
-  const canvas = await waitFor(() => document.querySelector("canvas"));
-  const svg = await waitFor(() =>
-    document.querySelector<SVGSVGElement>("#logo"),
-  );
-  const ctx = await waitFor(() => canvas.getContext("2d"));
-
-  /** get all paths in svg to check */
-  const paths = Array.from(svg.querySelectorAll("path")).map((path) => ({
-    path,
-    fill: window.getComputedStyle(path).fill !== "none",
-    stroke: window.getComputedStyle(path).stroke !== "none",
-    transform: getMatrix(svg, path),
-  }));
-
-  const primary = getCssVariable("--primary");
-  const secondary = getCssVariable("--secondary");
-  const gray = getCssVariable("--gray");
-
-  /** size and center canvas */
-  const resize = () => {
-    /** set canvas coordinate dimensions from canvas css dimensions */
-    canvas.width = canvas.clientWidth * oversample;
-    canvas.height = canvas.clientHeight * oversample;
-
-    /** center camera at origin */
-    ctx.translate(canvas.width / 2, canvas.height / 2);
-  };
-  resize();
-  window.addEventListener("resize", resize);
-
-  /** smaller of canvas half width/height */
-  const canvasSize = Math.min(canvas.width, canvas.height) / 2;
-
-  /** particle size */
-  const particleSize = canvasSize / 150;
-
-  /** get bounding box of svg */
-  const [svgLeft = 0, svgTop = 0, svgWidth = 100, svgHeight = 100] = (
-    svg.getAttribute("viewBox") || ""
-  )
-    .split(" ")
-    .map(Number);
-
-  /** larger of svg half width/height */
-  const svgSide = Math.max(svgWidth, svgHeight) / 2;
-
-  /** desired spacing of points, in svg coordinates */
-  const spacing = svgSide / 30;
-
-  /** create evenly spaced points in range of 0 -> width/height */
-  const points: Point[] = new PoissonDiskSampling({
-    shape: [svgWidth, svgHeight],
-    minDistance: spacing,
-    maxDistance: spacing * 1.01,
-    tries: 10,
-  })
-    .fill()
-    /** shift range into range of svg viewbox */
-    .map(([x = 0, y = 0]) => ({ x: x + svgLeft, y: y + svgTop }))
-    /** remove points that aren't inside one of svg's paths */
-    .filter(({ x, y }) =>
-      paths.some(({ path, fill, stroke, transform }) => {
-        let point = svg.createSVGPoint();
-        point.x = x;
-        point.y = y;
-        /** account for transform svg/css properties */
-        point = point.matrixTransform(transform.inverse());
-        /** check if inside */
-        return (
-          (fill && path.isPointInFill(point)) ||
-          (stroke && path.isPointInStroke(point))
-        );
-      }),
-    )
-    /** map svg viewbox range to -0.5 -> 0.5 */
-    .map(({ x, y }) => ({
-      x: (x + svgWidth / 2 + svgLeft) / svgSide,
-      y: (y + svgHeight / 2 + svgTop) / svgSide,
-    }))
-    /** scale to fit canvas */
-    .map(({ x, y }) => ({
-      x: canvasSize * x,
-      y: canvasSize * y,
-    }));
-
-  /** hard limit number of points */
-  while (points.length > 500)
-    points.splice(Math.floor(Math.random() * points.length), 1);
-
-  type Particle = {
-    position: Point;
-    destination: Point;
-    size: number;
-    alpha: number;
-    color: string;
-    spin: number;
-    radius: number;
-    animations: gsap.core.Timeline[];
-  };
-
-  /** create particle for each point */
-  const particles: Particle[] = points.map((point) => ({
-    /** starting values */
-    position: scale(normalize(point), canvasSize * 1.5),
-    destination: point,
-    size: particleSize,
-    color: gray,
-    alpha: 0,
-    spin: Math.random() * 360,
-    radius: 0,
-    animations: [],
-  }));
-
-  /** animate each particle */
-  for (const particle of particles) {
-    const duration = 2;
-    const delay = Math.random() * duration;
-    const ease = "power4.out";
-    particle.animations = [
-      gsap.timeline().to(particle.position, {
-        x: particle.destination.x,
-        y: particle.destination.y,
-        duration,
-        delay,
-        ease,
-      }),
-      gsap
-        .timeline()
-        .to(particle, { alpha: 1, duration: 0.5, delay, ease })
-        .to(particle, { alpha: 0.5, duration, ease }),
-      gsap
-        .timeline({ repeat: -1, yoyo: true, delay: -delay * 4 })
-        .to(particle, { color: gray, duration, ease })
-        .to(particle, { color: primary, duration, ease })
-        .to(particle, { color: secondary, duration, ease }),
-    ];
-  }
-
-  /** draw frame */
-  const frame = () => {
-    /** time in degrees, one full rotation per second */
-    const t = 360 * (window.performance.now() / 1000);
-
-    /** clear canvas */
-    ctx.clearRect(
-      -canvas.width / 2,
-      -canvas.height / 2,
-      canvas.width,
-      canvas.height,
-    );
-
-    /** draw particles */
-    for (const { position, size, color, alpha, spin, radius } of particles) {
-      ctx.globalAlpha = alpha;
-      ctx.fillStyle = color;
-      ctx.beginPath();
-      ctx.arc(
-        position.x + sin(t / 3 + spin) * radius,
-        position.y + cos(t / 3 + spin) * radius,
-        size,
-        0,
-        Math.PI * 2,
-      );
-      ctx.fill();
-    }
-  };
-
-  /** call frames */
-  gsap.ticker.add(frame);
-  gsap.ticker.fps(60);
-
-  /** track mouse */
-  window.addEventListener("mousemove", (event) => {
-    const { left, top } = canvas.getBoundingClientRect();
-    const point = new DOMPoint(event.clientX - left, event.clientY - top);
-    point.x *= oversample;
-    point.y *= oversample;
-    const mouse = point.matrixTransform(ctx.getTransform().inverse());
-    /** bulge particles */
-    for (const particle of particles) {
-      const bulge = 20 * particleSize * 1.01 ** -dist(particle.position, mouse);
-      gsap.to(particle, { radius: bulge });
-    }
-  });
-
-  /** restart animations on click */
-  canvas.addEventListener("click", () =>
-    particles.forEach((particle) =>
-      particle.animations.forEach((animation) => animation.restart()),
-    ),
-  );
-})();
