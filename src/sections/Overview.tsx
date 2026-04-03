@@ -86,7 +86,7 @@ const Overview = () => {
         <>
           {formatNumber(diseases)} disease types
           <br />
-          (curatedMetagenomicData)
+          from <i>inform-all</i>
         </>
       ),
     },
@@ -109,11 +109,7 @@ const Overview = () => {
 
       <p className={classes.methodology}>
         <b>Data &amp; Methods:</b>{" "}
-        Samples sourced from the{" "}
-        <a href="https://bioconductor.org/packages/curatedMetagenomicData" target="_blank" rel="noreferrer">
-          curatedMetagenomicData
-        </a>{" "}
-        compendium (Pasolli <i>et al.</i>, 2017). Taxonomic profiles generated with MetaPhlAn.
+        Taxonomic profiles generated with MetaPhlAn.
         Differential abundance uses Wilcoxon rank-sum test with Benjamini–Hochberg FDR correction (adj. p &lt; 0.05).
         Beta diversity computed as Bray–Curtis dissimilarity, visualised by PCoA.
       </p>

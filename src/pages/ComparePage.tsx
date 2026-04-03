@@ -89,7 +89,7 @@ const ComparePage = () => {
       })
       .catch(() => {
         setFilterLoading(false);
-        setError("Cannot connect to backend API. Please start the API server before running analysis.");
+        setError("Differential analysis backend is under development. Stay tuned! / 差异分析后端正在开发中，敬请期待！");
       });
   }, []);
 
