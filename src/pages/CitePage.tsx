@@ -29,10 +29,12 @@ const CitePage = () => {
   } | null>(null);
 
   useEffect(() => {
-    fetch(`${API_BASE}/api/data-stats`)
+    const controller = new AbortController();
+    fetch(`${API_BASE}/api/data-stats`, { signal: controller.signal })
       .then((r) => r.json())
       .then(setApiStats)
       .catch(() => {});
+    return () => controller.abort();
   }, []);
 
   const STATS = [
@@ -127,11 +129,11 @@ const CitePage = () => {
           <p className={classes.cardText}>{t("cite.contactText")}</p>
           <ul className={classes.contactList}>
             <li>
-              Email:{" "}
+              {t("cite.emailLabel")}:{" "}
               <a href="mailto:cdai@cmu.edu.cn">cdai@cmu.edu.cn</a>
             </li>
             <li>
-              GitHub:{" "}
+              {t("cite.githubLabel")}:{" "}
               <a
                 href="https://github.com/zhai199887/gut-microbiome-atlas"
                 target="_blank"

@@ -2,10 +2,10 @@ import { useI18n } from "@/i18n";
 import classes from "./Footer.module.css";
 
 const Footer = () => {
-  const { t, locale } = useI18n();
+  const { t } = useI18n();
 
   return (
-    <footer>
+    <footer aria-label="Site footer">
       <p>
         {t("footer.project")}{" "}
         <strong>{t("footer.lab")}</strong>,{" "}
@@ -20,15 +20,14 @@ const Footer = () => {
           href="https://www.cmu.edu.cn"
           target="_blank"
           rel="noreferrer"
-          data-tooltip={`${t("footer.university")} · ${t("footer.lab")}`}
+          aria-label={`${t("footer.university")} · ${t("footer.lab")}`}
           className={classes.logoBlock}
         >
           <div className={classes.logoMark} aria-hidden="true">
-            <span>CMU</span>
+            <span>{t("footer.universityShort")}</span>
           </div>
           <div className={classes.logoText}>
-            <span className={classes.logoEn}>China Medical University</span>
-            <span className={classes.logoCn}>中国医科大学</span>
+            <span className={classes.logoEn}>{t("footer.university")}</span>
             <span className={classes.logoDept}>{t("footer.lab")}</span>
           </div>
         </a>
@@ -37,18 +36,18 @@ const Footer = () => {
       {/* Contact / 联系方式 */}
       <div className={classes.contact}>
         <p className={classes.contactTitle}>
-          {locale === "zh" ? "如有问题或合作意向，请联系：" : "For inquiries or collaborations, please contact:"}
+          {t("footer.contactIntro")}
         </p>
         <div className={classes.contactList}>
           <span className={classes.contactItem}>
-            <strong>{locale === "zh" ? "戴聪" : "Cong Dai"}</strong>
-            {locale === "zh" ? "（通讯作者）" : " (Corresponding Author)"}
+            <strong>{t("footer.authorCong")}</strong>
+            {t("footer.corresponding")}
             {" · "}
             <a href="mailto:cdai@cmu.edu.cn">cdai@cmu.edu.cn</a>
           </span>
           <span className={classes.contactDivider}>|</span>
           <span className={classes.contactItem}>
-            <strong>{locale === "zh" ? "翟锦霞" : "Jinxia Zhai"}</strong>
+            <strong>{t("footer.authorZhai")}</strong>
             {" · "}
             <a href="mailto:zhaijinxia07@gmail.com">zhaijinxia07@gmail.com</a>
           </span>

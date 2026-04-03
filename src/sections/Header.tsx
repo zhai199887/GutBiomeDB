@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import Logo from "@/assets/logo.svg?react";
 import LangSwitch from "@/components/LangSwitch";
@@ -7,6 +8,7 @@ import classes from "./Header.module.css";
 
 const Header = () => {
   const { t } = useI18n();
+  const [menuOpen, setMenuOpen] = useState(false);
 
   const NAV_LINKS = [
     { to: "/",           label: t("nav.home") },
@@ -34,9 +36,26 @@ const Header = () => {
 
       <p className={classes.subtitle}>{t("header.subtitle")}</p>
 
-      <nav className={classes.buttons}>
+      {/* Hamburger button for mobile / 移动端汉堡菜单按钮 */}
+      <button
+        className={classes.hamburger}
+        onClick={() => setMenuOpen(!menuOpen)}
+        aria-label="Toggle navigation menu"
+        aria-expanded={menuOpen}
+      >
+        <span className={`${classes.hamburgerLine} ${menuOpen ? classes.hamburgerOpen : ""}`} />
+        <span className={`${classes.hamburgerLine} ${menuOpen ? classes.hamburgerOpen : ""}`} />
+        <span className={`${classes.hamburgerLine} ${menuOpen ? classes.hamburgerOpen : ""}`} />
+      </button>
+
+      <nav className={`${classes.buttons} ${menuOpen ? classes.buttonsOpen : ""}`}>
         {NAV_LINKS.map(({ to, label }) => (
-          <Link key={to} to={to} className={classes.navLink}>
+          <Link
+            key={to}
+            to={to}
+            className={classes.navLink}
+            onClick={() => setMenuOpen(false)}
+          >
             {label}
           </Link>
         ))}

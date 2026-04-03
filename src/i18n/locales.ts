@@ -157,6 +157,11 @@ const en = {
   "footer.project": "A project of the",
   "footer.lab": "Gastroenterology Laboratory",
   "footer.university": "China Medical University",
+  "footer.universityShort": "CMU",
+  "footer.contactIntro": "For inquiries or collaborations, please contact:",
+  "footer.authorCong": "Cong Dai",
+  "footer.corresponding": " (Corresponding Author)",
+  "footer.authorZhai": "Jinxia Zhai",
 
   // Sankey
   "sankey.title": "Taxonomy Flow: Phylum → Genus",
@@ -371,6 +376,8 @@ const en = {
   "cite.changesCol": "Changes",
   "cite.v2Changes": "API documentation with Python/R/cURL examples; CSV/SVG/PNG export for all analysis pages; Disease ontology mapping (204 diseases with MeSH/ICD-10); Rate limiting & API versioning (/api/v1/); About & Cite page; Data preprocessing documentation",
   "cite.v1Changes": "Initial release with 8 analysis modules: Phenotype overview, Disease browser, Differential analysis, Metabolism pathway, Species profile, Network visualization, Lifecycle atlas, Sample similarity search. 11 D3.js chart types, bilingual (EN/ZH) interface",
+  "cite.emailLabel": "Email",
+  "cite.githubLabel": "GitHub",
 
   // Language switch
   "lang.switch": "中文",
@@ -528,6 +535,11 @@ const zh: Record<keyof typeof en, string> = {
   "footer.project": "项目所属",
   "footer.lab": "消化内科实验室",
   "footer.university": "中国医科大学",
+  "footer.universityShort": "CMU",
+  "footer.contactIntro": "如有问题或合作意向，请联系：",
+  "footer.authorCong": "戴聪",
+  "footer.corresponding": "（通讯作者）",
+  "footer.authorZhai": "翟锦霞",
 
   // Sankey
   "sankey.title": "分类流向：门 → 属",
@@ -742,6 +754,8 @@ const zh: Record<keyof typeof en, string> = {
   "cite.changesCol": "更新内容",
   "cite.v2Changes": "Python/R/cURL 示例的 API 文档；所有分析页面支持 CSV/SVG/PNG 导出；疾病本体映射（204 种疾病含 MeSH/ICD-10）；API 限流与版本化（/api/v1/）；关于与引用页面；数据预处理文档",
   "cite.v1Changes": "首次发布，包含 8 个分析模块：表型总览、疾病浏览、差异分析、代谢通路、物种详情、网络可视化、生命周期图谱、样本相似性搜索。11 种 D3.js 图表类型，中英双语界面",
+  "cite.emailLabel": "邮箱",
+  "cite.githubLabel": "GitHub",
 
   // Language switch
   "lang.switch": "EN",

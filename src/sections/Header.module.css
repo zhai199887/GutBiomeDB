@@ -61,6 +61,69 @@
   background: rgba(255, 255, 255, 0.15);
 }
 
+/* Hamburger menu button — hidden on desktop / 汉堡按钮 — 桌面端隐藏 */
+.hamburger {
+  display: none;
+  flex-direction: column;
+  gap: 5px;
+  background: none;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  border-radius: 6px;
+  padding: 8px 10px;
+  cursor: pointer;
+  z-index: 20;
+}
+
+.hamburgerLine {
+  display: block;
+  width: 22px;
+  height: 2px;
+  background: var(--white);
+  border-radius: 2px;
+  transition: transform 0.25s ease, opacity 0.25s ease;
+}
+
+.hamburgerOpen:nth-child(1) {
+  transform: rotate(45deg) translate(3px, 5px);
+}
+.hamburgerOpen:nth-child(2) {
+  opacity: 0;
+}
+.hamburgerOpen:nth-child(3) {
+  transform: rotate(-45deg) translate(3px, -5px);
+}
+
+/* Mobile breakpoint / 移动端断点 */
+@media (max-width: 768px) {
+  .header {
+    padding-top: 60px;
+    padding-bottom: 60px;
+    gap: 20px;
+  }
+
+  .hamburger {
+    display: flex;
+  }
+
+  .buttons {
+    display: none;
+    flex-direction: column;
+    width: 100%;
+    gap: 10px;
+    padding: 0 20px;
+  }
+
+  .buttonsOpen {
+    display: flex;
+  }
+
+  .navLink {
+    width: 100%;
+    text-align: center;
+    padding: 0.5rem;
+    font-size: 0.95rem;
+  }
+}
 
 @media (max-width: 500px) {
   .title {

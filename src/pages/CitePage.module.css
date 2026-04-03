@@ -165,3 +165,49 @@
   vertical-align: top;
   line-height: 1.5;
 }
+
+.tableWrapper {
+  width: 100%;
+  overflow-x: auto;
+}
+
+/* sr-only for table caption */
+:global(.sr-only) {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+@media (max-width: 600px) {
+  .container {
+    padding: 0 1rem 2rem;
+  }
+  .card {
+    padding: 1rem 1.2rem;
+  }
+  .pageTitle {
+    font-size: 1.4rem;
+  }
+  .bibtexCode {
+    font-size: 0.72rem;
+    padding: 0.8rem 1rem;
+  }
+  .statsGrid {
+    grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+    gap: 0.6rem;
+  }
+  .statNumber {
+    font-size: 1.3rem;
+  }
+  .changelogTable th,
+  .changelogTable td {
+    padding: 0.4rem 0.5rem;
+    font-size: 0.82rem;
+  }
+}
