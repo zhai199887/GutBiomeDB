@@ -381,6 +381,10 @@ const en = {
 
   // Language switch
   "lang.switch": "中文",
+
+  // 404 page
+  "notFound.message": "The page you are looking for does not exist.",
+  "notFound.backHome": "Back to Home",
 } as const;
 
 const zh: Record<keyof typeof en, string> = {
@@ -759,6 +763,10 @@ const zh: Record<keyof typeof en, string> = {
 
   // Language switch
   "lang.switch": "EN",
+
+  // 404 page
+  "notFound.message": "您访问的页面不存在。",
+  "notFound.backHome": "返回首页",
 };
 
 export const translations = { en, zh } as const;

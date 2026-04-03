@@ -30,6 +30,7 @@ const LifecyclePage = lazy(() => import("@/pages/LifecyclePage"));
 const SearchPage = lazy(() => import("@/pages/SearchPage"));
 const ApiDocsPage = lazy(() => import("@/pages/ApiDocsPage"));
 const CitePage = lazy(() => import("@/pages/CitePage"));
+const NotFoundPage = lazy(() => import("@/pages/NotFoundPage"));
 
 const PageLoader = () => (
   <div style={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: "60vh" }}>
@@ -47,7 +48,7 @@ const MainPage = () => {
   return (
     <>
       <Header />
-      <main>
+      <main id="main-content">
         <Overview />
         <FilterPanel />
         <MapSection />
@@ -62,6 +63,7 @@ const MainPage = () => {
 const App = () => (
   <I18nProvider>
     <BrowserRouter>
+      <a href="#main-content" className="skip-link">Skip to content</a>
       <Suspense fallback={<PageLoader />}>
         <Routes>
           <Route path="/" element={<MainPage />} />
@@ -77,6 +79,7 @@ const App = () => (
           <Route path="/api-docs" element={<ApiDocsPage />} />
           <Route path="/about" element={<CitePage />} />
           <Route path="/admin" element={<AdminPage />} />
+          <Route path="*" element={<NotFoundPage />} />
         </Routes>
       </Suspense>
     </BrowserRouter>

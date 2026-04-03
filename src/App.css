@@ -222,6 +222,23 @@ svg [data-tooltip]:hover {
   outline: none;
 }
 
+/* Skip-to-content link for accessibility */
+.skip-link {
+  position: absolute;
+  top: -100%;
+  left: 1rem;
+  z-index: 9999;
+  padding: 0.5rem 1rem;
+  background: var(--primary);
+  color: var(--white);
+  border-radius: var(--rounded);
+  font-weight: 600;
+  text-decoration: none;
+}
+.skip-link:focus {
+  top: 1rem;
+}
+
 span[data-tooltip] {
   text-decoration: underline;
   text-decoration-style: dotted;

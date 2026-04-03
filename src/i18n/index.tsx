@@ -30,7 +30,11 @@ function getInitialLocale(): Locale {
 }
 
 export const I18nProvider = ({ children }: { children: ReactNode }) => {
-  const [locale, setLocaleState] = useState<Locale>(getInitialLocale);
+  const [locale, setLocaleState] = useState<Locale>(() => {
+    const l = getInitialLocale();
+    document.documentElement.lang = l === "zh" ? "zh-CN" : "en";
+    return l;
+  });
 
   const setLocale = useCallback((l: Locale) => {
     setLocaleState(l);
