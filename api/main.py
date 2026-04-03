@@ -164,6 +164,19 @@ def iso_to_name(code: str) -> str:
     return COUNTRY_NAMES.get(code, code)
 
 
+# ── Disease name i18n / 疾病名称中英文映射 ────────────────────────────────────
+_DISEASE_ZH_PATH = Path(__file__).parent / "disease_names_zh.json"
+DISEASE_NAMES_ZH: dict[str, str] = {}
+if _DISEASE_ZH_PATH.exists():
+    with open(_DISEASE_ZH_PATH, encoding="utf-8") as f:
+        DISEASE_NAMES_ZH = json.load(f)
+
+
+def disease_to_zh(name: str) -> str:
+    """Return Chinese name if available, else original. / 返回中文疾病名（如有）"""
+    return DISEASE_NAMES_ZH.get(name, name)
+
+
 def extract_genus(col_name: str) -> str:
     """
     Extract genus from full taxonomy string.
@@ -548,6 +561,12 @@ def data_stats():
     }
 
 
+@app.get("/api/disease-names-zh")
+def get_disease_names_zh():
+    """Return disease name Chinese translations / 返回疾病名称中文翻译字典"""
+    return DISEASE_NAMES_ZH
+
+
 @app.post("/api/diff-analysis")
 def diff_analysis(req: DiffAnalysisRequest):
     """
@@ -594,9 +613,16 @@ def diff_analysis(req: DiffAnalysisRequest):
             f"abundance data."
         )
 
-    # Extract abundance matrices / 提取丰度矩阵
-    mat_a = abund.loc[valid_a].values.astype(float)
-    mat_b = abund.loc[valid_b].values.astype(float)
+    # Extract abundance matrices and normalize to relative abundance (%)
+    # 提取丰度矩阵并归一化为相对丰度（%）
+    raw_a = abund.loc[valid_a].values.astype(float)
+    raw_b = abund.loc[valid_b].values.astype(float)
+    totals_a = raw_a.sum(axis=1, keepdims=True)
+    totals_b = raw_b.sum(axis=1, keepdims=True)
+    totals_a[totals_a == 0] = 1
+    totals_b[totals_b == 0] = 1
+    mat_a = raw_a / totals_a * 100
+    mat_b = raw_b / totals_b * 100
     col_names = abund.columns.tolist()
 
     # ── Aggregate by taxonomy level / 按分类层级聚合 ──────────────────────────
@@ -826,7 +852,12 @@ def species_profile(genus: str):
 
     # Sum abundance across all matching columns for the genus
     # 对该属的所有匹配列求和
-    genus_abundance = abund[matching_cols].sum(axis=1)
+    genus_raw = abund[matching_cols].sum(axis=1)
+
+    # Convert to relative abundance (%) per sample
+    # 转换为每样本相对丰度（%）
+    sample_totals = abund.sum(axis=1).replace(0, 1)
+    genus_abundance = genus_raw / sample_totals * 100
 
     # Match to metadata / 与元数据关联
     meta_with_key = meta.set_index("sample_key")
@@ -966,13 +997,13 @@ def disease_profile(disease: str, top_n: int = 20):
     if len(disease_samples) == 0:
         raise HTTPException(404, f"Disease '{disease}' not found")
 
-    # Find healthy control samples (those with no disease in any inform column)
-    # 查找健康对照样本（所有inform列均无疾病标注）
-    control_mask = pd.Series(True, index=meta.index)
+    # Find healthy control samples: NC (Normal Control) in any inform column
+    # 查找健康对照样本：inform0-11 中任一列为 "NC" 的样本
+    control_mask = pd.Series(False, index=meta.index)
     for col in INFORM_COLS:
         if col not in meta.columns:
             continue
-        control_mask &= (meta[col].fillna("").astype(str).str.strip().isin(["", "nan", "control", "healthy"]))
+        control_mask |= (meta[col].fillna("").astype(str).str.strip() == "NC")
     control_samples = meta.loc[control_mask]
 
     # Get abundance for disease and control samples / 获取疾病组和对照组丰度
@@ -988,8 +1019,18 @@ def disease_profile(disease: str, top_n: int = 20):
     disease_abund = abund.loc[common_disease]
     control_abund = abund.loc[common_control] if len(common_control) > 0 else None
 
-    # Compute genus-level mean abundance for disease group
-    # 计算疾病组的属级平均丰度
+    # Normalize to relative abundance (%) per sample
+    # 每个样本转换为相对丰度（%），使所有属的丰度之和 = 100%
+    disease_totals = disease_abund.sum(axis=1).replace(0, 1)  # avoid div by 0
+    disease_rel = disease_abund.div(disease_totals, axis=0) * 100
+
+    control_rel = None
+    if control_abund is not None and len(common_control) > 0:
+        control_totals = control_abund.sum(axis=1).replace(0, 1)
+        control_rel = control_abund.div(control_totals, axis=0) * 100
+
+    # Compute genus-level mean relative abundance for disease group
+    # 计算疾病组的属级平均相对丰度
     genus_map: dict[str, list[str]] = {}
     for col in abund.columns:
         g = extract_genus(col)
@@ -999,14 +1040,14 @@ def disease_profile(disease: str, top_n: int = 20):
     for genus, cols in genus_map.items():
         if not is_valid_genus(genus):
             continue
-        d_vals = disease_abund[cols].sum(axis=1)
+        d_vals = disease_rel[cols].sum(axis=1)
         d_mean = float(d_vals.mean())
         d_prev = float((d_vals > 0).sum() / len(d_vals)) if len(d_vals) > 0 else 0
 
         c_mean = 0.0
         c_prev = 0.0
-        if control_abund is not None and len(common_control) > 0:
-            c_vals = control_abund[cols].sum(axis=1)
+        if control_rel is not None:
+            c_vals = control_rel[cols].sum(axis=1)
             c_mean = float(c_vals.mean())
             c_prev = float((c_vals > 0).sum() / len(c_vals)) if len(c_vals) > 0 else 0
 
@@ -1014,9 +1055,9 @@ def disease_profile(disease: str, top_n: int = 20):
             log2fc = float(np.log2((d_mean + 1e-10) / (c_mean + 1e-10))) if c_mean >= 0 else 0.0
             genus_stats.append({
                 "genus": genus,
-                "disease_mean": round(d_mean, 8),
+                "disease_mean": round(d_mean, 4),
                 "disease_prevalence": round(d_prev, 4),
-                "control_mean": round(c_mean, 8),
+                "control_mean": round(c_mean, 4),
                 "control_prevalence": round(c_prev, 4),
                 "log2fc": round(log2fc, 4),
             })
@@ -1088,7 +1129,10 @@ def microbe_disease_network(top_diseases: int = 15, top_genera: int = 30):
         common = abund.index.intersection(sample_keys)
         if len(common) == 0:
             continue
-        disease_abund = abund.loc[common]
+        disease_abund_raw = abund.loc[common]
+        # Normalize to relative abundance (%) / 转换为相对丰度
+        d_totals = disease_abund_raw.sum(axis=1).replace(0, 1)
+        disease_abund = disease_abund_raw.div(d_totals, axis=0) * 100
 
         # Get top genera for this disease / 获取该疾病的 top 属
         genus_means = []

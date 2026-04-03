@@ -33,25 +33,31 @@ interface NetworkData {
 }
 
 const NetworkPage = () => {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const svgRef = useRef<SVGSVGElement>(null);
   const [data, setData] = useState<NetworkData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [diseaseZh, setDiseaseZh] = useState<Record<string, string>>({});
 
-  // Load network data / 加载网络数据
+  // Load network data + Chinese names / 加载网络数据 + 中文名
   useEffect(() => {
     fetch(`${API_BASE}/api/network?top_diseases=12&top_genera=15`)
       .then((r) => r.json())
       .then((d: NetworkData) => setData(d))
       .catch(() => {})
       .finally(() => setLoading(false));
+    fetch(`${API_BASE}/api/disease-names-zh`)
+      .then((r) => r.json())
+      .then(setDiseaseZh)
+      .catch(() => {});
   }, []);
 
   // Draw force-directed graph / 绘制力导向图
   useEffect(() => {
     if (!svgRef.current || !data) return;
-    drawNetwork(svgRef.current, data);
-  }, [data]);
+    const dName = (name: string) => (locale === "zh" && diseaseZh[name]) ? diseaseZh[name] : name;
+    drawNetwork(svgRef.current, data, dName);
+  }, [data, locale, diseaseZh]);
 
   return (
     <div className={classes.page}>
@@ -93,7 +99,7 @@ export default NetworkPage;
 
 // ── D3 force-directed network / D3 力导向网络 ──────────────────────────────
 
-function drawNetwork(svgEl: SVGSVGElement, rawData: NetworkData) {
+function drawNetwork(svgEl: SVGSVGElement, rawData: NetworkData, dName: (n: string) => string = (n) => n) {
   const svg = d3.select(svgEl);
   svg.selectAll("*").remove();
 
@@ -166,7 +172,10 @@ function drawNetwork(svgEl: SVGSVGElement, rawData: NetworkData) {
     .selectAll("text")
     .data(nodes)
     .join("text")
-    .text((d) => d.id.length > 20 ? d.id.slice(0, 18) + "…" : d.id)
+    .text((d) => {
+      const label = d.type === "disease" ? dName(d.id) : d.id;
+      return label.length > 14 ? label.slice(0, 12) + "…" : label;
+    })
     .attr("font-size", (d) => d.type === "disease" ? 11 : 9)
     .attr("font-style", (d) => d.type === "genus" ? "italic" : "normal")
     .attr("font-weight", (d) => d.type === "disease" ? 600 : 400)

@@ -43,15 +43,16 @@ interface DiseaseProfile {
 }
 
 const DiseasePage = () => {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const [diseases, setDiseases] = useState<DiseaseItem[]>([]);
   const [filtered, setFiltered] = useState<DiseaseItem[]>([]);
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState<string | null>(null);
   const [profile, setProfile] = useState<DiseaseProfile | null>(null);
   const [loading, setLoading] = useState(false);
+  const [diseaseZh, setDiseaseZh] = useState<Record<string, string>>({});
 
-  // Load disease list / 加载疾病列表
+  // Load disease list + Chinese names / 加载疾病列表 + 中文名
   useEffect(() => {
     fetch(`${API_BASE}/api/disease-list`)
       .then((r) => r.json())
@@ -60,17 +61,27 @@ const DiseasePage = () => {
         setFiltered(data.diseases ?? []);
       })
       .catch(() => {});
+    fetch(`${API_BASE}/api/disease-names-zh`)
+      .then((r) => r.json())
+      .then(setDiseaseZh)
+      .catch(() => {});
   }, []);
 
-  // Filter diseases / 筛选疾病
+  // Helper: translate disease name / 翻译疾病名
+  const dName = (name: string) => (locale === "zh" && diseaseZh[name]) ? diseaseZh[name] : name;
+
+  // Filter diseases (search both English and Chinese names) / 筛选疾病（支持中英文搜索）
   useEffect(() => {
     if (!search.trim()) {
       setFiltered(diseases);
     } else {
       const q = search.trim().toLowerCase();
-      setFiltered(diseases.filter((d) => d.name.toLowerCase().includes(q)));
+      setFiltered(diseases.filter((d) =>
+        d.name.toLowerCase().includes(q) ||
+        (diseaseZh[d.name] ?? "").toLowerCase().includes(q)
+      ));
     }
-  }, [search, diseases]);
+  }, [search, diseases, diseaseZh]);
 
   // Select disease / 选择疾病
   const selectDisease = useCallback((name: string) => {
@@ -116,7 +127,7 @@ const DiseasePage = () => {
                 className={selected === d.name ? classes.diseaseItemActive : classes.diseaseItem}
                 onClick={() => selectDisease(d.name)}
               >
-                <span>{d.name}</span>
+                <span>{dName(d.name)}</span>
                 <span className={classes.diseaseCount}>
                   {d.sample_count.toLocaleString("en")}
                 </span>
@@ -135,7 +146,7 @@ const DiseasePage = () => {
             <div className={classes.loading}>{t("search.searching")}</div>
           )}
 
-          {profile && <ProfileView profile={profile} />}
+          {profile && <ProfileView profile={profile} dName={dName} />}
         </div>
       </div>
     </div>
@@ -146,7 +157,7 @@ export default DiseasePage;
 
 // ── Profile visualization / 画像可视化 ─────────────────────────────────────
 
-const ProfileView = ({ profile }: { profile: DiseaseProfile }) => {
+const ProfileView = ({ profile, dName }: { profile: DiseaseProfile; dName: (n: string) => string }) => {
   const { t } = useI18n();
   const barRef = useRef<SVGSVGElement>(null);
 
@@ -162,7 +173,7 @@ const ProfileView = ({ profile }: { profile: DiseaseProfile }) => {
       <div className={classes.profileHeader}>
         <div className={classes.statCard}>
           <span className={classes.statValue}>{profile.sample_count.toLocaleString("en")}</span>
-          <span className={classes.statLabel}>{profile.disease} {t("disease.samples")}</span>
+          <span className={classes.statLabel}>{dName(profile.disease)} {t("disease.samples")}</span>
         </div>
         <div className={classes.statCard}>
           <span className={classes.statValue}>{profile.control_count.toLocaleString("en")}</span>
@@ -201,8 +212,8 @@ const ProfileView = ({ profile }: { profile: DiseaseProfile }) => {
                     {g.genus}
                   </Link>
                 </td>
-                <td>{(g.disease_mean * 100).toFixed(4)}%</td>
-                <td>{(g.control_mean * 100).toFixed(4)}%</td>
+                <td>{g.disease_mean.toFixed(4)}%</td>
+                <td>{g.control_mean.toFixed(4)}%</td>
                 <td className={g.log2fc > 0 ? classes.enriched : classes.depleted}>
                   {g.log2fc > 0 ? "+" : ""}{g.log2fc.toFixed(2)}
                 </td>
@@ -296,7 +307,7 @@ function drawComparisonChart(svgEl: SVGSVGElement, data: GenusEntry[]) {
       renderToString(
         <div className="tooltip-table">
           <span>Genus</span><span><i>{d.genus}</i></span>
-          <span>Disease Mean</span><span>{(d.disease_mean * 100).toFixed(4)}%</span>
+          <span>Disease Mean</span><span>{d.disease_mean.toFixed(4)}%</span>
           <span>Prevalence</span><span>{(d.disease_prevalence * 100).toFixed(1)}%</span>
           <span>Log₂FC</span><span>{d.log2fc.toFixed(2)}</span>
         </div>
@@ -318,7 +329,7 @@ function drawComparisonChart(svgEl: SVGSVGElement, data: GenusEntry[]) {
       renderToString(
         <div className="tooltip-table">
           <span>Genus</span><span><i>{d.genus}</i></span>
-          <span>Control Mean</span><span>{(d.control_mean * 100).toFixed(4)}%</span>
+          <span>Control Mean</span><span>{d.control_mean.toFixed(4)}%</span>
           <span>Control Prevalence</span><span>{(d.control_prevalence * 100).toFixed(1)}%</span>
         </div>
       )
@@ -334,7 +345,7 @@ function drawComparisonChart(svgEl: SVGSVGElement, data: GenusEntry[]) {
   // X axis / X轴
   g.append("g")
     .attr("transform", `translate(0,${iH})`)
-    .call(d3.axisBottom(xScale).ticks(5).tickFormat((d) => `${(Number(d) * 100).toFixed(2)}%`))
+    .call(d3.axisBottom(xScale).ticks(5).tickFormat((d) => `${Number(d).toFixed(2)}%`))
     .attr("font-size", 9);
 
   // Legend / 图例
