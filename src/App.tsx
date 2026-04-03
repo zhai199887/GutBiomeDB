@@ -25,6 +25,13 @@ const DiseasePage = lazy(() => import("@/pages/DiseasePage"));
 const NetworkPage = lazy(() => import("@/pages/NetworkPage"));
 const SpeciesPage = lazy(() => import("@/pages/SpeciesPage"));
 const AdminPage = lazy(() => import("@/pages/AdminPage"));
+const BiomarkerPage = lazy(() => import("@/pages/BiomarkerPage"));
+const ChordPage = lazy(() => import("@/pages/ChordPage"));
+const CooccurrencePage = lazy(() => import("@/pages/CooccurrencePage"));
+const LollipopPage = lazy(() => import("@/pages/LollipopPage"));
+const DownloadPage = lazy(() => import("@/pages/DownloadPage"));
+const SimilarityPage = lazy(() => import("@/pages/SimilarityPage"));
+const LifecyclePage = lazy(() => import("@/pages/LifecyclePage"));
 
 const PageLoader = () => (
   <div style={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: "60vh" }}>
@@ -67,6 +74,13 @@ const App = () => (
           <Route path="/network" element={<NetworkPage />} />
           <Route path="/metabolism" element={<MetabolismPage />} />
           <Route path="/species/:taxon" element={<SpeciesPage />} />
+          <Route path="/biomarker" element={<BiomarkerPage />} />
+          <Route path="/chord" element={<ChordPage />} />
+          <Route path="/cooccurrence" element={<CooccurrencePage />} />
+          <Route path="/lollipop" element={<LollipopPage />} />
+          <Route path="/download" element={<DownloadPage />} />
+          <Route path="/similarity" element={<SimilarityPage />} />
+          <Route path="/lifecycle" element={<LifecyclePage />} />
           <Route path="/admin" element={<AdminPage />} />
         </Routes>
       </Suspense>

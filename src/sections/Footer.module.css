@@ -64,6 +64,42 @@
   margin-top: 0.2rem;
 }
 
+/* Contact banner / 联系信息栏 */
+.contact {
+  margin-top: 2rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  text-align: center;
+}
+
+.contactTitle {
+  font-size: 0.85rem;
+  color: var(--gray);
+  margin-bottom: 0.6rem;
+}
+
+.contactList {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 0.8rem;
+  flex-wrap: wrap;
+  font-size: 0.9rem;
+}
+
+.contactItem a {
+  color: var(--primary);
+  text-decoration: none;
+}
+
+.contactItem a:hover {
+  text-decoration: underline;
+}
+
+.contactDivider {
+  color: rgba(255, 255, 255, 0.2);
+}
+
 @media (max-width: 800px) {
   .logoBlock {
     padding: 0.75rem 1.25rem;

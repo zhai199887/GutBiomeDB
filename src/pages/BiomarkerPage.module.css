@@ -1,0 +1,65 @@
+.page { max-width: 1100px; margin: 0 auto; padding: 2rem; }
+.topBar { margin-bottom: 2rem; }
+.topBar h1 { font-size: 1.8rem; margin: 0.5rem 0; }
+.topBar p { color: var(--gray); font-size: 0.95rem; }
+.back { color: var(--accent); text-decoration: none; font-size: 0.9rem; }
+
+.controls { display: flex; gap: 1rem; align-items: flex-end; margin-bottom: 2rem; flex-wrap: wrap; }
+.field { display: flex; flex-direction: column; gap: 0.3rem; }
+.field label { font-size: 0.8rem; color: var(--gray); }
+.select {
+  padding: 0.5rem 0.8rem;
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 6px;
+  color: inherit;
+  min-width: 180px;
+}
+.runBtn {
+  padding: 0.5rem 1.5rem;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+}
+.runBtn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.statsRow { display: flex; gap: 1.5rem; margin-bottom: 2rem; flex-wrap: wrap; }
+.statCard {
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 10px;
+  padding: 1rem 1.5rem;
+  text-align: center;
+}
+.statValue { display: block; font-size: 1.6rem; font-weight: 700; color: var(--accent); }
+.statLabel { font-size: 0.8rem; color: var(--gray); }
+
+.chartCard {
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 12px;
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+.chartCard h3 { margin: 0 0 1rem; font-size: 1.1rem; }
+.chart { width: 100%; min-height: 400px; }
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+.table th, .table td {
+  padding: 0.5rem 0.8rem;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+  text-align: left;
+}
+.table th { color: var(--gray); font-weight: 600; font-size: 0.8rem; }
+.enriched { color: #ff6b6b; }
+.depleted { color: #4ecdc4; }
+
+.loading { text-align: center; padding: 3rem; color: var(--gray); }
+.noResults { text-align: center; padding: 2rem; color: var(--gray); }

@@ -2,7 +2,7 @@ import { useI18n } from "@/i18n";
 import classes from "./Footer.module.css";
 
 const Footer = () => {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
 
   return (
     <footer>
@@ -32,6 +32,27 @@ const Footer = () => {
             <span className={classes.logoDept}>{t("footer.lab")}</span>
           </div>
         </a>
+      </div>
+
+      {/* Contact / 联系方式 */}
+      <div className={classes.contact}>
+        <p className={classes.contactTitle}>
+          {locale === "zh" ? "如有问题或合作意向，请联系：" : "For inquiries or collaborations, please contact:"}
+        </p>
+        <div className={classes.contactList}>
+          <span className={classes.contactItem}>
+            <strong>{locale === "zh" ? "戴聪" : "Cong Dai"}</strong>
+            {locale === "zh" ? "（通讯作者）" : " (Corresponding Author)"}
+            {" · "}
+            <a href="mailto:congdai2006@sohu.com">congdai2006@sohu.com</a>
+          </span>
+          <span className={classes.contactDivider}>|</span>
+          <span className={classes.contactItem}>
+            <strong>{locale === "zh" ? "翟金霞" : "Jinxia Zhai"}</strong>
+            {" · "}
+            <a href="mailto:zhaijinxia07@gmail.com">zhaijinxia07@gmail.com</a>
+          </span>
+        </div>
       </div>
     </footer>
   );

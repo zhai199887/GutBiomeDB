@@ -1,0 +1,59 @@
+.page { max-width: 900px; margin: 0 auto; padding: 2rem; }
+.topBar { margin-bottom: 2rem; }
+.topBar h1 { font-size: 1.8rem; margin: 0.5rem 0; }
+.topBar p { color: var(--gray); font-size: 0.95rem; }
+.back { color: var(--accent); text-decoration: none; font-size: 0.9rem; }
+.back:hover { text-decoration: underline; }
+
+.cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1.5rem; }
+.card {
+  background: var(--card-bg, rgba(255,255,255,0.05));
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 12px;
+  padding: 1.5rem;
+}
+.card h3 { margin: 0 0 0.5rem; font-size: 1.1rem; }
+.card p { color: var(--gray); font-size: 0.85rem; margin-bottom: 1rem; }
+
+.formatRow { display: flex; gap: 0.5rem; align-items: center; }
+.formatSelect {
+  flex: 1;
+  padding: 0.4rem 0.6rem;
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 6px;
+  color: inherit;
+  font-size: 0.85rem;
+}
+.downloadBtn {
+  padding: 0.4rem 1rem;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.85rem;
+}
+.downloadBtn:hover { opacity: 0.85; }
+
+.codeSection { margin-top: 2.5rem; }
+.codeSection h2 { font-size: 1.3rem; margin-bottom: 1rem; }
+.codeBlock {
+  background: rgba(0,0,0,0.3);
+  border-radius: 8px;
+  padding: 1rem;
+  overflow-x: auto;
+  font-family: monospace;
+  font-size: 0.8rem;
+  line-height: 1.5;
+  margin-bottom: 1rem;
+  white-space: pre;
+}
+.codeLabel {
+  display: inline-block;
+  background: rgba(255,255,255,0.1);
+  padding: 0.2rem 0.6rem;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  margin-bottom: 0.5rem;
+}

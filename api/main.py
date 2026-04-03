@@ -23,6 +23,7 @@ from pydantic import BaseModel
 from scipy import stats
 from scipy.spatial.distance import cdist
 from dotenv import load_dotenv
+from analysis import wilcoxon_marker_test, spearman_cooccurrence, sample_similarity_search
 
 # Configure logging / 配置日志
 logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
@@ -208,6 +209,13 @@ class DiffAnalysisRequest(BaseModel):
     group_b_filter: GroupFilter
     taxonomy_level: str = "genus"   # phylum / genus
     method: str = "wilcoxon"        # wilcoxon / t-test / lefse / permanova
+
+
+class SimilarityRequest(BaseModel):
+    """样本相似性搜索请求模型"""
+    abundances: dict[str, float]  # genus_name -> abundance_value / 属名 -> 丰度值
+    metric: str = "braycurtis"    # braycurtis or jaccard / 距离度量
+    top_k: int = 10               # 返回最相似样本数量
 
 
 # ── Helper functions / 辅助函数 ────────────────────────────────────────────────
@@ -1224,6 +1232,670 @@ async def validate_metadata_endpoint(
         return validate_metadata(tmp_path)
     finally:
         os.unlink(tmp_path)
+
+
+# ── Data download endpoints / 数据下载端点 ────────────────────────────────────
+
+from fastapi.responses import StreamingResponse
+import io
+import csv as csv_mod
+
+
+@app.get("/api/download/summary-stats")
+def download_summary_stats(format: str = "csv"):
+    """
+    Download aggregated summary statistics (NOT raw sample data).
+    下载聚合统计数据（不提供原始样本数据）
+
+    Returns sample counts by country, disease, age group, and sex.
+    """
+    meta = get_metadata()
+    INFORM_COLS = [f"inform{i}" for i in range(12)]
+
+    # Country stats / 国家统计
+    country_counts = meta["country"].value_counts().to_dict()
+    # Disease stats / 疾病统计
+    disease_counts: dict[str, int] = {}
+    for col in INFORM_COLS:
+        if col in meta.columns:
+            for val in meta[col].dropna().astype(str).str.strip():
+                if val and val != "nan" and val != "":
+                    disease_counts[val] = disease_counts.get(val, 0) + 1
+    # Age group stats / 年龄组统计
+    age_counts = meta["age_group"].value_counts().to_dict() if "age_group" in meta.columns else {}
+    # Sex stats / 性别统计
+    sex_counts = meta["sex"].value_counts().to_dict() if "sex" in meta.columns else {}
+
+    if format == "json":
+        return {
+            "total_samples": len(meta),
+            "by_country": country_counts,
+            "by_disease": disease_counts,
+            "by_age_group": age_counts,
+            "by_sex": sex_counts,
+        }
+
+    # CSV format: flatten to rows
+    rows = []
+    for k, v in country_counts.items():
+        rows.append({"category": "country", "name": iso_to_name(k), "count": v})
+    for k, v in sorted(disease_counts.items(), key=lambda x: x[1], reverse=True):
+        rows.append({"category": "disease", "name": k, "count": v})
+    for k, v in age_counts.items():
+        rows.append({"category": "age_group", "name": k, "count": v})
+    for k, v in sex_counts.items():
+        rows.append({"category": "sex", "name": k, "count": v})
+
+    sep = "\t" if format == "tsv" else ","
+    buf = io.StringIO()
+    writer = csv_mod.DictWriter(buf, fieldnames=["category", "name", "count"], delimiter=sep)
+    writer.writeheader()
+    writer.writerows(rows)
+    buf.seek(0)
+    ext = "tsv" if format == "tsv" else "csv"
+    return StreamingResponse(
+        iter([buf.getvalue()]),
+        media_type="text/csv",
+        headers={"Content-Disposition": f"attachment; filename=summary_stats.{ext}"}
+    )
+
+
+@app.get("/api/download/disease-profile")
+def download_disease_profile_data(disease: str, format: str = "csv"):
+    """Download disease profile data / 下载疾病画像数据"""
+    profile = disease_profile(disease, top_n=50)
+    rows = profile["top_genera"]
+
+    if format == "json":
+        return rows
+
+    sep = "\t" if format == "tsv" else ","
+    buf = io.StringIO()
+    if rows:
+        writer = csv_mod.DictWriter(buf, fieldnames=rows[0].keys(), delimiter=sep)
+        writer.writeheader()
+        writer.writerows(rows)
+    buf.seek(0)
+    ext = "tsv" if format == "tsv" else "csv"
+    return StreamingResponse(
+        iter([buf.getvalue()]),
+        media_type="text/csv",
+        headers={"Content-Disposition": f"attachment; filename={disease}_profile.{ext}"}
+    )
+
+
+@app.get("/api/download/species-profile")
+def download_species_profile_data(genus: str, format: str = "csv"):
+    """Download species profile data / 下载物种画像数据"""
+    profile = species_profile(genus)
+
+    if format == "json":
+        return profile
+
+    rows = profile.get("by_disease", [])
+    sep = "\t" if format == "tsv" else ","
+    buf = io.StringIO()
+    if rows:
+        writer = csv_mod.DictWriter(buf, fieldnames=rows[0].keys(), delimiter=sep)
+        writer.writeheader()
+        writer.writerows(rows)
+    buf.seek(0)
+    ext = "tsv" if format == "tsv" else "csv"
+    return StreamingResponse(
+        iter([buf.getvalue()]),
+        media_type="text/csv",
+        headers={"Content-Disposition": f"attachment; filename={genus}_profile.{ext}"}
+    )
+
+
+@app.get("/api/download/genus-list")
+def download_genus_list(format: str = "csv"):
+    """Download list of all genera / 下载所有属名列表"""
+    genera = get_genus_list()
+
+    if format == "json":
+        return {"genera": genera}
+
+    buf = io.StringIO()
+    buf.write("genus\n")
+    for g in genera:
+        buf.write(f"{g}\n")
+    buf.seek(0)
+    ext = "tsv" if format == "tsv" else "csv"
+    return StreamingResponse(
+        iter([buf.getvalue()]),
+        media_type="text/csv",
+        headers={"Content-Disposition": f"attachment; filename=genus_list.{ext}"}
+    )
+
+
+@app.get("/api/biomarker-discovery")
+def biomarker_discovery(disease: str, lda_threshold: float = 2.0, p_threshold: float = 0.05):
+    """
+    Discover biomarker taxa for a given disease vs healthy controls.
+    发现疾病标志物：疾病组 vs 健康对照的显著差异属
+    """
+    if not disease or not disease.strip():
+        raise HTTPException(400, "disease parameter is required")
+    disease = disease.strip()
+
+    meta = get_metadata()
+    abund = get_abundance()
+
+    INFORM_COLS = [f"inform{i}" for i in range(12)]
+    disease_mask = pd.Series(False, index=meta.index)
+    for col in INFORM_COLS:
+        if col in meta.columns:
+            disease_mask |= (meta[col].fillna("").astype(str).str.strip() == disease)
+    disease_samples = meta.loc[disease_mask]
+
+    if len(disease_samples) == 0:
+        raise HTTPException(404, f"Disease '{disease}' not found")
+
+    control_mask = pd.Series(False, index=meta.index)
+    for col in INFORM_COLS:
+        if col in meta.columns:
+            control_mask |= (meta[col].fillna("").astype(str).str.strip() == "NC")
+    control_samples = meta.loc[control_mask]
+
+    d_keys = disease_samples["sample_key"].dropna().unique()
+    c_keys = control_samples["sample_key"].dropna().unique()
+    d_valid = abund.index.intersection(d_keys)
+    c_valid = abund.index.intersection(c_keys)
+
+    if len(d_valid) < 5:
+        raise HTTPException(400, f"Too few disease samples with abundance data: {len(d_valid)}")
+    if len(c_valid) < 5:
+        raise HTTPException(400, f"Too few control samples with abundance data: {len(c_valid)}")
+
+    # Subsample control if too large
+    np.random.seed(42)
+    if len(c_valid) > 5000:
+        c_valid = c_valid[np.random.choice(len(c_valid), 5000, replace=False)]
+
+    d_raw = abund.loc[d_valid].values.astype(float)
+    c_raw = abund.loc[c_valid].values.astype(float)
+
+    d_totals = d_raw.sum(axis=1, keepdims=True); d_totals[d_totals == 0] = 1
+    c_totals = c_raw.sum(axis=1, keepdims=True); c_totals[c_totals == 0] = 1
+    d_rel = d_raw / d_totals * 100
+    c_rel = c_raw / c_totals * 100
+
+    col_names = abund.columns.tolist()
+    genus_labels = [extract_genus(c) for c in col_names]
+    unique_genera = list(dict.fromkeys(genus_labels))
+
+    d_agg = np.zeros((d_rel.shape[0], len(unique_genera)))
+    c_agg = np.zeros((c_rel.shape[0], len(unique_genera)))
+    for i, g in enumerate(unique_genera):
+        idxs = [j for j, l in enumerate(genus_labels) if l == g]
+        d_agg[:, i] = d_rel[:, idxs].sum(axis=1)
+        c_agg[:, i] = c_rel[:, idxs].sum(axis=1)
+
+    valid_mask = [is_valid_genus(g) for g in unique_genera]
+    valid_indices = [i for i, v in enumerate(valid_mask) if v]
+    valid_genera = [unique_genera[i] for i in valid_indices]
+    d_filtered = d_agg[:, valid_indices]
+    c_filtered = c_agg[:, valid_indices]
+
+    markers = wilcoxon_marker_test(d_filtered, c_filtered, valid_genera, p_threshold)
+    markers = [m for m in markers if m["lda_score"] >= lda_threshold]
+
+    return {
+        "disease": disease,
+        "n_disease": len(d_valid),
+        "n_control": len(c_valid),
+        "n_markers": len(markers),
+        "lda_threshold": lda_threshold,
+        "p_threshold": p_threshold,
+        "markers": markers[:100],
+    }
+
+
+@app.get("/api/lollipop-data")
+def lollipop_data(disease: str, top_n: int = 40):
+    """
+    Return differential abundance data for lollipop plot.
+    返回棒棒糖图格式的差异丰度数据
+    """
+    if not disease or not disease.strip():
+        raise HTTPException(400, "disease parameter is required")
+    disease = disease.strip()
+
+    meta = get_metadata()
+    abund = get_abundance()
+
+    INFORM_COLS = [f"inform{i}" for i in range(12)]
+    disease_mask = pd.Series(False, index=meta.index)
+    for col in INFORM_COLS:
+        if col in meta.columns:
+            disease_mask |= (meta[col].fillna("").astype(str).str.strip() == disease)
+    disease_samples = meta.loc[disease_mask]
+
+    control_mask = pd.Series(False, index=meta.index)
+    for col in INFORM_COLS:
+        if col in meta.columns:
+            control_mask |= (meta[col].fillna("").astype(str).str.strip() == "NC")
+    control_samples = meta.loc[control_mask]
+
+    d_keys = abund.index.intersection(disease_samples["sample_key"].dropna().unique())
+    c_keys = abund.index.intersection(control_samples["sample_key"].dropna().unique())
+
+    if len(d_keys) == 0 or len(c_keys) == 0:
+        raise HTTPException(404, "Insufficient samples")
+
+    d_raw = abund.loc[d_keys].values.astype(float)
+    c_raw = abund.loc[c_keys].values.astype(float)
+    d_t = d_raw.sum(axis=1, keepdims=True); d_t[d_t == 0] = 1
+    c_t = c_raw.sum(axis=1, keepdims=True); c_t[c_t == 0] = 1
+    d_rel = d_raw / d_t * 100
+    c_rel = c_raw / c_t * 100
+
+    col_names = abund.columns.tolist()
+    results = []
+
+    genus_map: dict[str, list[int]] = {}
+    genus_phylum: dict[str, str] = {}
+    for j, col in enumerate(col_names):
+        g = extract_genus(col)
+        if not is_valid_genus(g):
+            continue
+        genus_map.setdefault(g, []).append(j)
+        if g not in genus_phylum:
+            genus_phylum[g] = extract_phylum(col)
+
+    for genus, idxs in genus_map.items():
+        d_vals = d_rel[:, idxs].sum(axis=1)
+        c_vals = c_rel[:, idxs].sum(axis=1)
+        mean_d = float(np.mean(d_vals))
+        mean_c = float(np.mean(c_vals))
+
+        pseudo = 1e-6
+        log2fc = float(np.log2((mean_d + pseudo) / (mean_c + pseudo)))
+
+        try:
+            _, p = stats.mannwhitneyu(d_vals, c_vals, alternative="two-sided")
+        except Exception:
+            p = 1.0
+
+        neg_log10p = -math.log10(max(float(p), 1e-300))
+
+        results.append({
+            "genus": genus,
+            "phylum": genus_phylum.get(genus, "Unknown"),
+            "log2fc": round(log2fc, 4),
+            "neg_log10p": round(neg_log10p, 2),
+            "p_value": round(float(p), 8),
+            "mean_disease": round(mean_d, 6),
+            "mean_control": round(mean_c, 6),
+        })
+
+    results.sort(key=lambda x: abs(x["log2fc"]), reverse=True)
+    return {
+        "disease": disease,
+        "n_disease": len(d_keys),
+        "n_control": len(c_keys),
+        "data": results[:top_n],
+    }
+
+
+@app.get("/api/chord-data")
+def chord_data(top_diseases: int = 10, top_genera: int = 12):
+    """
+    Return disease-genus association matrix for chord diagram.
+    返回疾病-属关联矩阵用于弦图
+    """
+    meta = get_metadata()
+    abund = get_abundance()
+
+    INFORM_COLS = [f"inform{i}" for i in range(12)]
+
+    disease_counts: dict[str, set] = {}
+    for col in INFORM_COLS:
+        if col not in meta.columns:
+            continue
+        for idx, val in meta[col].dropna().items():
+            val = str(val).strip()
+            if val and val != "nan" and val != "NC":
+                disease_counts.setdefault(val, set()).add(idx)
+
+    top_d = sorted(disease_counts.items(), key=lambda x: len(x[1]), reverse=True)[:top_diseases]
+    disease_names = [d[0] for d in top_d]
+
+    genus_map: dict[str, list[str]] = {}
+    genus_phylum: dict[str, str] = {}
+    for col in abund.columns:
+        g = extract_genus(col)
+        if is_valid_genus(g):
+            genus_map.setdefault(g, []).append(col)
+            if g not in genus_phylum:
+                genus_phylum[g] = extract_phylum(col)
+
+    sample_totals = abund.sum(axis=1).replace(0, 1)
+    global_genus_means: list[tuple[str, float]] = []
+    for g, cols in genus_map.items():
+        mean_val = float((abund[cols].sum(axis=1) / sample_totals * 100).mean())
+        global_genus_means.append((g, mean_val))
+    global_genus_means.sort(key=lambda x: x[1], reverse=True)
+    genus_names = [g[0] for g in global_genus_means[:top_genera]]
+
+    matrix: list[list[float]] = []
+    for disease_name in disease_names:
+        sample_indices = list(disease_counts[disease_name])
+        sample_keys = meta.loc[sample_indices, "sample_key"].dropna().unique()
+        common = abund.index.intersection(sample_keys)
+        row = []
+        if len(common) > 0:
+            d_abund = abund.loc[common]
+            d_totals = d_abund.sum(axis=1).replace(0, 1)
+            for g in genus_names:
+                cols = genus_map.get(g, [])
+                if cols:
+                    mean_val = float((d_abund[cols].sum(axis=1) / d_totals * 100).mean())
+                else:
+                    mean_val = 0.0
+                row.append(round(mean_val, 4))
+        else:
+            row = [0.0] * len(genus_names)
+        matrix.append(row)
+
+    return {
+        "diseases": disease_names,
+        "genera": genus_names,
+        "phyla": [genus_phylum.get(g, "Unknown") for g in genus_names],
+        "matrix": matrix,
+    }
+
+
+@app.get("/api/cooccurrence")
+def cooccurrence_network(
+    disease: str = "",
+    min_r: float = 0.3,
+    top_genera: int = 50,
+    max_samples: int = 3000,
+):
+    """
+    Compute genus co-occurrence network based on Spearman correlation.
+    基于 Spearman 相关性计算属共现网络
+    """
+    meta = get_metadata()
+    abund = get_abundance()
+
+    INFORM_COLS = [f"inform{i}" for i in range(12)]
+
+    if disease and disease.strip():
+        mask = pd.Series(False, index=meta.index)
+        for col in INFORM_COLS:
+            if col in meta.columns:
+                mask |= (meta[col].fillna("").astype(str).str.strip() == disease.strip())
+        sample_keys = meta.loc[mask, "sample_key"].dropna().unique()
+    else:
+        mask = pd.Series(False, index=meta.index)
+        for col in INFORM_COLS:
+            if col in meta.columns:
+                mask |= (meta[col].fillna("").astype(str).str.strip() == "NC")
+        sample_keys = meta.loc[mask, "sample_key"].dropna().unique()
+
+    valid_keys = abund.index.intersection(sample_keys)
+    if len(valid_keys) < 10:
+        raise HTTPException(400, "Too few samples for correlation analysis")
+
+    np.random.seed(42)
+    if len(valid_keys) > max_samples:
+        valid_keys = valid_keys[np.random.choice(len(valid_keys), max_samples, replace=False)]
+
+    raw = abund.loc[valid_keys].values.astype(float)
+    totals = raw.sum(axis=1, keepdims=True)
+    totals[totals == 0] = 1
+    rel = raw / totals * 100
+
+    col_names = abund.columns.tolist()
+    genus_labels = [extract_genus(c) for c in col_names]
+    unique_genera = list(dict.fromkeys(genus_labels))
+
+    valid_genera = [g for g in unique_genera if is_valid_genus(g)]
+
+    genus_means = []
+    genus_indices: dict[str, list[int]] = {}
+    for g in valid_genera:
+        idxs = [j for j, l in enumerate(genus_labels) if l == g]
+        genus_indices[g] = idxs
+        mean_val = float(rel[:, idxs].sum(axis=1).mean())
+        genus_means.append((g, mean_val))
+
+    genus_means.sort(key=lambda x: x[1], reverse=True)
+    top_genera_names = [g[0] for g in genus_means[:top_genera]]
+
+    genus_matrix = np.zeros((len(valid_keys), len(top_genera_names)))
+    for i, g in enumerate(top_genera_names):
+        genus_matrix[:, i] = rel[:, genus_indices[g]].sum(axis=1)
+
+    edges = spearman_cooccurrence(
+        genus_matrix, top_genera_names,
+        min_prevalence=0.1, min_abs_r=min_r, max_pairs=500
+    )
+
+    node_set = set()
+    for e in edges:
+        node_set.add(e["source"])
+        node_set.add(e["target"])
+
+    nodes = []
+    for g in top_genera_names:
+        if g in node_set:
+            nodes.append({
+                "id": g,
+                "mean_abundance": round(float(genus_matrix[:, top_genera_names.index(g)].mean()), 4),
+            })
+
+    return {
+        "disease": disease or "Healthy (NC)",
+        "n_samples": len(valid_keys),
+        "n_genera": len(nodes),
+        "n_edges": len(edges),
+        "min_r": min_r,
+        "nodes": nodes,
+        "edges": edges,
+    }
+
+
+AGE_GROUP_ORDER = ["Infant", "Child", "Adolescent", "Adult", "Older_Adult", "Oldest_Old", "Centenarian", "Unknown"]
+
+
+@app.get("/api/lifecycle")
+def lifecycle_atlas(
+    disease: str = "",
+    country: str = "",
+    top_genera: int = 15,
+):
+    """
+    Return genus composition across 8 life stages.
+    返回 8 个生命阶段的属级组成
+    """
+    meta = get_metadata()
+    abund = get_abundance()
+
+    if "age_group" not in meta.columns:
+        raise HTTPException(400, "age_group column not found in metadata")
+
+    filtered = meta.copy()
+    INFORM_COLS = [f"inform{i}" for i in range(12)]
+    if disease and disease.strip():
+        mask = pd.Series(False, index=filtered.index)
+        for col in INFORM_COLS:
+            if col in filtered.columns:
+                mask |= (filtered[col].fillna("").astype(str).str.strip() == disease.strip())
+        filtered = filtered[mask]
+    else:
+        mask = pd.Series(False, index=filtered.index)
+        for col in INFORM_COLS:
+            if col in filtered.columns:
+                mask |= (filtered[col].fillna("").astype(str).str.strip() == "NC")
+        filtered = filtered[mask]
+
+    if country and country.strip():
+        filtered = filtered[filtered["country"].str.upper() == country.strip().upper()]
+
+    if len(filtered) < 10:
+        raise HTTPException(400, "Too few samples after filtering")
+
+    valid_keys = abund.index.intersection(filtered["sample_key"].dropna().unique())
+    if len(valid_keys) < 10:
+        raise HTTPException(400, "Too few samples with abundance data")
+
+    raw = abund.loc[valid_keys].values.astype(float)
+    totals = raw.sum(axis=1, keepdims=True)
+    totals[totals == 0] = 1
+    rel = raw / totals * 100
+
+    col_names = abund.columns.tolist()
+    genus_labels = [extract_genus(c) for c in col_names]
+    unique_genera = list(dict.fromkeys(genus_labels))
+
+    genus_indices: dict[str, list[int]] = {}
+    genus_means_list: list[tuple[str, float]] = []
+    for g in unique_genera:
+        if not is_valid_genus(g):
+            continue
+        idxs = [j for j, l in enumerate(genus_labels) if l == g]
+        genus_indices[g] = idxs
+        genus_means_list.append((g, float(rel[:, idxs].sum(axis=1).mean())))
+
+    genus_means_list.sort(key=lambda x: x[1], reverse=True)
+    top_genus_names = [g[0] for g in genus_means_list[:top_genera]]
+
+    key_to_age = dict(zip(filtered["sample_key"], filtered["age_group"].fillna("Unknown").astype(str).str.strip()))
+    sample_ages = [key_to_age.get(k, "Unknown") for k in valid_keys]
+
+    age_groups_present = [ag for ag in AGE_GROUP_ORDER if ag in set(sample_ages)]
+    stacked_data = []
+
+    for ag in age_groups_present:
+        ag_indices = [i for i, a in enumerate(sample_ages) if a == ag]
+        if len(ag_indices) == 0:
+            continue
+
+        ag_rel = rel[ag_indices]
+        row: dict = {"age_group": ag, "sample_count": len(ag_indices)}
+
+        for g in top_genus_names:
+            idxs = genus_indices[g]
+            row[g] = round(float(ag_rel[:, idxs].sum(axis=1).mean()), 4)
+
+        top_sum = sum(row[g] for g in top_genus_names)
+        row["Other"] = round(max(0, 100 - top_sum), 4)
+
+        stacked_data.append(row)
+
+    transitions = []
+    for i in range(1, len(stacked_data)):
+        prev = stacked_data[i - 1]
+        curr = stacked_data[i]
+        max_change_genus = ""
+        max_change = 0.0
+        for g in top_genus_names:
+            change = abs(curr.get(g, 0) - prev.get(g, 0))
+            if change > max_change:
+                max_change = change
+                max_change_genus = g
+        if max_change > 0.5:
+            transitions.append({
+                "from": prev["age_group"],
+                "to": curr["age_group"],
+                "genus": max_change_genus,
+                "change": round(max_change, 4),
+                "direction": "increase" if curr.get(max_change_genus, 0) > prev.get(max_change_genus, 0) else "decrease",
+            })
+
+    return {
+        "disease": disease or "Healthy (NC)",
+        "country": country or "All",
+        "total_samples": len(valid_keys),
+        "genera": top_genus_names + ["Other"],
+        "data": stacked_data,
+        "transitions": transitions,
+    }
+
+
+# ── 样本相似性搜索 API / Sample Similarity Search ─────────────────────────────
+
+
+@app.get("/api/genus-names")
+async def get_genus_names():
+    """返回丰度矩阵所有属名列表（供前端下载模板用）。
+    Return list of genus names from abundance matrix columns.
+    """
+    abund = get_abundance()
+    genera = sorted(set(extract_genus(c) for c in abund.columns))
+    # 过滤无效属名
+    genera = [g for g in genera if g and g not in ("", "NA", "unknown")]
+    return {"genera": genera, "count": len(genera)}
+
+
+@app.post("/api/similarity-search")
+async def similarity_search(req: SimilarityRequest):
+    """接收用户上传的丰度向量，返回 Top-K 最相似样本。
+    Receive user abundance vector, return Top-K most similar samples.
+    注意：不暴露批量原始数据，仅返回样本ID、距离、元数据摘要。
+    """
+    # ── 参数校验 ──
+    if req.metric not in ("braycurtis", "jaccard"):
+        raise HTTPException(400, "metric must be 'braycurtis' or 'jaccard'")
+    if req.top_k < 1 or req.top_k > 50:
+        raise HTTPException(400, "top_k must be between 1 and 50")
+    if not req.abundances:
+        raise HTTPException(400, "abundances dict must not be empty")
+
+    abund = get_abundance()
+    meta = get_metadata()
+
+    # ── 构建列名映射：属名 -> 丰度矩阵列名 ──
+    col_genus_map: dict[str, str] = {}
+    for c in abund.columns:
+        g = extract_genus(c)
+        if g and is_valid_genus(g):
+            col_genus_map[g.lower()] = c
+
+    # ── 将用户提交的属名->丰度值对齐到丰度矩阵的列顺序 ──
+    query_vector = np.zeros(len(abund.columns), dtype=float)
+    matched_genera = 0
+    for genus_name, value in req.abundances.items():
+        col_name = col_genus_map.get(genus_name.lower().strip())
+        if col_name is not None:
+            idx = abund.columns.get_loc(col_name)
+            query_vector[idx] = float(value)
+            matched_genera += 1
+
+    if matched_genera == 0:
+        raise HTTPException(400, "No matching genera found in the abundance matrix")
+
+    # ── 调用 analysis.py 中的相似性搜索函数 ──
+    results = sample_similarity_search(
+        query_vector=query_vector,
+        abundance_matrix=abund.values,
+        sample_keys=list(abund.index),
+        metric=req.metric,
+        top_k=req.top_k,
+    )
+
+    # ── 补充元数据信息（疾病、国家等） ──
+    for item in results:
+        key = item["sample_key"]
+        if key in meta.index:
+            row = meta.loc[key]
+            item["disease"] = str(row.get("disease", "Unknown"))
+            item["country"] = str(row.get("country", "Unknown"))
+        else:
+            item["disease"] = "Unknown"
+            item["country"] = "Unknown"
+
+    return {
+        "metric": req.metric,
+        "top_k": req.top_k,
+        "matched_genera": matched_genera,
+        "total_genera": len(col_genus_map),
+        "results": results,
+    }
 
 
 if __name__ == "__main__":

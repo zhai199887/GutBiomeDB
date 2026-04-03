@@ -1,0 +1,28 @@
+.page { max-width: 1000px; margin: 0 auto; padding: 2rem; }
+.topBar { margin-bottom: 2rem; }
+.topBar h1 { font-size: 1.8rem; margin: 0.5rem 0; }
+.topBar p { color: var(--gray); font-size: 0.95rem; }
+.back { color: var(--accent); text-decoration: none; font-size: 0.9rem; }
+
+.controls { display: flex; gap: 1rem; align-items: flex-end; margin-bottom: 1.5rem; flex-wrap: wrap; }
+.field { display: flex; flex-direction: column; gap: 0.3rem; }
+.field label { font-size: 0.8rem; color: var(--gray); }
+.select {
+  padding: 0.4rem 0.6rem;
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 6px;
+  color: inherit;
+  min-width: 100px;
+}
+
+.chordContainer {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 600px;
+}
+.chordSvg { width: 100%; max-width: 700px; height: auto; }
+
+.loading { text-align: center; padding: 3rem; color: var(--gray); }
+.hint { text-align: center; color: var(--gray); font-size: 0.85rem; margin-top: 0.5rem; }
