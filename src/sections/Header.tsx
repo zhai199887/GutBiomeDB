@@ -19,6 +19,7 @@ const Header = () => {
     { to: "/similarity", label: t("nav.similarity") },
     { to: "/search",     label: t("nav.search") },
     { to: "/api-docs",   label: t("nav.apiDocs") },
+    { to: "/about",     label: t("nav.cite") },
   ] as const;
 
   return (

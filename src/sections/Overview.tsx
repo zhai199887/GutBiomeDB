@@ -141,6 +141,13 @@ const Overview = () => {
         </p>
       )}
 
+      <p style={{ textAlign: "center", color: "#888", fontSize: "0.85rem", marginTop: "1rem" }}>
+        Data from NCBI SRA, ENA &amp; DDBJ public repositories.
+        <Link to="/about" style={{ color: "var(--accent)", marginLeft: "0.5rem" }}>
+          Learn more &amp; cite
+        </Link>
+      </p>
+
       {/* Quick-access cards / 快速入口卡片 */}
       <div className={classes.featureGrid}>
         {FEATURE_CARDS.map(({ to, title, desc, color }) => (

@@ -327,6 +327,24 @@ const en = {
   "disease.icd10": "ICD-10",
   "disease.standardName": "Standard Name",
 
+  // About & Cite page
+  "nav.cite": "About",
+  "cite.title": "About & Cite",
+  "cite.dataSources": "Data Sources",
+  "cite.dataSourcesText": "Gut Microbiome Atlas integrates 168,464 human gut 16S rRNA gene sequencing samples from public repositories including NCBI SRA, ENA, and DDBJ. Samples span 69 countries, 217+ disease conditions, and 8 life stages from Infant to Centenarian.",
+  "cite.pipeline": "Bioinformatics Pipeline",
+  "cite.pipelineText": "All samples were processed through a unified pipeline: quality control (fastp), taxonomy classification (Kraken2 + Bracken at genus level), reference database (GTDB r220), abundance normalization (relative abundance).",
+  "cite.howToCite": "How to Cite",
+  "cite.citeText": "If you use Gut Microbiome Atlas in your research, please cite:",
+  "cite.citation": "Zhai J, Dai C. Gut Microbiome Atlas: a comprehensive platform for exploring human gut microbiome across diseases, geography, and lifespan. [Manuscript in preparation]",
+  "cite.contact": "Contact",
+  "cite.contactText": "For questions, data requests, or collaboration inquiries:",
+  "cite.disclaimer": "Disclaimer",
+  "cite.disclaimerText": "This database is for research purposes only. The data should not be used for clinical diagnosis or treatment decisions.",
+  "cite.copyBibtex": "Copy BibTeX",
+  "cite.copied": "Copied!",
+  "cite.stats": "Database Statistics",
+
   // Language switch
   "lang.switch": "中文",
 } as const;
@@ -652,6 +670,24 @@ const zh: Record<keyof typeof en, string> = {
   "disease.meshId": "MeSH ID",
   "disease.icd10": "ICD-10",
   "disease.standardName": "标准名称",
+
+  // About & Cite page
+  "nav.cite": "关于",
+  "cite.title": "关于与引用",
+  "cite.dataSources": "数据来源",
+  "cite.dataSourcesText": "肠道微生物图谱整合了来自 NCBI SRA、ENA 和 DDBJ 等公共数据库的 168,464 份人类肠道 16S rRNA 基因测序样本，覆盖 69 个国家、217+ 种疾病状态和从婴儿到百岁老人的 8 个生命阶段。",
+  "cite.pipeline": "生物信息学分析流程",
+  "cite.pipelineText": "所有样本经过统一流程处理：质控（fastp）、分类注释（Kraken2 + Bracken，属级水平）、参考数据库（GTDB r220）、丰度标准化（相对丰度）。",
+  "cite.howToCite": "如何引用",
+  "cite.citeText": "如果您在研究中使用了肠道微生物图谱，请引用：",
+  "cite.citation": "翟锦霞, 戴聪. Gut Microbiome Atlas：一个综合性的人类肠道微生物组跨疾病、地理和生命周期探索平台。[稿件准备中]",
+  "cite.contact": "联系方式",
+  "cite.contactText": "如有问题、数据请求或合作咨询：",
+  "cite.disclaimer": "免责声明",
+  "cite.disclaimerText": "本数据库仅供科研使用，数据不得用于临床诊断或治疗决策。",
+  "cite.copyBibtex": "复制 BibTeX",
+  "cite.copied": "已复制！",
+  "cite.stats": "数据库统计",
 
   // Language switch
   "lang.switch": "EN",

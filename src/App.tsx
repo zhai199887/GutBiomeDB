@@ -29,6 +29,7 @@ const SimilarityPage = lazy(() => import("@/pages/SimilarityPage"));
 const LifecyclePage = lazy(() => import("@/pages/LifecyclePage"));
 const SearchPage = lazy(() => import("@/pages/SearchPage"));
 const ApiDocsPage = lazy(() => import("@/pages/ApiDocsPage"));
+const CitePage = lazy(() => import("@/pages/CitePage"));
 
 const PageLoader = () => (
   <div style={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: "60vh" }}>
@@ -74,6 +75,7 @@ const App = () => (
           <Route path="/lifecycle" element={<LifecyclePage />} />
           <Route path="/search" element={<SearchPage />} />
           <Route path="/api-docs" element={<ApiDocsPage />} />
+          <Route path="/about" element={<CitePage />} />
           <Route path="/admin" element={<AdminPage />} />
         </Routes>
       </Suspense>

@@ -1,0 +1,144 @@
+.container {
+  max-width: 900px;
+  margin: 2rem auto;
+  padding: 0 1.5rem 3rem;
+}
+
+.backLink {
+  display: inline-block;
+  margin-bottom: 1.5rem;
+  color: var(--accent, #4a90d9);
+  text-decoration: none;
+  font-size: 0.95rem;
+}
+.backLink:hover {
+  text-decoration: underline;
+}
+
+.pageTitle {
+  font-size: 1.8rem;
+  font-weight: 700;
+  margin-bottom: 2rem;
+  color: var(--text, #222);
+}
+
+.card {
+  background: #fff;
+  border: 1px solid #e0e0e0;
+  border-radius: 10px;
+  padding: 1.5rem 2rem;
+  margin-bottom: 1.5rem;
+}
+
+.cardTitle {
+  font-size: 1.15rem;
+  font-weight: 600;
+  margin-bottom: 0.75rem;
+  color: var(--primary, #2c5282);
+}
+
+.cardText {
+  font-size: 0.95rem;
+  line-height: 1.7;
+  color: #444;
+}
+
+.pipelineList {
+  list-style: disc inside;
+  padding-left: 0.5rem;
+  margin-top: 0.5rem;
+  font-size: 0.93rem;
+  line-height: 1.8;
+  color: #555;
+}
+
+.citation {
+  font-style: italic;
+  margin: 0.75rem 0;
+  color: #333;
+  line-height: 1.6;
+}
+
+.bibtexWrapper {
+  position: relative;
+  margin-top: 1rem;
+}
+
+.bibtexCode {
+  background: #1e1e2e;
+  color: #cdd6f4;
+  font-family: "Fira Code", "Cascadia Code", "Consolas", monospace;
+  font-size: 0.82rem;
+  line-height: 1.6;
+  padding: 1.2rem 1.5rem;
+  border-radius: 8px;
+  overflow-x: auto;
+  white-space: pre;
+}
+
+.copyBtn {
+  position: absolute;
+  top: 0.6rem;
+  right: 0.6rem;
+  background: rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  color: #cdd6f4;
+  padding: 0.3rem 0.75rem;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 0.8rem;
+  transition: background 0.2s;
+}
+.copyBtn:hover {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+.statsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 1rem;
+  margin-top: 0.5rem;
+}
+
+.statItem {
+  text-align: center;
+  padding: 1rem 0.5rem;
+  background: #f7f9fc;
+  border-radius: 8px;
+}
+
+.statNumber {
+  display: block;
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: var(--primary, #2c5282);
+}
+
+.statLabel {
+  display: block;
+  font-size: 0.82rem;
+  color: #777;
+  margin-top: 0.25rem;
+}
+
+.contactList {
+  list-style: none;
+  padding: 0;
+  margin: 0.5rem 0 0;
+  font-size: 0.93rem;
+  line-height: 2;
+}
+
+.contactList a {
+  color: var(--accent, #4a90d9);
+  text-decoration: none;
+}
+.contactList a:hover {
+  text-decoration: underline;
+}
+
+.disclaimer {
+  font-size: 0.9rem;
+  color: #888;
+  line-height: 1.6;
+}
