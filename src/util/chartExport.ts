@@ -15,7 +15,7 @@ export function exportSVG(svgElement: SVGSVGElement, filename: string) {
   clone.insertBefore(bg, clone.firstChild);
   // Add watermark
   const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
-  const vb = clone.getAttribute("viewBox")?.split(" ").map(Number) ?? [0, 0, 800, 600];
+  const vb = clone.getAttribute("viewBox")?.split(/[\s,]+/).map(Number) ?? [0, 0, 800, 600];
   text.setAttribute("x", String(vb[2] - 10));
   text.setAttribute("y", String(vb[3] - 8));
   text.setAttribute("text-anchor", "end");
@@ -44,7 +44,7 @@ export function exportPNG(svgElement: SVGSVGElement, filename: string, scale = 2
   bg.setAttribute("fill", "white");
   clone.insertBefore(bg, clone.firstChild);
   const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
-  const vb = clone.getAttribute("viewBox")?.split(" ").map(Number) ?? [0, 0, 800, 600];
+  const vb = clone.getAttribute("viewBox")?.split(/[\s,]+/).map(Number) ?? [0, 0, 800, 600];
   text.setAttribute("x", String(vb[2] - 10));
   text.setAttribute("y", String(vb[3] - 8));
   text.setAttribute("text-anchor", "end");

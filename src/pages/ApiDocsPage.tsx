@@ -57,8 +57,8 @@ const ENDPOINTS: Endpoint[] = [
     params: [
       { name: "q", type: "string", required: true, description: "Search query (e.g. 'Blautia')" },
     ],
-    python: (b) => `import requests\n\nres = requests.get("${b}/api/species-search", params={"q": "Blautia"})\nfor g in res.json():\n    print(g["genus"], g["prevalence"])`,
-    r: (b) => `library(httr)\nlibrary(jsonlite)\n\nres <- GET("${b}/api/species-search", query = list(q = "Blautia"))\ndf <- fromJSON(content(res, "text"))\nprint(df)`,
+    python: (b) => `import requests\n\nres = requests.get("${b}/api/species-search", params={"q": "Blautia"})\nfor g in res.json()["results"]:\n    print(g)`,
+    r: (b) => `library(httr)\nlibrary(jsonlite)\n\nres <- GET("${b}/api/species-search", query = list(q = "Blautia"))\ndata <- fromJSON(content(res, "text"))\nprint(data$results)`,
     curl: (b) => `curl -s "${b}/api/species-search?q=Blautia" | python -m json.tool`,
   },
   // 4. GET /api/species-profile
@@ -82,8 +82,8 @@ const ENDPOINTS: Endpoint[] = [
     category: "disease",
     summary: "List all diseases",
     description: "Returns the full list of diseases with sample counts.",
-    python: (b) => `import requests\n\nres = requests.get("${b}/api/disease-list")\nfor d in res.json():\n    print(d["disease"], d["sample_count"])`,
-    r: (b) => `library(httr)\nlibrary(jsonlite)\n\nres <- GET("${b}/api/disease-list")\ndf <- fromJSON(content(res, "text"))\nprint(head(df))`,
+    python: (b) => `import requests\n\nres = requests.get("${b}/api/disease-list")\nfor d in res.json()["diseases"]:\n    print(d["name"], d["sample_count"])`,
+    r: (b) => `library(httr)\nlibrary(jsonlite)\n\nres <- GET("${b}/api/disease-list")\ndata <- fromJSON(content(res, "text"))\nprint(head(data$diseases))`,
     curl: (b) => `curl -s "${b}/api/disease-list" | python -m json.tool`,
   },
   // 6. GET /api/disease-profile
@@ -162,8 +162,8 @@ const ENDPOINTS: Endpoint[] = [
       { name: "country", type: "string", required: false, description: "Filter by country" },
       { name: "top_genera", type: "integer", required: false, description: "Number of top genera (default 15)" },
     ],
-    python: (b) => `import requests\n\nres = requests.get("${b}/api/lifecycle", params={"top_genera": 10})\ndata = res.json()\nfor stage in data["stages"]:\n    print(stage["label"], len(stage["genera"]))`,
-    r: (b) => `library(httr)\nlibrary(jsonlite)\n\nres <- GET("${b}/api/lifecycle", query = list(top_genera = 10))\ndata <- fromJSON(content(res, "text"))\nprint(data$stages)`,
+    python: (b) => `import requests\n\nres = requests.get("${b}/api/lifecycle", params={"top_genera": 10})\ndata = res.json()\nprint(f"Total samples: {data['total_samples']}")\nfor row in data["data"]:\n    print(row["age_group"], row["sample_count"])`,
+    r: (b) => `library(httr)\nlibrary(jsonlite)\n\nres <- GET("${b}/api/lifecycle", query = list(top_genera = 10))\ndata <- fromJSON(content(res, "text"))\nprint(data$data)`,
     curl: (b) => `curl -s "${b}/api/lifecycle?top_genera=10" | python -m json.tool`,
   },
   // 11. POST /api/similarity-search
@@ -178,7 +178,7 @@ const ENDPOINTS: Endpoint[] = [
       metric: "braycurtis",
       top_k: 10,
     },
-    python: (b) => `import requests\n\npayload = {\n    "abundances": {"Bacteroides": 0.25, "Prevotella": 0.15, "Faecalibacterium": 0.10},\n    "metric": "braycurtis",\n    "top_k": 10\n}\nres = requests.post("${b}/api/similarity-search", json=payload)\nfor hit in res.json()["results"]:\n    print(hit["sample_id"], hit["distance"])`,
+    python: (b) => `import requests\n\npayload = {\n    "abundances": {"Bacteroides": 0.25, "Prevotella": 0.15, "Faecalibacterium": 0.10},\n    "metric": "braycurtis",\n    "top_k": 10\n}\nres = requests.post("${b}/api/similarity-search", json=payload)\nfor hit in res.json()["results"]:\n    print(hit["sample_key"], hit["distance"])`,
     r: (b) => `library(httr)\nlibrary(jsonlite)\n\npayload <- list(\n  abundances = list(Bacteroides = 0.25, Prevotella = 0.15, Faecalibacterium = 0.10),\n  metric = "braycurtis",\n  top_k = 10\n)\nres <- POST("${b}/api/similarity-search",\n  body = toJSON(payload, auto_unbox = TRUE),\n  content_type_json())\nresults <- fromJSON(content(res, "text"))$results\nprint(results)`,
     curl: (b) => `curl -s -X POST "${b}/api/similarity-search" \\\n  -H "Content-Type: application/json" \\\n  -d '{"abundances":{"Bacteroides":0.25,"Prevotella":0.15,"Faecalibacterium":0.10},"metric":"braycurtis","top_k":10}' \\\n  | python -m json.tool`,
   },
@@ -311,6 +311,14 @@ const ApiDocsPage = () => {
         <div className={css.infoCard}>
           <h4>{t("apiDocs.rateLimit")}</h4>
           <p>{t("apiDocs.rateLimitDesc")}</p>
+        </div>
+        <div className={css.infoCard}>
+          <h4>Interactive Docs</h4>
+          <p>
+            <a href={`${API_BASE}/api/docs`} target="_blank" rel="noopener noreferrer" style={{ color: "var(--accent)", textDecoration: "underline" }}>Swagger UI</a>
+            {" · "}
+            <a href={`${API_BASE}/api/redoc`} target="_blank" rel="noopener noreferrer" style={{ color: "var(--accent)", textDecoration: "underline" }}>ReDoc</a>
+          </p>
         </div>
       </div>
 
