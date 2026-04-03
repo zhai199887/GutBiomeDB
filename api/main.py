@@ -710,6 +710,135 @@ def diff_analysis(req: DiffAnalysisRequest):
     return response
 
 
+# ── Species search & profile endpoints / 物种搜索与画像端点 ──────────────────
+
+@lru_cache(maxsize=1)
+def get_genus_list() -> list[str]:
+    """Return sorted list of all genus names from abundance data. / 返回丰度数据中所有属名"""
+    abund = get_abundance()
+    genera = sorted(set(extract_genus(c) for c in abund.columns))
+    return genera
+
+
+@app.get("/api/species-search")
+def species_search(q: str = ""):
+    """
+    Autocomplete genus search. Returns up to 20 matching genus names.
+    属名自动补全搜索，返回最多20个匹配结果
+    """
+    if not q or len(q.strip()) < 2:
+        return {"results": []}
+    q_lower = q.strip().lower()
+    genera = get_genus_list()
+    # Prefix matches first, then contains matches / 前缀匹配优先，其次包含匹配
+    prefix = [g for g in genera if g.lower().startswith(q_lower)]
+    contains = [g for g in genera if q_lower in g.lower() and g not in prefix]
+    return {"results": (prefix + contains)[:20]}
+
+
+@app.get("/api/species-profile")
+def species_profile(genus: str):
+    """
+    Return a comprehensive profile for a given genus:
+    为给定属返回综合画像：
+    - Total sample count where genus is present / 含该属的总样本数
+    - Mean abundance by disease / 各疾病中的平均丰度
+    - Mean abundance by country / 各国家中的平均丰度
+    - Mean abundance by age group / 各年龄组中的平均丰度
+    - Mean abundance by sex / 各性别中的平均丰度
+    """
+    meta = get_metadata()
+    abund = get_abundance()
+
+    if not genus or not genus.strip():
+        raise HTTPException(400, "genus parameter is required")
+
+    genus = genus.strip()
+
+    # Find matching columns in abundance matrix / 在丰度矩阵中查找匹配列
+    matching_cols = [c for c in abund.columns if extract_genus(c).lower() == genus.lower()]
+    if not matching_cols:
+        raise HTTPException(404, f"Genus '{genus}' not found in abundance data")
+
+    # Resolve the canonical genus name / 解析标准属名
+    canonical_name = extract_genus(matching_cols[0])
+
+    # Sum abundance across all matching columns for the genus
+    # 对该属的所有匹配列求和
+    genus_abundance = abund[matching_cols].sum(axis=1)
+
+    # Match to metadata / 与元数据关联
+    meta_with_key = meta.set_index("sample_key")
+    common_keys = genus_abundance.index.intersection(meta_with_key.index)
+
+    if len(common_keys) == 0:
+        raise HTTPException(404, "No matching samples between abundance and metadata")
+
+    ga = genus_abundance.loc[common_keys]
+    mm = meta_with_key.loc[common_keys]
+
+    # Overall stats / 总体统计
+    present_count = int((ga > 0).sum())
+    total_count = len(ga)
+    mean_abundance = float(ga.mean())
+    prevalence = present_count / total_count if total_count > 0 else 0
+
+    # Helper: group mean abundance / 辅助函数：按分组计算平均丰度
+    def group_means(col_name: str, top_n: int = 30) -> list[dict]:
+        if col_name not in mm.columns:
+            return []
+        grouped = mm.groupby(mm[col_name].fillna("unknown").astype(str).str.strip())
+        results = []
+        for name, group_idx in grouped.groups.items():
+            if not name or name == "nan" or name == "unknown":
+                continue
+            vals = ga.loc[group_idx]
+            results.append({
+                "name": name,
+                "mean_abundance": round(float(vals.mean()), 8),
+                "prevalence": round(float((vals > 0).sum() / len(vals)), 4),
+                "sample_count": len(vals),
+            })
+        results.sort(key=lambda x: x["mean_abundance"], reverse=True)
+        return results[:top_n]
+
+    # Disease distribution (from inform0-11) / 疾病分布（来自inform0-11）
+    INFORM_COLS = [f"inform{i}" for i in range(12)]
+    disease_data: dict[str, list[float]] = {}
+    for col in INFORM_COLS:
+        if col not in mm.columns:
+            continue
+        for disease_name, group_idx in mm.groupby(mm[col].fillna("").astype(str).str.strip()).groups.items():
+            if not disease_name or disease_name == "nan" or disease_name == "":
+                continue
+            if disease_name not in disease_data:
+                disease_data[disease_name] = []
+            disease_data[disease_name].extend(ga.loc[group_idx].tolist())
+
+    by_disease = []
+    for disease_name, vals_list in disease_data.items():
+        arr = np.array(vals_list)
+        by_disease.append({
+            "name": disease_name,
+            "mean_abundance": round(float(arr.mean()), 8),
+            "prevalence": round(float((arr > 0).sum() / len(arr)), 4),
+            "sample_count": len(arr),
+        })
+    by_disease.sort(key=lambda x: x["mean_abundance"], reverse=True)
+
+    return {
+        "genus": canonical_name,
+        "total_samples": total_count,
+        "present_samples": present_count,
+        "prevalence": round(prevalence, 4),
+        "mean_abundance": round(mean_abundance, 8),
+        "by_disease": by_disease[:50],
+        "by_country": group_means("country", 30),
+        "by_age_group": group_means("age_group" if "age_group" in mm.columns else "age", 10),
+        "by_sex": group_means("sex", 5),
+    }
+
+
 # ── Data management endpoints / 数据管理端点 ──────────────────────────────────
 
 def _check_admin(token: str | None):

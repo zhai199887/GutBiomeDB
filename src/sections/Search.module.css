@@ -1,6 +1,207 @@
-.cols {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(400px, 100%), 1fr));
+/* Search.module.css — Species Search Engine styles */
+
+.searchContainer {
+  position: relative;
+  max-width: 600px;
+  margin: 0 auto 2rem;
+}
+
+.searchBox {
+  display: flex;
+  gap: 0;
+  border: 1px solid var(--gray);
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--dark-gray);
+}
+
+.searchInput {
+  flex: 1;
+  padding: 0.7rem 1rem;
+  border: none;
+  background: transparent;
+  color: var(--white);
+  font-size: 1rem;
+  font-family: inherit;
+  outline: none;
+}
+
+.searchInput::placeholder {
+  color: var(--light-gray);
+  font-style: italic;
+}
+
+.searchBtn {
+  padding: 0.7rem 1.5rem;
+  border: none;
+  background: var(--primary);
+  color: var(--black);
+  font-weight: 600;
+  cursor: pointer;
+  font-size: 0.95rem;
+  transition: opacity 0.15s;
+}
+
+.searchBtn:hover {
+  opacity: 0.85;
+}
+
+.searchBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.suggestions {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: var(--dark-gray);
+  border: 1px solid var(--gray);
+  border-top: none;
+  border-radius: 0 0 8px 8px;
+  z-index: 10;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.suggestionItem {
+  display: block;
   width: 100%;
-  gap: 40px 60px;
+  padding: 0.5rem 1rem;
+  text-align: left;
+  border: none;
+  background: none;
+  color: var(--white);
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: background 0.1s;
+}
+
+.suggestionItem:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.errorMsg {
+  text-align: center;
+  color: #ff6b6b;
+  padding: 1rem;
+  font-size: 0.95rem;
+}
+
+.loadingMsg {
+  text-align: center;
+  color: var(--light-gray);
+  padding: 2rem;
+  font-size: 0.95rem;
+}
+
+/* Profile container / 画像容器 */
+.profileContainer {
+  margin-top: 1.5rem;
+}
+
+.profileHeader {
+  text-align: center;
+  margin-bottom: 2rem;
+  padding: 1.5rem;
+  border: 1px solid var(--gray);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.genusName {
+  font-size: 1.8rem;
+  margin-bottom: 1rem;
+  color: var(--primary);
+}
+
+.statsRow {
+  display: flex;
+  justify-content: center;
+  gap: 2rem;
+  flex-wrap: wrap;
+}
+
+.statCard {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 120px;
+}
+
+.statValue {
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: var(--white);
+}
+
+.statLabel {
+  font-size: 0.75rem;
+  color: var(--light-gray);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* Charts grid / 图表网格 */
+.chartsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(480px, 100%), 1fr));
+  gap: 2rem;
+}
+
+.chartBlock {
+  padding: 1rem;
+  border: 1px solid var(--gray);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.chartBlock h4 {
+  margin-bottom: 0.8rem;
+  color: var(--light-gray);
+  font-size: 0.9rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.profileChart {
+  width: 100%;
+  max-width: 520px;
+}
+
+/* Sex table / 性别分布表 */
+.sexTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.sexTable th {
+  text-align: left;
+  padding: 0.5rem 0.8rem;
+  color: var(--light-gray);
+  border-bottom: 1px solid var(--gray);
+  font-weight: 500;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+}
+
+.sexTable td {
+  padding: 0.5rem 0.8rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+@media (max-width: 600px) {
+  .statsRow {
+    gap: 1rem;
+  }
+
+  .statCard {
+    min-width: 80px;
+  }
+
+  .statValue {
+    font-size: 1.1rem;
+  }
 }

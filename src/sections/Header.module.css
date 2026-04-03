@@ -27,7 +27,8 @@
 }
 
 .h1 {
-  width: min-content;
+  width: max-content;
+  max-width: 300px;
 }
 
 .subtitle {

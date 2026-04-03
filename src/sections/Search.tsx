@@ -1,326 +1,335 @@
-import { useEffect, useRef, useState, useMemo } from "react";
-import { capitalize } from "lodash";
-import { useDebounce } from "@reactuses/core";
-import LoadingIcon from "@/assets/loading.svg?react";
-import Placeholder from "@/components/Placeholder";
-import Table, { type Col } from "@/components/Table";
-import Textbox from "@/components/Textbox";
-import Tabs from "@/components/Tabs";
-import type { GeoSearch, SampleEntry, SampleSearch } from "@/data";
-import { useData, loadSamples } from "@/data";
-import { formatNumber } from "@/util/string";
-import { thread } from "@/workers";
+/**
+ * Search.tsx — Species Search Engine
+ * 物种搜索引擎：输入属名 → 展示该属在疾病/国家/年龄组中的分布
+ * Inspired by ResMicroDb species search + GMrepo disease-species profiles
+ */
+import { useEffect, useRef, useState, useCallback } from "react";
+import { renderToString } from "react-dom/server";
+import * as d3 from "d3";
+import { useI18n } from "@/i18n";
+import "@/components/tooltip";
 import classes from "./Search.module.css";
 
-// ── Project columns vs Sample columns ────────────────────────────────────────
+const API_BASE = import.meta.env.VITE_API_URL ?? "http://localhost:8000";
 
-const PROJECT_COLS: (keyof SampleEntry)[] = [
-  "name",
-  "samples",
-  "top_disease",
-  "disease_types",
-  "age_groups",
-];
+interface ProfileEntry {
+  name: string;
+  mean_abundance: number;
+  prevalence: number;
+  sample_count: number;
+}
 
-const SAMPLE_COLS: (keyof SampleEntry)[] = [
-  "name",
-  "age_group",
-  "sex",
-  "disease",
-  "country",
-];
-
-const COL_LABELS: Partial<Record<keyof SampleEntry, string>> = {
-  name: "Name",
-  samples: "Samples",
-  top_disease: "Main Disease",
-  disease_types: "Disease Types",
-  age_groups: "Age Groups",
-  age_group: "Age Group",
-  sex: "Sex",
-  disease: "Disease",
-  country: "Country",
-};
-
-// ── Main Search section ───────────────────────────────────────────────────────
+interface SpeciesProfile {
+  genus: string;
+  total_samples: number;
+  present_samples: number;
+  prevalence: number;
+  mean_abundance: number;
+  by_disease: ProfileEntry[];
+  by_country: ProfileEntry[];
+  by_age_group: ProfileEntry[];
+  by_sex: ProfileEntry[];
+}
 
 const Search = () => {
-  const geoSearch = useData((s) => s.geoSearch);
-  const sampleSearch = useData((s) => s.sampleSearch);
-  const [tab, setTab] = useState(0);
+  const { t } = useI18n();
+  const [query, setQuery] = useState("");
+  const [suggestions, setSuggestions] = useState<string[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [profile, setProfile] = useState<SpeciesProfile | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const suggestionsRef = useRef<HTMLDivElement>(null);
 
+  // Autocomplete / 自动补全
   useEffect(() => {
-    if (tab === 1 && !sampleSearch) loadSamples();
-  }, [tab, sampleSearch]);
+    if (query.trim().length < 2) {
+      setSuggestions([]);
+      return;
+    }
+    const timer = setTimeout(() => {
+      fetch(`${API_BASE}/api/species-search?q=${encodeURIComponent(query.trim())}`)
+        .then((r) => r.json())
+        .then((data) => {
+          setSuggestions(data.results ?? []);
+          setShowSuggestions(true);
+        })
+        .catch(() => setSuggestions([]));
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [query]);
+
+  // Search handler / 搜索处理
+  const doSearch = useCallback((genus: string) => {
+    if (!genus.trim()) return;
+    setLoading(true);
+    setError(null);
+    setProfile(null);
+    setShowSuggestions(false);
+    setQuery(genus);
+
+    fetch(`${API_BASE}/api/species-profile?genus=${encodeURIComponent(genus.trim())}`)
+      .then((r) => {
+        if (!r.ok) throw new Error(r.status === 404 ? "Genus not found" : "Server error");
+        return r.json();
+      })
+      .then((data: SpeciesProfile) => setProfile(data))
+      .catch((e) => setError(e.message))
+      .finally(() => setLoading(false));
+  }, []);
+
+  // Close suggestions on outside click / 点击外部关闭建议
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (suggestionsRef.current && !suggestionsRef.current.contains(e.target as Node) &&
+          inputRef.current && !inputRef.current.contains(e.target as Node)) {
+        setShowSuggestions(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
 
   return (
     <section>
-      <h2>Search</h2>
-      <Tabs
-        onChange={setTab}
-        tabs={[
-          {
-            name: "Geography",
-            content: (
-              <>
-                <p>Search for a country or region.</p>
-                <GeoSearchList list={geoSearch} />
-              </>
-            ),
-          },
-          {
-            name: "Sample / Project",
-            content: (
-              <>
-                <p>
-                  Search by SRR accession or BioProject ID.
-                  <br />
-                  <span style={{ color: "var(--light-gray)", fontSize: "0.85rem" }}>
-                    Projects show aggregated disease/age summaries across all
-                    their samples. Samples show individual annotations.
-                  </span>
-                </p>
-                <SampleProjectList list={sampleSearch} />
-              </>
-            ),
-          },
-        ]}
-      />
+      <h2>{t("search.title")}</h2>
+      <p style={{ color: "var(--light-gray)", marginBottom: "1.5rem" }}>
+        {t("search.speciesHint")}
+      </p>
+
+      {/* Search bar / 搜索栏 */}
+      <div className={classes.searchContainer}>
+        <div className={classes.searchBox}>
+          <input
+            ref={inputRef}
+            type="text"
+            placeholder={t("search.speciesPlaceholder")}
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") doSearch(query);
+            }}
+            onFocus={() => suggestions.length > 0 && setShowSuggestions(true)}
+            className={classes.searchInput}
+          />
+          <button
+            className={classes.searchBtn}
+            onClick={() => doSearch(query)}
+            disabled={loading}
+          >
+            {loading ? "..." : t("search.go")}
+          </button>
+        </div>
+
+        {/* Autocomplete suggestions / 自动补全建议 */}
+        {showSuggestions && suggestions.length > 0 && (
+          <div ref={suggestionsRef} className={classes.suggestions}>
+            {suggestions.map((s) => (
+              <button
+                key={s}
+                className={classes.suggestionItem}
+                onClick={() => doSearch(s)}
+              >
+                <i>{s}</i>
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Error / 错误信息 */}
+      {error && (
+        <div className={classes.errorMsg}>
+          {error === "Genus not found" ? t("search.notFound") : error}
+        </div>
+      )}
+
+      {/* Loading / 加载中 */}
+      {loading && (
+        <div className={classes.loadingMsg}>{t("search.searching")}</div>
+      )}
+
+      {/* Species profile / 物种画像 */}
+      {profile && <SpeciesProfileView profile={profile} />}
     </section>
   );
 };
 
 export default Search;
 
-// ── Geography search list ─────────────────────────────────────────────────────
+// ── Species profile visualization / 物种画像可视化 ──────────────────────────
 
-const GeoSearchList = ({ list }: { list?: GeoSearch }) => {
-  const [_search, setSearch] = useState("");
-  const search = useDebounce(_search, 300);
-  const [type, setType] = useState("All");
-  const [exactMatches, setExactMatches] = useState<GeoSearch>([]);
-  const [searching, setSearching] = useState(false);
-  const ctrl = useRef<AbortController>(null);
+const SpeciesProfileView = ({ profile }: { profile: SpeciesProfile }) => {
+  const { t } = useI18n();
+  const diseaseRef = useRef<SVGSVGElement>(null);
+  const countryRef = useRef<SVGSVGElement>(null);
+  const ageRef = useRef<SVGSVGElement>(null);
 
-  const filtered = useMemo(() => {
-    if (!list) return undefined;
-    return type === "All"
-      ? list
-      : list.filter((e) => e.type === type);
-  }, [list, type]);
-
+  // Draw disease bar chart / 绘制疾病丰度柱状图
   useEffect(() => {
-    ctrl.current = new AbortController();
-    if (filtered && search.trim()) {
-      setExactMatches([]);
-      setSearching(true);
-      thread(
-        (w) => w.exactSearch(filtered, ["name"], search),
-        ctrl.current,
-      )
-        .then((r) => setExactMatches(r as GeoSearch))
-        .catch(() => {})
-        .finally(() => setSearching(false));
-    }
-    return () => {
-      ctrl.current?.abort();
-      setSearching(false);
-    };
-  }, [filtered, search]);
+    if (!diseaseRef.current || profile.by_disease.length === 0) return;
+    drawBarChart(diseaseRef.current, profile.by_disease.slice(0, 20), "var(--primary)");
+  }, [profile]);
 
-  if (!filtered)
-    return <Placeholder height={200}>Loading geography data...</Placeholder>;
+  // Draw country bar chart / 绘制国家丰度柱状图
+  useEffect(() => {
+    if (!countryRef.current || profile.by_country.length === 0) return;
+    drawBarChart(countryRef.current, profile.by_country.slice(0, 20), "var(--secondary)");
+  }, [profile]);
 
-  const matches = search.trim() ? exactMatches : filtered;
+  // Draw age group bar chart / 绘制年龄组丰度柱状图
+  useEffect(() => {
+    if (!ageRef.current || profile.by_age_group.length === 0) return;
+    drawBarChart(ageRef.current, profile.by_age_group, "#4ecdc4");
+  }, [profile]);
 
   return (
-    <>
-      <SearchBar
-        search={_search}
-        onSearch={setSearch}
-        searching={searching}
-        count={matches.length}
-        typeOptions={["All", "Country", "Region"]}
-        type={type}
-        onType={setType}
-      />
-      <Table
-        cols={[
-          { key: "name", name: "Name" },
-          { key: "type", name: "Type" },
-          { key: "samples", name: "Samples" },
-        ]}
-        rows={matches}
-        extraRows={
-          !searching && !matches.length ? ["", "No results", ""] : undefined
-        }
-      />
-    </>
-  );
-};
+    <div className={classes.profileContainer}>
+      {/* Header card / 物种信息卡 */}
+      <div className={classes.profileHeader}>
+        <h3 className={classes.genusName}><i>{profile.genus}</i></h3>
+        <div className={classes.statsRow}>
+          <div className={classes.statCard}>
+            <span className={classes.statValue}>{profile.total_samples.toLocaleString("en")}</span>
+            <span className={classes.statLabel}>{t("search.totalSamples")}</span>
+          </div>
+          <div className={classes.statCard}>
+            <span className={classes.statValue}>{profile.present_samples.toLocaleString("en")}</span>
+            <span className={classes.statLabel}>{t("search.presentIn")}</span>
+          </div>
+          <div className={classes.statCard}>
+            <span className={classes.statValue}>{(profile.prevalence * 100).toFixed(1)}%</span>
+            <span className={classes.statLabel}>{t("search.prevalence")}</span>
+          </div>
+          <div className={classes.statCard}>
+            <span className={classes.statValue}>{(profile.mean_abundance * 100).toFixed(4)}%</span>
+            <span className={classes.statLabel}>{t("search.meanAbundance")}</span>
+          </div>
+        </div>
+      </div>
 
-// ── Sample/Project search list ────────────────────────────────────────────────
-
-const SampleProjectList = ({ list }: { list?: SampleSearch }) => {
-  const [_search, setSearch] = useState("");
-  const search = useDebounce(_search, 300);
-  const [type, setType] = useState<"All" | "Project" | "Sample">("All");
-  const [exactMatches, setExactMatches] = useState<SampleSearch>([]);
-  const [fuzzyMatches, setFuzzyMatches] = useState<SampleSearch>([]);
-  const [exactSearching, setExactSearching] = useState(false);
-  const [fuzzySearching, setFuzzySearching] = useState(false);
-  const exactCtrl = useRef<AbortController>(null);
-  const fuzzyCtrl = useRef<AbortController>(null);
-
-  const filtered = useMemo(() => {
-    if (!list) return undefined;
-    return type === "All" ? list : list.filter((e) => e.type === type);
-  }, [list, type]);
-
-  useEffect(() => {
-    exactCtrl.current = new AbortController();
-    if (filtered && search.trim()) {
-      setExactMatches([]);
-      setExactSearching(true);
-      thread(
-        (w) => w.exactSearch(filtered, ["name"], search),
-        exactCtrl.current,
-      )
-        .then((r) => setExactMatches(r as SampleSearch))
-        .catch(() => {})
-        .finally(() => setExactSearching(false));
-    }
-    return () => {
-      exactCtrl.current?.abort();
-      setExactSearching(false);
-    };
-  }, [filtered, search]);
-
-  useEffect(() => {
-    fuzzyCtrl.current = new AbortController();
-    if (filtered && search.trim()) {
-      setFuzzyMatches([]);
-      setFuzzySearching(true);
-      thread(
-        (w) => w.fuzzySearch(filtered, ["name"], search),
-        fuzzyCtrl.current,
-      )
-        .then((r) => setFuzzyMatches(r as SampleSearch))
-        .catch(() => {})
-        .finally(() => setFuzzySearching(false));
-    }
-    return () => {
-      fuzzyCtrl.current?.abort();
-      setFuzzySearching(false);
-    };
-  }, [filtered, search]);
-
-  const exactLookup = useMemo(
-    () => Object.fromEntries(exactMatches.map((m) => [m.name, ""])),
-    [exactMatches],
-  );
-
-  if (!filtered)
-    return <Placeholder height={300}>Loading sample data...</Placeholder>;
-
-  const matches: SampleSearch = search.trim()
-    ? exactMatches.concat(
-        fuzzyMatches
-          .filter((f) => !(f.name in exactLookup))
-          .map((f) => ({ ...f, fuzzy: true })),
-      )
-    : filtered;
-
-  /** choose columns based on active type filter */
-  const showingProjects = type === "Project";
-  const showingSamples = type === "Sample";
-  const cols: (keyof SampleEntry)[] =
-    showingProjects
-      ? PROJECT_COLS
-      : showingSamples
-        ? SAMPLE_COLS
-        : ["name", "type", "samples", "top_disease", "age_group", "sex"];
-
-  return (
-    <>
-      <SearchBar
-        search={_search}
-        onSearch={setSearch}
-        searching={exactSearching || fuzzySearching}
-        count={matches.length}
-        typeOptions={["All", "Project", "Sample"]}
-        type={type}
-        onType={(t) => setType(t as typeof type)}
-      />
-      <Table
-        cols={cols.map(
-          (col): Col<SampleEntry, keyof SampleEntry> => ({
-            key: col,
-            name: COL_LABELS[col] ?? capitalize(String(col).replace(/_/g, " ")),
-            style: (_, row) => ({ opacity: row?.fuzzy ? 0.5 : 1 }),
-          }),
+      {/* Charts grid / 图表网格 */}
+      <div className={classes.chartsGrid}>
+        {profile.by_disease.length > 0 && (
+          <div className={classes.chartBlock}>
+            <h4>{t("search.byDisease")}</h4>
+            <svg ref={diseaseRef} className={classes.profileChart} />
+          </div>
         )}
-        rows={matches}
-        extraRows={
-          !exactSearching && !fuzzySearching && !matches.length
-            ? ["", "No results", ""]
-            : undefined
-        }
-      />
-    </>
+        {profile.by_country.length > 0 && (
+          <div className={classes.chartBlock}>
+            <h4>{t("search.byCountry")}</h4>
+            <svg ref={countryRef} className={classes.profileChart} />
+          </div>
+        )}
+        {profile.by_age_group.length > 0 && (
+          <div className={classes.chartBlock}>
+            <h4>{t("search.byAgeGroup")}</h4>
+            <svg ref={ageRef} className={classes.profileChart} />
+          </div>
+        )}
+
+        {/* Sex distribution as simple table / 性别分布简表 */}
+        {profile.by_sex.length > 0 && (
+          <div className={classes.chartBlock}>
+            <h4>{t("search.bySex")}</h4>
+            <table className={classes.sexTable}>
+              <thead>
+                <tr>
+                  <th>{t("filter.sex")}</th>
+                  <th>{t("search.meanAbundance")}</th>
+                  <th>{t("search.prevalence")}</th>
+                  <th>n</th>
+                </tr>
+              </thead>
+              <tbody>
+                {profile.by_sex.map((s) => (
+                  <tr key={s.name}>
+                    <td>{s.name}</td>
+                    <td>{(s.mean_abundance * 100).toFixed(4)}%</td>
+                    <td>{(s.prevalence * 100).toFixed(1)}%</td>
+                    <td>{s.sample_count.toLocaleString("en")}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    </div>
   );
 };
 
-// ── Shared search bar ─────────────────────────────────────────────────────────
+// ── D3 horizontal bar chart / D3 水平柱状图 ─────────────────────────────────
 
-type SearchBarProps = {
-  search: string;
-  onSearch: (v: string) => void;
-  searching: boolean;
-  count: number;
-  typeOptions: string[];
-  type: string;
-  onType: (t: string) => void;
-};
+function drawBarChart(svgEl: SVGSVGElement, data: ProfileEntry[], color: string) {
+  const svg = d3.select(svgEl);
+  svg.selectAll("*").remove();
 
-const SearchBar = ({
-  search,
-  onSearch,
-  searching,
-  count,
-  typeOptions,
-  type,
-  onType,
-}: SearchBarProps) => (
-  <div className={classes.search}>
-    <div className={classes.box}>
-      <LoadingIcon style={{ opacity: searching ? 1 : 0 }} />
-      <Textbox value={search} onChange={onSearch} placeholder="Search" />
-    </div>
+  const margin = { top: 10, right: 60, bottom: 30, left: 130 };
+  const W = 520, H = Math.max(180, data.length * 22 + margin.top + margin.bottom);
+  svg.attr("viewBox", `0 0 ${W} ${H}`);
 
-    <div style={{ display: "flex", gap: "0.4rem", alignItems: "center" }}>
-      <span style={{ fontSize: "0.85rem", color: "var(--light-gray)" }}>
-        Type:
-      </span>
-      {typeOptions.map((t) => (
-        <button
-          key={t}
-          onClick={() => onType(t)}
-          style={{
-            background: type === t ? "var(--primary)" : "none",
-            border: "1px solid var(--gray)",
-            color: type === t ? "var(--black)" : "var(--light-gray)",
-            borderRadius: "4px",
-            padding: "0.2rem 0.6rem",
-            cursor: "pointer",
-            fontSize: "0.8rem",
-          }}
-        >
-          {t}
-        </button>
-      ))}
-    </div>
+  const g = svg.append("g").attr("transform", `translate(${margin.left},${margin.top})`);
+  const iW = W - margin.left - margin.right;
+  const iH = H - margin.top - margin.bottom;
 
-    <div style={{ width: 110 }}>{formatNumber(count)} items</div>
-  </div>
-);
+  const xScale = d3.scaleLinear()
+    .domain([0, d3.max(data, (d) => d.mean_abundance) ?? 0.001])
+    .range([0, iW]);
+  const yScale = d3.scaleBand()
+    .domain(data.map((d) => d.name))
+    .range([0, iH])
+    .padding(0.2);
+
+  // Resolve CSS variable to hex / 将 CSS 变量解析为十六进制
+  const rootStyles = getComputedStyle(document.documentElement);
+  const resolvedColor = color.startsWith("var(")
+    ? rootStyles.getPropertyValue(color.slice(4, -1)).trim() || "#e23fff"
+    : color;
+
+  g.selectAll(".bar")
+    .data(data)
+    .join("rect")
+    .attr("class", "bar")
+    .attr("x", 0)
+    .attr("y", (d) => yScale(d.name) ?? 0)
+    .attr("width", (d) => xScale(d.mean_abundance))
+    .attr("height", yScale.bandwidth())
+    .attr("fill", resolvedColor)
+    .attr("opacity", 0.8)
+    .attr("rx", 2)
+    .attr("data-tooltip", (d) =>
+      renderToString(
+        <div className="tooltip-table">
+          <span>Name</span><span>{d.name}</span>
+          <span>Abundance</span><span>{(d.mean_abundance * 100).toFixed(4)}%</span>
+          <span>Prevalence</span><span>{(d.prevalence * 100).toFixed(1)}%</span>
+          <span>Samples</span><span>{d.sample_count.toLocaleString("en")}</span>
+        </div>
+      )
+    );
+
+  // Value labels / 数值标签
+  g.selectAll(".val-label")
+    .data(data)
+    .join("text")
+    .attr("x", (d) => xScale(d.mean_abundance) + 4)
+    .attr("y", (d) => (yScale(d.name) ?? 0) + yScale.bandwidth() / 2 + 1)
+    .attr("dominant-baseline", "middle")
+    .attr("font-size", 9)
+    .attr("fill", "currentColor")
+    .text((d) => `${(d.mean_abundance * 100).toFixed(3)}%`);
+
+  // Y axis / Y轴
+  g.append("g")
+    .call(d3.axisLeft(yScale).tickFormat((d) => d.length > 16 ? d.slice(0, 14) + "…" : d))
+    .attr("font-size", 10);
+
+  // X axis / X轴
+  g.append("g")
+    .attr("transform", `translate(0,${iH})`)
+    .call(d3.axisBottom(xScale).ticks(4).tickFormat((d) => `${(Number(d) * 100).toFixed(2)}%`))
+    .attr("font-size", 9);
+}

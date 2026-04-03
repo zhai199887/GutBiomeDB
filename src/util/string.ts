@@ -1,6 +1,6 @@
-/** format number to string */
+/** format number to string — always use "en" locale to avoid "17万" mixed text */
 export const formatNumber = (value?: number, compact = true) =>
-  (value || 0).toLocaleString(undefined, {
+  (value || 0).toLocaleString("en", {
     notation: compact ? "compact" : undefined,
   });
 
