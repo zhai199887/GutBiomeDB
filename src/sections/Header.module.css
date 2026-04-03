@@ -4,7 +4,7 @@
   position: relative;
   padding-top: 100px;
   padding-bottom: 100px;
-  overflow: hidden;
+  overflow: visible;
   gap: 40px;
 }
 
@@ -59,6 +59,13 @@
 
 .navLink:hover {
   background: rgba(255, 255, 255, 0.15);
+}
+
+/* Dropdown trigger button reset / 下拉按钮重置浏览器默认样式 */
+button.navLink {
+  background: transparent;
+  cursor: pointer;
+  font-family: inherit;
 }
 
 /* Dropdown / 下拉菜单 */
