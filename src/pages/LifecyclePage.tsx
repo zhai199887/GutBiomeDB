@@ -38,6 +38,7 @@ const LifecyclePage = () => {
   const [country, setCountry] = useState("");
   const [data, setData] = useState<LifecycleData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
   const svgRef = useRef<SVGSVGElement>(null);
 
   const dName = (n: string) => (locale === "zh" && diseaseZh[n]) ? diseaseZh[n] : n;
@@ -51,13 +52,14 @@ const LifecyclePage = () => {
 
   useEffect(() => {
     setLoading(true);
+    setError("");
     const params = new URLSearchParams();
     if (disease) params.set("disease", disease);
     if (country) params.set("country", country);
     fetch(`${API_BASE}/api/lifecycle?${params}`)
-      .then(r => r.json())
+      .then(r => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json(); })
       .then((d: LifecycleData) => setData(d))
-      .catch(() => {})
+      .catch((e) => setError(locale === "zh" ? "后端未启动或连接失败" : `API error: ${e.message}`))
       .finally(() => setLoading(false));
   }, [disease, country]);
 
@@ -96,6 +98,8 @@ const LifecyclePage = () => {
       </div>
 
       {loading && <div className={classes.loading}>{t("search.searching")}</div>}
+
+      {error && <div className={classes.error}>{error}</div>}
 
       {data && data.data.length > 0 && (
         <>

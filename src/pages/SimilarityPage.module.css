@@ -1,7 +1,7 @@
 /* SimilarityPage.module.css — 样本相似性搜索页面样式 */
 /* 深色主题，与其他页面一致 */
 
-.page { max-width: 1100px; margin: 0 auto; padding: 2rem; }
+.page { max-width: 1100px; margin: 0 auto; padding: 2rem; min-height: 100vh; color: var(--white); }
 .topBar { margin-bottom: 2rem; }
 .topBar h1 { font-size: 1.8rem; margin: 0.5rem 0; }
 .topBar p { color: var(--gray); font-size: 0.95rem; }
