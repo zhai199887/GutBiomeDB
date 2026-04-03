@@ -69,7 +69,7 @@ const Search = ({ list: fullList, cols, types, names, onSelect }: Props) => {
         exactController.current,
       )
         .then((result) => setExactMatches(result as typeof exactMatches))
-        .catch(console.error)
+        .catch(() => {})
         .finally(() => setExactSearching(false));
     }
 
@@ -93,7 +93,7 @@ const Search = ({ list: fullList, cols, types, names, onSelect }: Props) => {
         fuzzyController.current,
       )
         .then((result) => setFuzzyMatches(result as typeof fuzzyMatches))
-        .catch(console.error)
+        .catch(() => {})
         .finally(() => setFuzzySearching(false));
     }
 

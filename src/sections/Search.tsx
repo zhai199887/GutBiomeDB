@@ -119,7 +119,7 @@ const GeoSearchList = ({ list }: { list?: GeoSearch }) => {
         ctrl.current,
       )
         .then((r) => setExactMatches(r as GeoSearch))
-        .catch(console.error)
+        .catch(() => {})
         .finally(() => setSearching(false));
     }
     return () => {
@@ -187,7 +187,7 @@ const SampleProjectList = ({ list }: { list?: SampleSearch }) => {
         exactCtrl.current,
       )
         .then((r) => setExactMatches(r as SampleSearch))
-        .catch(console.error)
+        .catch(() => {})
         .finally(() => setExactSearching(false));
     }
     return () => {
@@ -206,7 +206,7 @@ const SampleProjectList = ({ list }: { list?: SampleSearch }) => {
         fuzzyCtrl.current,
       )
         .then((r) => setFuzzyMatches(r as SampleSearch))
-        .catch(console.error)
+        .catch(() => {})
         .finally(() => setFuzzySearching(false));
     }
     return () => {

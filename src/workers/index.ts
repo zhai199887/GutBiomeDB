@@ -32,7 +32,7 @@ export const thread = <Type>(
     /** handle abort */
     const onAbort = () => {
       worker.abort(abort?.signal.reason);
-      console.warn(abort?.signal.reason);
+      // Abort signal received / 中止信号
     };
     abort?.signal.addEventListener("abort", onAbort);
     /** execute specified method */
