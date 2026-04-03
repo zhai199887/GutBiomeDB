@@ -116,14 +116,13 @@ const SankeyChart = () => {
       .map(([name]) => name);
 
     // ── Layout dimensions / 布局尺寸 ────────────────────────────────────
-    const W = 800;
-    const minH = Math.max(480, topGenera.length * 28 + 60);
-    const H = minH;
-    const margin = { top: 30, right: 160, bottom: 30, left: 140 };
+    const W = 900;
+    const H = 620;
+    const margin = { top: 50, right: 180, bottom: 50, left: 150 };
     const iW = W - margin.left - margin.right;
     const iH = H - margin.top - margin.bottom;
-    const nodeW = 18;
-    const nodePad = 4;
+    const nodeW = 14;
+    const nodePad = 1;
 
     svg.attr("viewBox", `0 0 ${W} ${H}`);
     const g = svg.append("g").attr("transform", `translate(${margin.left},${margin.top})`);
@@ -136,7 +135,7 @@ const SankeyChart = () => {
     let py = 0;
     for (const p of phyla) {
       const val = phylumTotals[p];
-      const dy = Math.max((val / totalValue) * iH, 14);
+      const dy = Math.max((val / totalValue) * iH, 10);
       phylumNodes.push({ id: `p_${p}`, label: p, level: "phylum", x: 0, y: py, dy, value: val });
       py += dy + nodePad;
     }
@@ -158,7 +157,7 @@ const SankeyChart = () => {
 
     for (const gen of sortedGenera) {
       const val = genusAbundance[gen] ?? 0;
-      const dy = Math.max((val / totalValue) * iH, 12);
+      const dy = Math.max((val / totalValue) * iH, 8);
       genusNodes.push({ id: `g_${gen}`, label: gen, level: "genus", x: iW - nodeW, y: gy, dy, value: val });
       gy += dy + nodePad;
     }
@@ -259,7 +258,7 @@ const SankeyChart = () => {
       .attr("text-anchor", "end")
       .attr("dominant-baseline", "middle")
       .attr("fill", "currentColor")
-      .attr("font-size", 13)
+      .attr("font-size", 11)
       .attr("font-weight", 600)
       .attr("opacity", (d) => (!highlight || highlight === d.label ? 1 : 0.3))
       .text((d) => d.label);
@@ -289,7 +288,7 @@ const SankeyChart = () => {
       .attr("y", (d) => d.y + d.dy / 2)
       .attr("dominant-baseline", "middle")
       .attr("fill", "currentColor")
-      .attr("font-size", 11)
+      .attr("font-size", 10)
       .attr("font-style", "italic")
       .attr("opacity", (d) => (!highlight || highlight === d.label || highlight === PHYLUM_MAP[d.label] ? 1 : 0.3))
       .text((d) => `${d.label} (${(d.value * 100).toFixed(2)}%)`);
@@ -312,7 +311,7 @@ const SankeyChart = () => {
       <p style={{ color: "var(--light-gray)", fontSize: "0.85rem", margin: "0.3rem 0 0.8rem" }}>
         Hover to highlight connections. Width proportional to mean relative abundance.
       </p>
-      <svg ref={svgRef} className="chart compare-chart" style={{ width: "100%", maxWidth: 900 }} />
+      <svg ref={svgRef} className="chart compare-chart" style={{ width: "100%", maxWidth: 560 }} />
     </div>
   );
 };
