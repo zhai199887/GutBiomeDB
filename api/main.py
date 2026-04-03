@@ -121,7 +121,7 @@ app.add_middleware(
 @lru_cache(maxsize=1)
 def get_metadata() -> pd.DataFrame:
     """Load and clean metadata CSV. / 加载并清理元数据CSV"""
-    print(f"Loading metadata from {METADATA_PATH}...")
+    logging.info(f"Loading metadata from {METADATA_PATH}...")
     df = pd.read_csv(METADATA_PATH, encoding="gbk", on_bad_lines="skip", low_memory=False)
 
     # Normalize column names / 规范化列名
@@ -163,18 +163,18 @@ def get_metadata() -> pd.DataFrame:
     else:
         df["sample_key"] = df.index.astype(str)
 
-    print(f"Metadata loaded: {len(df)} rows")
+    logging.info(f"Metadata loaded: {len(df)} rows")
     return df
 
 
 @lru_cache(maxsize=1)
 def get_abundance() -> pd.DataFrame:
     """Load abundance CSV (large ~1.5 GB). / 加载丰度CSV（约1.5GB大文件）"""
-    print(f"Loading abundance from {ABUNDANCE_PATH}...")
+    logging.info(f"Loading abundance from {ABUNDANCE_PATH}...")
     # First column is sample_id (rownames from R)
     # 第一列是样本ID（来自R的行名）
     df = pd.read_csv(ABUNDANCE_PATH, index_col=0, low_memory=False)
-    print(f"Abundance loaded: {df.shape}")
+    logging.info(f"Abundance loaded: {df.shape}")
     return df
 
 
@@ -536,14 +536,17 @@ def permanova_test(
 
 # ── API endpoints / API端点 ───────────────────────────────────────────────────
 
-@app.get("/api/health", summary="Health check", description="Returns API status and timestamp.")
+@app.get("/api/health", summary="Health check",
+         description="Returns API status and current timestamp.")
 @limiter.limit("120/minute")
 def health(request: Request):
     """Health check / 健康检查"""
     return {"status": "ok", "timestamp": datetime.now().isoformat()}
 
 
-@app.get("/api/filter-options")
+@app.get("/api/filter-options",
+         summary="Get filter options",
+         description="Returns available filter values for countries, diseases, age groups, and sexes.")
 @limiter.limit("120/minute")
 def filter_options(request: Request):
     """
@@ -580,7 +583,9 @@ def filter_options(request: Request):
     }
 
 
-@app.get("/api/data-stats")
+@app.get("/api/data-stats",
+         summary="Dataset statistics",
+         description="Returns total sample count, country count, disease count, and data version.")
 @limiter.limit("120/minute")
 def data_stats(request: Request):
     """
@@ -616,14 +621,18 @@ def data_stats(request: Request):
     }
 
 
-@app.get("/api/disease-names-zh")
+@app.get("/api/disease-names-zh",
+         summary="Disease name translations",
+         description="Returns Chinese translations for disease names.")
 @limiter.limit("120/minute")
 def get_disease_names_zh(request: Request):
     """Return disease name Chinese translations / 返回疾病名称中文翻译字典"""
     return DISEASE_NAMES_ZH
 
 
-@app.post("/api/diff-analysis")
+@app.post("/api/diff-analysis",
+          summary="Differential analysis",
+          description="Compare microbiome between two groups using Wilcoxon, t-test, LEfSe, or PERMANOVA.")
 @limiter.limit("20/minute")
 def diff_analysis(request: Request, req: DiffAnalysisRequest):
     """
@@ -864,7 +873,9 @@ def get_genus_list() -> list[str]:
     return genera
 
 
-@app.get("/api/species-search")
+@app.get("/api/species-search",
+         summary="Search genera",
+         description="Full-text search across genus names, returns up to 20 matches.")
 @limiter.limit("120/minute")
 def species_search(request: Request, q: str = ""):
     """
@@ -881,7 +892,9 @@ def species_search(request: Request, q: str = ""):
     return {"results": (prefix + contains)[:20]}
 
 
-@app.get("/api/species-profile")
+@app.get("/api/species-profile",
+         summary="Genus profile",
+         description="Detailed abundance profile for a genus across diseases, countries, age groups, and sex.")
 @limiter.limit("60/minute")
 def species_profile(request: Request, genus: str):
     """
@@ -1013,7 +1026,9 @@ def get_disease_list_cached() -> list[dict]:
     return result
 
 
-@app.get("/api/disease-list")
+@app.get("/api/disease-list",
+         summary="List all diseases",
+         description="Returns all diseases with sample counts, sorted by frequency.")
 @limiter.limit("120/minute")
 def disease_list(request: Request, q: str = ""):
     """
@@ -1027,7 +1042,9 @@ def disease_list(request: Request, q: str = ""):
     return {"diseases": diseases}
 
 
-@app.get("/api/disease-profile")
+@app.get("/api/disease-profile",
+         summary="Disease microbiome profile",
+         description="Top genera for a disease vs healthy controls with fold-change and prevalence.")
 @limiter.limit("60/minute")
 def disease_profile(request: Request, disease: str, top_n: int = 20):
     """
@@ -1148,7 +1165,9 @@ def disease_profile(request: Request, disease: str, top_n: int = 20):
 
 # ── Microbe-disease network endpoint / 菌群-疾病网络端点 ─────────────────────
 
-@app.get("/api/network")
+@app.get("/api/network",
+         summary="Disease-genus network",
+         description="Force-directed graph data showing associations between diseases and genera.")
 @limiter.limit("60/minute")
 def microbe_disease_network(request: Request, top_diseases: int = 15, top_genera: int = 30):
     """
@@ -1232,7 +1251,9 @@ def _check_admin(token: str | None):
         raise HTTPException(401, "Invalid admin token")
 
 
-@app.get("/api/admin/check")
+@app.get("/api/admin/check",
+         summary="Admin authentication check",
+         description="Verify admin token validity.")
 @limiter.limit("10/minute")
 def admin_check(request: Request, x_admin_token: str | None = Header(None)):
     """Verify admin token. / 验证管理员token"""
@@ -1240,7 +1261,9 @@ def admin_check(request: Request, x_admin_token: str | None = Header(None)):
     return {"status": "authorized"}
 
 
-@app.post("/api/admin/upload-metadata")
+@app.post("/api/admin/upload-metadata",
+          summary="Upload metadata",
+          description="Upload and merge new metadata CSV file (requires admin token).")
 @limiter.limit("10/minute")
 async def upload_metadata(
     request: Request,
@@ -1271,7 +1294,9 @@ async def upload_metadata(
         os.unlink(tmp_path)
 
 
-@app.post("/api/admin/validate-metadata")
+@app.post("/api/admin/validate-metadata",
+          summary="Validate metadata",
+          description="Validate metadata CSV file format and columns (requires admin token).")
 @limiter.limit("10/minute")
 async def validate_metadata_endpoint(
     request: Request,
@@ -1300,7 +1325,9 @@ import io
 import csv as csv_mod
 
 
-@app.get("/api/download/summary-stats")
+@app.get("/api/download/summary-stats",
+         summary="Download summary statistics",
+         description="Export aggregated statistics as CSV, JSON, or TSV.")
 @limiter.limit("30/minute")
 def download_summary_stats(request: Request, format: str = "csv"):
     """
@@ -1360,7 +1387,9 @@ def download_summary_stats(request: Request, format: str = "csv"):
     )
 
 
-@app.get("/api/download/disease-profile")
+@app.get("/api/download/disease-profile",
+         summary="Download disease profile",
+         description="Export disease microbiome profile as CSV, JSON, or TSV.")
 @limiter.limit("30/minute")
 def download_disease_profile_data(request: Request, disease: str, format: str = "csv"):
     """Download disease profile data / 下载疾病画像数据"""
@@ -1385,7 +1414,9 @@ def download_disease_profile_data(request: Request, disease: str, format: str = 
     )
 
 
-@app.get("/api/download/species-profile")
+@app.get("/api/download/species-profile",
+         summary="Download species profile",
+         description="Export genus abundance profile as CSV, JSON, or TSV.")
 @limiter.limit("30/minute")
 def download_species_profile_data(request: Request, genus: str, format: str = "csv"):
     """Download species profile data / 下载物种画像数据"""
@@ -1410,7 +1441,9 @@ def download_species_profile_data(request: Request, genus: str, format: str = "c
     )
 
 
-@app.get("/api/download/genus-list")
+@app.get("/api/download/genus-list",
+         summary="Download genus list",
+         description="Export complete genus name list as CSV, JSON, or TSV.")
 @limiter.limit("30/minute")
 def download_genus_list(request: Request, format: str = "csv"):
     """Download list of all genera / 下载所有属名列表"""
@@ -1432,7 +1465,9 @@ def download_genus_list(request: Request, format: str = "csv"):
     )
 
 
-@app.get("/api/biomarker-discovery")
+@app.get("/api/biomarker-discovery",
+         summary="Disease biomarker discovery",
+         description="Identifies significant biomarker taxa using Wilcoxon test with BH FDR correction and LDA effect size.")
 @limiter.limit("60/minute")
 def biomarker_discovery(request: Request, disease: str, lda_threshold: float = 2.0, p_threshold: float = 0.05):
     """
@@ -1516,7 +1551,9 @@ def biomarker_discovery(request: Request, disease: str, lda_threshold: float = 2
     }
 
 
-@app.get("/api/lollipop-data")
+@app.get("/api/lollipop-data",
+         summary="Differential abundance plot data",
+         description="Log2 fold change data for lollipop plot visualization.")
 @limiter.limit("60/minute")
 def lollipop_data(request: Request, disease: str, top_n: int = 40):
     """
@@ -1604,7 +1641,9 @@ def lollipop_data(request: Request, disease: str, top_n: int = 40):
     }
 
 
-@app.get("/api/chord-data")
+@app.get("/api/chord-data",
+         summary="Chord diagram data",
+         description="Disease-genus association matrix for chord diagram visualization.")
 @limiter.limit("60/minute")
 def chord_data(request: Request, top_diseases: int = 10, top_genera: int = 12):
     """
@@ -1673,7 +1712,9 @@ def chord_data(request: Request, top_diseases: int = 10, top_genera: int = 12):
     }
 
 
-@app.get("/api/cooccurrence")
+@app.get("/api/cooccurrence",
+         summary="Co-occurrence network",
+         description="Spearman correlation-based microbial co-occurrence network.")
 @limiter.limit("20/minute")
 def cooccurrence_network(
     request: Request,
@@ -1770,7 +1811,9 @@ def cooccurrence_network(
 AGE_GROUP_ORDER = ["Infant", "Child", "Adolescent", "Adult", "Older_Adult", "Oldest_Old", "Centenarian", "Unknown"]
 
 
-@app.get("/api/lifecycle")
+@app.get("/api/lifecycle",
+         summary="Lifecycle microbiome atlas",
+         description="Genus-level composition across 8 life stages from Infant to Centenarian.")
 @limiter.limit("60/minute")
 def lifecycle_atlas(
     request: Request,
@@ -1890,7 +1933,9 @@ def lifecycle_atlas(
 # ── 样本相似性搜索 API / Sample Similarity Search ─────────────────────────────
 
 
-@app.get("/api/genus-names")
+@app.get("/api/genus-names",
+         summary="List all genera",
+         description="Returns all valid genus names from abundance data.")
 @limiter.limit("120/minute")
 async def get_genus_names(request: Request):
     """返回丰度矩阵所有属名列表（供前端下载模板用）。
@@ -1903,7 +1948,9 @@ async def get_genus_names(request: Request):
     return {"genera": genera, "count": len(genera)}
 
 
-@app.post("/api/similarity-search")
+@app.post("/api/similarity-search",
+          summary="Sample similarity search",
+          description="Find most similar samples using Bray-Curtis or Jaccard distance.")
 @limiter.limit("20/minute")
 async def similarity_search(request: Request, req: SimilarityRequest):
     """接收用户上传的丰度向量，返回 Top-K 最相似样本。
@@ -1972,6 +2019,7 @@ async def similarity_search(request: Request, req: SimilarityRequest):
 
 # ── API v1 version aliases / API v1 版本别名 ─────────────────────────────────
 @app.get("/api/v1/{path:path}")
+@limiter.limit("120/minute")
 async def v1_redirect_get(path: str, request: Request):
     """Redirect GET /api/v1/* to /api/* for versioned access"""
     query = str(request.query_params)
@@ -1979,6 +2027,7 @@ async def v1_redirect_get(path: str, request: Request):
     return RedirectResponse(url=url, status_code=307)
 
 @app.post("/api/v1/{path:path}")
+@limiter.limit("120/minute")
 async def v1_redirect_post(path: str, request: Request):
     """Redirect POST /api/v1/* to /api/* for versioned access"""
     query = str(request.query_params)
