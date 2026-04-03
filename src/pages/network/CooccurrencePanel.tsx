@@ -5,6 +5,8 @@
 import { useEffect, useRef, useState } from "react";
 import * as d3 from "d3";
 import { useI18n } from "@/i18n";
+import { exportTable } from "@/util/export";
+import { exportSVG, exportPNG } from "@/util/chartExport";
 import classes from "../CooccurrencePage.module.css";
 
 const API_BASE = import.meta.env.VITE_API_URL ?? "http://localhost:8000";
@@ -92,6 +94,22 @@ const CooccurrencePanel = () => {
         <>
           <div className={classes.graphContainer}>
             <svg ref={svgRef} />
+          </div>
+          <div style={{ display: "flex", gap: "0.5rem", marginTop: "0.5rem" }}>
+            <button onClick={() => {
+              if (!data) return;
+              exportTable(
+                data.edges.map((e) => ({
+                  Source: typeof e.source === "string" ? e.source : e.source.id,
+                  Target: typeof e.target === "string" ? e.target : e.target.id,
+                  Correlation: e.r,
+                  P_value: e.p_value,
+                })),
+                `cooccurrence_${Date.now()}`,
+              );
+            }} style={{ fontSize: "0.8rem", padding: "0.3rem 0.8rem", cursor: "pointer", border: "1px solid #dee2e6", borderRadius: "4px", background: "white" }}>{t("export.csv")}</button>
+            <button onClick={() => { const svg = svgRef.current; if (svg) exportSVG(svg, `cooccurrence_${Date.now()}`); }} style={{ fontSize: "0.8rem", padding: "0.3rem 0.8rem", cursor: "pointer", border: "1px solid #dee2e6", borderRadius: "4px", background: "white" }}>{t("export.svg")}</button>
+            <button onClick={() => { const svg = svgRef.current; if (svg) exportPNG(svg, `cooccurrence_${Date.now()}`); }} style={{ fontSize: "0.8rem", padding: "0.3rem 0.8rem", cursor: "pointer", border: "1px solid #dee2e6", borderRadius: "4px", background: "white" }}>{t("export.png")}</button>
           </div>
           <div className={classes.legend}>
             <div className={classes.legendItem}>

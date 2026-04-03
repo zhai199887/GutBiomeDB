@@ -8,6 +8,7 @@ import { useEffect, useRef, useState, lazy, Suspense } from "react";
 import { Link } from "react-router-dom";
 import * as d3 from "d3";
 import { useI18n } from "@/i18n";
+import { exportSVG, exportPNG } from "@/util/chartExport";
 import classes from "./NetworkPage.module.css";
 
 const ChordPanel = lazy(() => import("./network/ChordPanel"));
@@ -70,6 +71,14 @@ const NetworkPage = () => {
     drawNetwork(svgRef.current, data, dName);
   }, [data, locale, diseaseZh, activeTab]);
 
+  const exportNetworkChart = (type: "svg" | "png") => {
+    const svg = svgRef.current;
+    if (!svg) return;
+    type === "svg"
+      ? exportSVG(svg, `network_association_${Date.now()}`)
+      : exportPNG(svg, `network_association_${Date.now()}`);
+  };
+
   const tabs: { key: TabKey; label: string }[] = [
     { key: "association", label: t("network.tabAssociation") },
     { key: "chord",       label: t("network.tabChord") },
@@ -122,6 +131,10 @@ const NetworkPage = () => {
                   <span className={classes.legendDot} style={{ background: "rgba(255,255,255,0.15)", border: "1px dashed var(--gray)" }} />
                   <span>{t("network.edgeWeight")}</span>
                 </div>
+              </div>
+              <div style={{ display: "flex", gap: "0.5rem", marginTop: "0.5rem" }}>
+                <button onClick={() => exportNetworkChart("svg")} style={{ fontSize: "0.8rem", padding: "0.3rem 0.8rem", cursor: "pointer", border: "1px solid #dee2e6", borderRadius: "4px", background: "white" }}>{t("export.svg")}</button>
+                <button onClick={() => exportNetworkChart("png")} style={{ fontSize: "0.8rem", padding: "0.3rem 0.8rem", cursor: "pointer", border: "1px solid #dee2e6", borderRadius: "4px", background: "white" }}>{t("export.png")}</button>
               </div>
             </div>
           )}

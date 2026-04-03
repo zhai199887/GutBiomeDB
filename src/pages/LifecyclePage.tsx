@@ -6,6 +6,8 @@ import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import * as d3 from "d3";
 import { useI18n } from "@/i18n";
+import { exportTable } from "@/util/export";
+import { exportSVG, exportPNG } from "@/util/chartExport";
 import { countryName, AGE_GROUP_ZH } from "@/util/countries";
 import classes from "./LifecyclePage.module.css";
 
@@ -105,6 +107,21 @@ const LifecyclePage = () => {
         <>
           <div className={classes.chartCard}>
             <h3>{t("lifecycle.stackedArea")} ({data.total_samples.toLocaleString()} samples)</h3>
+            <div style={{ display: "flex", gap: "0.5rem", marginBottom: "0.5rem" }}>
+              <button onClick={() => {
+                if (!data) return;
+                exportTable(
+                  data.data.map((row: Record<string, any>) => {
+                    const out: Record<string, any> = { Age_Group: row.age_group };
+                    data.genera.forEach((g) => { out[g] = row[g]; });
+                    return out;
+                  }),
+                  `lifecycle_${Date.now()}`,
+                );
+              }} style={{ fontSize: "0.8rem", padding: "0.3rem 0.8rem", cursor: "pointer", border: "1px solid #dee2e6", borderRadius: "4px", background: "white" }}>{t("export.csv")}</button>
+              <button onClick={() => { const svg = svgRef.current; if (svg) exportSVG(svg, `lifecycle_${Date.now()}`); }} style={{ fontSize: "0.8rem", padding: "0.3rem 0.8rem", cursor: "pointer", border: "1px solid #dee2e6", borderRadius: "4px", background: "white" }}>{t("export.svg")}</button>
+              <button onClick={() => { const svg = svgRef.current; if (svg) exportPNG(svg, `lifecycle_${Date.now()}`); }} style={{ fontSize: "0.8rem", padding: "0.3rem 0.8rem", cursor: "pointer", border: "1px solid #dee2e6", borderRadius: "4px", background: "white" }}>{t("export.png")}</button>
+            </div>
             <svg ref={svgRef} className={classes.chart} />
             <div className={classes.legend}>
               {data.genera.map((g, i) => (

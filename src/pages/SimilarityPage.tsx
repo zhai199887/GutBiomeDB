@@ -5,6 +5,7 @@
 import { useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { useI18n } from "@/i18n";
+import { exportTable } from "@/util/export";
 import classes from "./SimilarityPage.module.css";
 
 const API_BASE = import.meta.env.VITE_API_URL ?? "http://localhost:8000";
@@ -251,7 +252,25 @@ const SimilarityPage = () => {
 
           {/* 结果表格 */}
           <div className={classes.tableCard}>
-            <h3>{t("similarity.topResults")}</h3>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <h3>{t("similarity.topResults")}</h3>
+              <div style={{ display: "flex", gap: "0.5rem" }}>
+                <button onClick={() => {
+                  if (!result) return;
+                  exportTable(
+                    result.results.map((item, idx) => ({
+                      Rank: idx + 1,
+                      Sample_ID: item.sample_key,
+                      Distance: item.distance,
+                      Similarity: item.similarity,
+                      Disease: item.disease,
+                      Country: item.country,
+                    })),
+                    `similarity_results_${Date.now()}`,
+                  );
+                }} style={{ fontSize: "0.8rem", padding: "0.3rem 0.8rem", cursor: "pointer", border: "1px solid #dee2e6", borderRadius: "4px", background: "white" }}>{t("export.csv")}</button>
+              </div>
+            </div>
             {result.results.length === 0 ? (
               <div className={classes.noResults}>No similar samples found</div>
             ) : (

@@ -5,6 +5,8 @@
 import { useEffect, useRef, useState } from "react";
 import * as d3 from "d3";
 import { useI18n } from "@/i18n";
+import { exportTable } from "@/util/export";
+import { exportSVG, exportPNG } from "@/util/chartExport";
 import classes from "../DiseasePage.module.css";
 
 const API_BASE = import.meta.env.VITE_API_URL ?? "http://localhost:8000";
@@ -81,6 +83,31 @@ const BiomarkerPanel = ({ disease }: Props) => {
     drawLDAChart(ldaRef.current, result.markers.slice(0, 30));
   }, [result]);
 
+  const exportBiomarkerCsv = () => {
+    if (!result) return;
+    exportTable(
+      result.markers.map((m) => ({
+        Taxon: m.taxon,
+        Log2FC: m.log2fc,
+        LDA_Score: m.lda_score,
+        P_value: m.p_value,
+        Adjusted_P: m.adjusted_p,
+        Enriched_In: m.enriched_in,
+        Prevalence_Disease: m.prevalence_disease,
+        Prevalence_Control: m.prevalence_control,
+      })),
+      `biomarker_${disease}_${Date.now()}`,
+    );
+  };
+
+  const exportBiomarkerChart = (ref: React.RefObject<SVGSVGElement | null>, name: string, type: "svg" | "png") => {
+    const svg = ref.current;
+    if (!svg) return;
+    type === "svg"
+      ? exportSVG(svg, `${name}_${disease}_${Date.now()}`)
+      : exportPNG(svg, `${name}_${disease}_${Date.now()}`);
+  };
+
   return (
     <div>
       {/* 控制栏：LDA 阈值 + 运行按钮 */}
@@ -128,6 +155,13 @@ const BiomarkerPanel = ({ disease }: Props) => {
             <div className={classes.selectHint}>{t("biomarker.noResults")}</div>
           ) : (
             <>
+              {/* 导出按钮 */}
+              <div style={{ display: "flex", gap: "0.5rem", marginBottom: "0.5rem", padding: "0 1rem" }}>
+                <button onClick={exportBiomarkerCsv} style={{ fontSize: "0.8rem", padding: "0.3rem 0.8rem", cursor: "pointer", border: "1px solid #dee2e6", borderRadius: "4px", background: "white" }}>{t("export.csv")}</button>
+                <button onClick={() => exportBiomarkerChart(ldaRef, "lda", "svg")} style={{ fontSize: "0.8rem", padding: "0.3rem 0.8rem", cursor: "pointer", border: "1px solid #dee2e6", borderRadius: "4px", background: "white" }}>{t("export.svg")}</button>
+                <button onClick={() => exportBiomarkerChart(ldaRef, "lda", "png")} style={{ fontSize: "0.8rem", padding: "0.3rem 0.8rem", cursor: "pointer", border: "1px solid #dee2e6", borderRadius: "4px", background: "white" }}>{t("export.png")}</button>
+              </div>
+
               {/* 森林图 */}
               <div className={classes.chartCard}>
                 <h3>{t("biomarker.forestPlot")}</h3>

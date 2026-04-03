@@ -5,6 +5,7 @@
 import { useEffect, useRef, useState } from "react";
 import * as d3 from "d3";
 import { useI18n } from "@/i18n";
+import { exportSVG, exportPNG } from "@/util/chartExport";
 import classes from "../ChordPage.module.css";
 
 const API_BASE = import.meta.env.VITE_API_URL ?? "http://localhost:8000";
@@ -89,6 +90,10 @@ const ChordPanel = () => {
         <>
           <div className={classes.chordContainer}>
             <svg ref={svgRef} className={classes.chordSvg} />
+          </div>
+          <div style={{ display: "flex", gap: "0.5rem", marginTop: "0.5rem" }}>
+            <button onClick={() => { const svg = svgRef.current; if (svg) exportSVG(svg, `chord_${Date.now()}`); }} style={{ fontSize: "0.8rem", padding: "0.3rem 0.8rem", cursor: "pointer", border: "1px solid #dee2e6", borderRadius: "4px", background: "white" }}>{t("export.svg")}</button>
+            <button onClick={() => { const svg = svgRef.current; if (svg) exportPNG(svg, `chord_${Date.now()}`); }} style={{ fontSize: "0.8rem", padding: "0.3rem 0.8rem", cursor: "pointer", border: "1px solid #dee2e6", borderRadius: "4px", background: "white" }}>{t("export.png")}</button>
           </div>
           <p className={classes.hint}>{t("chord.hovering")}</p>
         </>

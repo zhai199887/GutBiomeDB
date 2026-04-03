@@ -8,6 +8,8 @@ import { renderToString } from "react-dom/server";
 import { Link } from "react-router-dom";
 import * as d3 from "d3";
 import { useI18n } from "@/i18n";
+import { exportTable } from "@/util/export";
+import { exportSVG, exportPNG } from "@/util/chartExport";
 import "@/components/tooltip";
 import classes from "./Search.module.css";
 
@@ -185,6 +187,24 @@ const SpeciesProfileView = ({ profile }: { profile: SpeciesProfile }) => {
     drawBarChart(ageRef.current, profile.by_age_group, "#4ecdc4");
   }, [profile]);
 
+  const exportSearchCsv = () => {
+    const allData = [
+      ...profile.by_disease.map((d) => ({ Category: "Disease", Name: d.name, Mean_Abundance: d.mean_abundance, Prevalence: d.prevalence, Sample_Count: d.sample_count })),
+      ...profile.by_country.map((d) => ({ Category: "Country", Name: d.name, Mean_Abundance: d.mean_abundance, Prevalence: d.prevalence, Sample_Count: d.sample_count })),
+      ...profile.by_age_group.map((d) => ({ Category: "Age_Group", Name: d.name, Mean_Abundance: d.mean_abundance, Prevalence: d.prevalence, Sample_Count: d.sample_count })),
+      ...profile.by_sex.map((d) => ({ Category: "Sex", Name: d.name, Mean_Abundance: d.mean_abundance, Prevalence: d.prevalence, Sample_Count: d.sample_count })),
+    ];
+    exportTable(allData, `species_${profile.genus}_${Date.now()}`);
+  };
+
+  const exportSearchChart = (ref: React.RefObject<SVGSVGElement | null>, name: string, type: "svg" | "png") => {
+    const svg = ref.current;
+    if (!svg) return;
+    type === "svg"
+      ? exportSVG(svg, `species_${profile.genus}_${name}_${Date.now()}`)
+      : exportPNG(svg, `species_${profile.genus}_${name}_${Date.now()}`);
+  };
+
   return (
     <div className={classes.profileContainer}>
       {/* Header card / 物种信息卡 */}
@@ -212,6 +232,13 @@ const SpeciesProfileView = ({ profile }: { profile: SpeciesProfile }) => {
             <span className={classes.statLabel}>{t("search.meanAbundance")}</span>
           </div>
         </div>
+      </div>
+
+      {/* Export buttons */}
+      <div style={{ display: "flex", gap: "0.5rem", marginBottom: "1rem" }}>
+        <button onClick={exportSearchCsv} style={{ fontSize: "0.8rem", padding: "0.3rem 0.8rem", cursor: "pointer", border: "1px solid #dee2e6", borderRadius: "4px", background: "white" }}>{t("export.csv")}</button>
+        <button onClick={() => exportSearchChart(diseaseRef, "disease", "svg")} style={{ fontSize: "0.8rem", padding: "0.3rem 0.8rem", cursor: "pointer", border: "1px solid #dee2e6", borderRadius: "4px", background: "white" }}>{t("export.svg")}</button>
+        <button onClick={() => exportSearchChart(diseaseRef, "disease", "png")} style={{ fontSize: "0.8rem", padding: "0.3rem 0.8rem", cursor: "pointer", border: "1px solid #dee2e6", borderRadius: "4px", background: "white" }}>{t("export.png")}</button>
       </div>
 
       {/* Charts grid / 图表网格 */}

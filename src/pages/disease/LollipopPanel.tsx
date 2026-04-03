@@ -5,6 +5,8 @@
 import { useEffect, useRef, useState } from "react";
 import * as d3 from "d3";
 import { useI18n } from "@/i18n";
+import { exportTable } from "@/util/export";
+import { exportSVG, exportPNG } from "@/util/chartExport";
 import classes from "../DiseasePage.module.css";
 
 const API_BASE = import.meta.env.VITE_API_URL ?? "http://localhost:8000";
@@ -67,6 +69,29 @@ const LollipopPanel = ({ disease }: Props) => {
     drawLollipop(svgRef.current, data);
   }, [data]);
 
+  const exportLollipopCsv = () => {
+    if (!data.length) return;
+    exportTable(
+      data.map((d) => ({
+        Genus: d.genus,
+        Phylum: d.phylum,
+        Log2FC: d.log2fc,
+        P_value: d.p_value,
+        Mean_Disease: d.mean_disease,
+        Mean_Control: d.mean_control,
+      })),
+      `lollipop_${disease}_${Date.now()}`,
+    );
+  };
+
+  const exportLollipopChart = (type: "svg" | "png") => {
+    const svg = svgRef.current;
+    if (!svg) return;
+    type === "svg"
+      ? exportSVG(svg, `lollipop_${disease}_${Date.now()}`)
+      : exportPNG(svg, `lollipop_${disease}_${Date.now()}`);
+  };
+
   const phyla = [...new Set(data.map(d => d.phylum))];
 
   return (
@@ -80,6 +105,11 @@ const LollipopPanel = ({ disease }: Props) => {
       {/* Lollipop 图 */}
       {data.length > 0 && (
         <div className={classes.chartCard}>
+          <div style={{ display: "flex", gap: "0.5rem", marginBottom: "0.5rem" }}>
+            <button onClick={exportLollipopCsv} style={{ fontSize: "0.8rem", padding: "0.3rem 0.8rem", cursor: "pointer", border: "1px solid #dee2e6", borderRadius: "4px", background: "white" }}>{t("export.csv")}</button>
+            <button onClick={() => exportLollipopChart("svg")} style={{ fontSize: "0.8rem", padding: "0.3rem 0.8rem", cursor: "pointer", border: "1px solid #dee2e6", borderRadius: "4px", background: "white" }}>{t("export.svg")}</button>
+            <button onClick={() => exportLollipopChart("png")} style={{ fontSize: "0.8rem", padding: "0.3rem 0.8rem", cursor: "pointer", border: "1px solid #dee2e6", borderRadius: "4px", background: "white" }}>{t("export.png")}</button>
+          </div>
           <svg ref={svgRef} className={classes.chart} />
           <div className={classes.legend}>
             {phyla.map(p => (

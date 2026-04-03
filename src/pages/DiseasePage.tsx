@@ -8,6 +8,8 @@ import { renderToString } from "react-dom/server";
 import { Link } from "react-router-dom";
 import * as d3 from "d3";
 import { useI18n } from "@/i18n";
+import { exportTable } from "@/util/export";
+import { exportSVG, exportPNG } from "@/util/chartExport";
 import "@/components/tooltip";
 import BiomarkerPanel from "./disease/BiomarkerPanel";
 import LollipopPanel from "./disease/LollipopPanel";
@@ -198,6 +200,29 @@ const ProfileView = ({ profile, dName }: { profile: DiseaseProfile; dName: (n: s
     drawComparisonChart(barRef.current, profile.top_genera.slice(0, 20));
   }, [profile]);
 
+  const exportProfileCsv = () => {
+    if (!profile) return;
+    exportTable(
+      profile.top_genera.map((g: GenusEntry) => ({
+        Genus: g.genus,
+        Disease_Mean: g.disease_mean,
+        Control_Mean: g.control_mean,
+        Log2FC: g.log2fc,
+        Disease_Prevalence: g.disease_prevalence,
+        Control_Prevalence: g.control_prevalence,
+      })),
+      `disease_${profile.disease}_top_genera`,
+    );
+  };
+
+  const exportProfileChart = (type: "svg" | "png") => {
+    const svg = barRef.current;
+    if (!svg) return;
+    type === "svg"
+      ? exportSVG(svg, `disease_${profile?.disease}_chart`)
+      : exportPNG(svg, `disease_${profile?.disease}_chart`);
+  };
+
   return (
     <div>
       {/* Stats header */}
@@ -219,6 +244,11 @@ const ProfileView = ({ profile, dName }: { profile: DiseaseProfile; dName: (n: s
       {/* Comparison bar chart */}
       <div className={classes.chartCard}>
         <h3>{t("disease.topGenera")}</h3>
+        <div style={{ display: "flex", gap: "0.5rem", marginBottom: "0.5rem" }}>
+          <button onClick={exportProfileCsv} style={{ fontSize: "0.8rem", padding: "0.3rem 0.8rem", cursor: "pointer", border: "1px solid #dee2e6", borderRadius: "4px", background: "white" }}>{t("export.csv")}</button>
+          <button onClick={() => exportProfileChart("svg")} style={{ fontSize: "0.8rem", padding: "0.3rem 0.8rem", cursor: "pointer", border: "1px solid #dee2e6", borderRadius: "4px", background: "white" }}>{t("export.svg")}</button>
+          <button onClick={() => exportProfileChart("png")} style={{ fontSize: "0.8rem", padding: "0.3rem 0.8rem", cursor: "pointer", border: "1px solid #dee2e6", borderRadius: "4px", background: "white" }}>{t("export.png")}</button>
+        </div>
         <svg ref={barRef} className={classes.chart} />
       </div>
 

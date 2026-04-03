@@ -6,6 +6,8 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { useI18n } from "@/i18n";
+import { exportTable } from "@/util/export";
+import { exportSVG, exportPNG } from "@/util/chartExport";
 import "@/components/tooltip";
 import classes from "./ComparePage.module.css";
 
@@ -83,35 +85,29 @@ const ComparePage = () => {
   // Export result CSV / 导出结果CSV
   const exportCsv = () => {
     if (!result) return;
-    const rows = [
-      ["Taxon", "Mean_A", "Mean_B", "log2FC", "P_value", "Adjusted_P", "Effect_size"].join(","),
-      ...result.diff_taxa.map((t) =>
-        [t.taxon, t.mean_a, t.mean_b, t.log2fc, t.p_value, t.adjusted_p, t.effect_size].join(","),
-      ),
-    ];
-    const blob = new Blob([rows.join("\n")], { type: "text/csv" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `diff_analysis_${Date.now()}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
+    exportTable(
+      result.diff_taxa.map((t) => ({
+        Taxon: t.taxon,
+        Mean_A: t.mean_a,
+        Mean_B: t.mean_b,
+        Log2FC: t.log2fc,
+        P_value: t.p_value,
+        Adjusted_P: t.adjusted_p,
+        Effect_size: t.effect_size,
+      })),
+      `diff_analysis_${Date.now()}`,
+    );
   };
 
   // Export current chart as SVG / 导出当前图表SVG
-  const exportSvg = () => {
+  const exportSvgChart = () => {
     const svgEl = document.querySelector<SVGSVGElement>(".compare-chart");
-    if (!svgEl) return;
-    const blob = new Blob(
-      [new XMLSerializer().serializeToString(svgEl)],
-      { type: "image/svg+xml" },
-    );
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `chart_${activeTab}_${Date.now()}.svg`;
-    a.click();
-    URL.revokeObjectURL(url);
+    if (svgEl) exportSVG(svgEl, `chart_${activeTab}_${Date.now()}`);
+  };
+
+  const exportPngChart = () => {
+    const svgEl = document.querySelector<SVGSVGElement>(".compare-chart");
+    if (svgEl) exportPNG(svgEl, `chart_${activeTab}_${Date.now()}`);
   };
 
   // All available methods / 所有可选统计方法
@@ -255,8 +251,9 @@ const ComparePage = () => {
 
           {/* Export buttons / 导出按钮 */}
           <div className={classes.exportRow}>
-            <button className={classes.exportBtn} onClick={exportCsv}>{t("compare.export.csv")}</button>
-            <button className={classes.exportBtn} onClick={exportSvg}>{t("compare.export.svg")}</button>
+            <button className={classes.exportBtn} onClick={exportCsv}>{t("export.csv")}</button>
+            <button className={classes.exportBtn} onClick={exportSvgChart}>{t("export.svg")}</button>
+            <button className={classes.exportBtn} onClick={exportPngChart}>{t("export.png")}</button>
           </div>
         </section>
       )}
