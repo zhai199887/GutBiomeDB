@@ -42,12 +42,12 @@ const PhenotypeCharts = () => {
       <div className={classes.grid}>
         <div className="sub-section">
           <h3>Age Group Distribution</h3>
-          <svg id="age-chart" className="chart" viewBox="-80 -40 480 380" />
+          <svg id="age-chart" className="chart" viewBox="-80 -40 480 380" style={{ minHeight: 360 }} />
         </div>
 
         <div className="sub-section">
           <h3>Top 20 Diseases</h3>
-          <svg id="disease-chart" className="chart" viewBox="-200 -20 700 560" />
+          <svg id="disease-chart" className="chart" viewBox="-200 -20 700 560" style={{ minHeight: 420 }} />
         </div>
       </div>
 

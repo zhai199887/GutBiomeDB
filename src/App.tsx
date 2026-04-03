@@ -13,7 +13,7 @@ import Overview from "@/sections/Overview";
 import MapSection from "@/sections/MapSection";
 import PhenotypeCharts from "@/sections/PhenotypeCharts";
 import SankeyChart from "@/sections/SankeyChart";
-import Search from "@/sections/Search";
+// Search 已移到独立页面 /search
 import "@/components/tooltip";
 import "./App.css";
 
@@ -27,6 +27,7 @@ const SpeciesPage = lazy(() => import("@/pages/SpeciesPage"));
 const AdminPage = lazy(() => import("@/pages/AdminPage"));
 const SimilarityPage = lazy(() => import("@/pages/SimilarityPage"));
 const LifecyclePage = lazy(() => import("@/pages/LifecyclePage"));
+const SearchPage = lazy(() => import("@/pages/SearchPage"));
 
 const PageLoader = () => (
   <div style={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: "60vh" }}>
@@ -50,7 +51,6 @@ const MainPage = () => {
         <MapSection />
         <PhenotypeCharts />
         <SankeyChart />
-        <Search />
         <Footer />
       </main>
     </>
@@ -71,6 +71,7 @@ const App = () => (
           <Route path="/species/:taxon" element={<SpeciesPage />} />
           <Route path="/similarity" element={<SimilarityPage />} />
           <Route path="/lifecycle" element={<LifecyclePage />} />
+          <Route path="/search" element={<SearchPage />} />
           <Route path="/admin" element={<AdminPage />} />
         </Routes>
       </Suspense>

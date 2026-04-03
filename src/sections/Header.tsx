@@ -17,6 +17,7 @@ const Header = () => {
     { to: "/metabolism", label: t("nav.metabolism") },
     { to: "/lifecycle",  label: t("nav.lifecycle") },
     { to: "/similarity", label: t("nav.similarity") },
+    { to: "/search",     label: t("nav.search") },
   ] as const;
 
   return (

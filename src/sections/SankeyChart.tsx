@@ -311,7 +311,7 @@ const SankeyChart = () => {
       <p style={{ color: "var(--light-gray)", fontSize: "0.85rem", margin: "0.3rem 0 0.8rem" }}>
         Hover to highlight connections. Width proportional to mean relative abundance.
       </p>
-      <svg ref={svgRef} className="chart compare-chart" style={{ width: "100%", maxWidth: 780 }} />
+      <svg ref={svgRef} className="chart compare-chart" style={{ width: "100%", maxWidth: 880 }} />
     </div>
   );
 };
