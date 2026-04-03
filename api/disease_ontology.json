@@ -1,0 +1,1838 @@
+{
+  "NC": {
+    "standard_name": "Normal Control",
+    "standard_name_zh": "正常对照",
+    "abbreviation": "NC",
+    "mesh_id": "",
+    "icd10": "Z76.0",
+    "category": "Control",
+    "category_zh": "对照"
+  },
+  "hematopoietic_stem_cell_transplantation": {
+    "standard_name": "Hematopoietic stem cell transplantation",
+    "standard_name_zh": "造血干细胞移植",
+    "abbreviation": "HSCT",
+    "mesh_id": "D018380",
+    "icd10": "Z94.84",
+    "category": "Other",
+    "category_zh": "其他"
+  },
+  "Hematologic malignancy": {
+    "standard_name": "Hematologic malignancy",
+    "standard_name_zh": "血液系统恶性肿瘤",
+    "abbreviation": "",
+    "mesh_id": "D019337",
+    "icd10": "C96.9",
+    "category": "Hematological",
+    "category_zh": "血液疾病"
+  },
+  "preterm infants": {
+    "standard_name": "Preterm infant",
+    "standard_name_zh": "早产儿",
+    "abbreviation": "",
+    "mesh_id": "D007234",
+    "icd10": "P07.3",
+    "category": "Pediatric",
+    "category_zh": "儿科"
+  },
+  "chickenpox": {
+    "standard_name": "Chickenpox",
+    "standard_name_zh": "水痘",
+    "abbreviation": "",
+    "mesh_id": "D002644",
+    "icd10": "B01",
+    "category": "Infectious Disease",
+    "category_zh": "感染性疾病"
+  },
+  "UC": {
+    "standard_name": "Ulcerative colitis",
+    "standard_name_zh": "溃疡性结肠炎",
+    "abbreviation": "UC",
+    "mesh_id": "D003093",
+    "icd10": "K51",
+    "category": "Gastrointestinal",
+    "category_zh": "消化系统疾病"
+  },
+  "obesity": {
+    "standard_name": "Obesity",
+    "standard_name_zh": "肥胖症",
+    "abbreviation": "",
+    "mesh_id": "D009765",
+    "icd10": "E66",
+    "category": "Metabolic",
+    "category_zh": "代谢性疾病"
+  },
+  "c_difficile_infection": {
+    "standard_name": "Clostridioides difficile infection",
+    "standard_name_zh": "艰难梭菌感染",
+    "abbreviation": "CDI",
+    "mesh_id": "D003015",
+    "icd10": "A04.72",
+    "category": "Infectious Disease",
+    "category_zh": "感染性疾病"
+  },
+  "CD": {
+    "standard_name": "Crohn's disease",
+    "standard_name_zh": "克罗恩病",
+    "abbreviation": "CD",
+    "mesh_id": "D003424",
+    "icd10": "K50",
+    "category": "Gastrointestinal",
+    "category_zh": "消化系统疾病"
+  },
+  "colorectal_cancer": {
+    "standard_name": "Colorectal cancer",
+    "standard_name_zh": "结直肠癌",
+    "abbreviation": "CRC",
+    "mesh_id": "D015179",
+    "icd10": "C18-C20",
+    "category": "Oncology",
+    "category_zh": "肿瘤"
+  },
+  "HIV": {
+    "standard_name": "Human immunodeficiency virus infection",
+    "standard_name_zh": "人类免疫缺陷病毒感染",
+    "abbreviation": "HIV",
+    "mesh_id": "D015658",
+    "icd10": "B20",
+    "category": "Infectious Disease",
+    "category_zh": "感染性疾病"
+  },
+  "Non-CDI diarrhea control": {
+    "standard_name": "Non-CDI diarrhea control",
+    "standard_name_zh": "非艰难梭菌感染腹泻对照",
+    "abbreviation": "",
+    "mesh_id": "",
+    "icd10": "",
+    "category": "Control",
+    "category_zh": "对照"
+  },
+  "IBS": {
+    "standard_name": "Irritable bowel syndrome",
+    "standard_name_zh": "肠易激综合征",
+    "abbreviation": "IBS",
+    "mesh_id": "D043183",
+    "icd10": "K58",
+    "category": "Gastrointestinal",
+    "category_zh": "消化系统疾病"
+  },
+  "HIV-exposed uninfected": {
+    "standard_name": "HIV-exposed uninfected",
+    "standard_name_zh": "HIV暴露未感染",
+    "abbreviation": "HEU",
+    "mesh_id": "",
+    "icd10": "",
+    "category": "Infectious Disease",
+    "category_zh": "感染性疾病"
+  },
+  "skin_condition": {
+    "standard_name": "Skin disease",
+    "standard_name_zh": "皮肤病",
+    "abbreviation": "",
+    "mesh_id": "D012871",
+    "icd10": "L98.9",
+    "category": "Dermatological",
+    "category_zh": "皮肤疾病"
+  },
+  "Acute myeloid leukemia": {
+    "standard_name": "Acute myeloid leukemia",
+    "standard_name_zh": "急性髓系白血病",
+    "abbreviation": "AML",
+    "mesh_id": "D015470",
+    "icd10": "C92.0",
+    "category": "Hematological",
+    "category_zh": "血液疾病"
+  },
+  "adenoma": {
+    "standard_name": "Adenoma",
+    "standard_name_zh": "腺瘤",
+    "abbreviation": "",
+    "mesh_id": "D000236",
+    "icd10": "D12",
+    "category": "Oncology",
+    "category_zh": "肿瘤"
+  },
+  "lactose_intolerance": {
+    "standard_name": "Lactose intolerance",
+    "standard_name_zh": "乳糖不耐受",
+    "abbreviation": "",
+    "mesh_id": "D007787",
+    "icd10": "E73",
+    "category": "Gastrointestinal",
+    "category_zh": "消化系统疾病"
+  },
+  "seasonal_allergies": {
+    "standard_name": "Seasonal allergic rhinitis",
+    "standard_name_zh": "季节性过敏性鼻炎",
+    "abbreviation": "",
+    "mesh_id": "D006255",
+    "icd10": "J30.2",
+    "category": "Autoimmune",
+    "category_zh": "自身免疫"
+  },
+  "Lean": {
+    "standard_name": "Lean control",
+    "standard_name_zh": "消瘦对照",
+    "abbreviation": "",
+    "mesh_id": "",
+    "icd10": "",
+    "category": "Control",
+    "category_zh": "对照"
+  },
+  "ICU patient": {
+    "standard_name": "Intensive care unit patient",
+    "standard_name_zh": "重症监护室患者",
+    "abbreviation": "ICU",
+    "mesh_id": "",
+    "icd10": "",
+    "category": "Other",
+    "category_zh": "其他"
+  },
+  "acid_reflux": {
+    "standard_name": "Gastroesophageal reflux disease",
+    "standard_name_zh": "胃食管反流病",
+    "abbreviation": "GERD",
+    "mesh_id": "D005764",
+    "icd10": "K21",
+    "category": "Gastrointestinal",
+    "category_zh": "消化系统疾病"
+  },
+  "LTACH patient": {
+    "standard_name": "Long-term acute care hospital patient",
+    "standard_name_zh": "长期急性护理医院患者",
+    "abbreviation": "LTACH",
+    "mesh_id": "",
+    "icd10": "",
+    "category": "Other",
+    "category_zh": "其他"
+  },
+  "severe acute malnutrition": {
+    "standard_name": "Severe acute malnutrition",
+    "standard_name_zh": "严重急性营养不良",
+    "abbreviation": "SAM",
+    "mesh_id": "D000067011",
+    "icd10": "E43",
+    "category": "Metabolic",
+    "category_zh": "代谢性疾病"
+  },
+  "migraine": {
+    "standard_name": "Migraine",
+    "standard_name_zh": "偏头痛",
+    "abbreviation": "",
+    "mesh_id": "D008881",
+    "icd10": "G43",
+    "category": "Neurological",
+    "category_zh": "神经系统疾病"
+  },
+  "parkinson": {
+    "standard_name": "Parkinson's disease",
+    "standard_name_zh": "帕金森病",
+    "abbreviation": "PD",
+    "mesh_id": "D010300",
+    "icd10": "G20",
+    "category": "Neurological",
+    "category_zh": "神经系统疾病"
+  },
+  "h_pylori_infection": {
+    "standard_name": "Helicobacter pylori infection",
+    "standard_name_zh": "幽门螺杆菌感染",
+    "abbreviation": "",
+    "mesh_id": "D016481",
+    "icd10": "B96.81",
+    "category": "Infectious Disease",
+    "category_zh": "感染性疾病"
+  },
+  "Food allergy": {
+    "standard_name": "Food allergy",
+    "standard_name_zh": "食物过敏",
+    "abbreviation": "",
+    "mesh_id": "D005512",
+    "icd10": "T78.1",
+    "category": "Autoimmune",
+    "category_zh": "自身免疫"
+  },
+  "autoimmune": {
+    "standard_name": "Autoimmune disease",
+    "standard_name_zh": "自身免疫性疾病",
+    "abbreviation": "",
+    "mesh_id": "D001327",
+    "icd10": "M35.9",
+    "category": "Autoimmune",
+    "category_zh": "自身免疫"
+  },
+  "IBD": {
+    "standard_name": "Inflammatory bowel disease",
+    "standard_name_zh": "炎症性肠病",
+    "abbreviation": "IBD",
+    "mesh_id": "D015212",
+    "icd10": "K50-K51",
+    "category": "Gastrointestinal",
+    "category_zh": "消化系统疾病"
+  },
+  "T2D": {
+    "standard_name": "Type 2 diabetes mellitus",
+    "standard_name_zh": "2型糖尿病",
+    "abbreviation": "T2D",
+    "mesh_id": "D003924",
+    "icd10": "E11",
+    "category": "Metabolic",
+    "category_zh": "代谢性疾病"
+  },
+  "high_cholesterol": {
+    "standard_name": "Hypercholesterolemia",
+    "standard_name_zh": "高胆固醇血症",
+    "abbreviation": "",
+    "mesh_id": "D006937",
+    "icd10": "E78.0",
+    "category": "Metabolic",
+    "category_zh": "代谢性疾病"
+  },
+  "Allogenic HSCT": {
+    "standard_name": "Allogeneic hematopoietic stem cell transplantation",
+    "standard_name_zh": "异基因造血干细胞移植",
+    "abbreviation": "Allo-HSCT",
+    "mesh_id": "D018380",
+    "icd10": "Z94.84",
+    "category": "Other",
+    "category_zh": "其他"
+  },
+  "psoriasis": {
+    "standard_name": "Psoriasis",
+    "standard_name_zh": "银屑病",
+    "abbreviation": "",
+    "mesh_id": "D011565",
+    "icd10": "L40",
+    "category": "Dermatological",
+    "category_zh": "皮肤疾病"
+  },
+  "cirrhosis": {
+    "standard_name": "Liver cirrhosis",
+    "standard_name_zh": "肝硬化",
+    "abbreviation": "",
+    "mesh_id": "D008103",
+    "icd10": "K74",
+    "category": "Hepatic",
+    "category_zh": "肝脏疾病"
+  },
+  "atopic_dermatitis": {
+    "standard_name": "Atopic dermatitis",
+    "standard_name_zh": "特应性皮炎",
+    "abbreviation": "AD",
+    "mesh_id": "D003876",
+    "icd10": "L20",
+    "category": "Dermatological",
+    "category_zh": "皮肤疾病"
+  },
+  "Liver Disease": {
+    "standard_name": "Liver disease",
+    "standard_name_zh": "肝病",
+    "abbreviation": "",
+    "mesh_id": "D008107",
+    "icd10": "K76.9",
+    "category": "Hepatic",
+    "category_zh": "肝脏疾病"
+  },
+  "T1D": {
+    "standard_name": "Type 1 diabetes mellitus",
+    "standard_name_zh": "1型糖尿病",
+    "abbreviation": "T1D",
+    "mesh_id": "D003922",
+    "icd10": "E10",
+    "category": "Metabolic",
+    "category_zh": "代谢性疾病"
+  },
+  "NAFLD": {
+    "standard_name": "Non-alcoholic fatty liver disease",
+    "standard_name_zh": "非酒精性脂肪性肝病",
+    "abbreviation": "NAFLD",
+    "mesh_id": "D065626",
+    "icd10": "K76.0",
+    "category": "Hepatic",
+    "category_zh": "肝脏疾病"
+  },
+  "ankylosing_spondylitis": {
+    "standard_name": "Ankylosing spondylitis",
+    "standard_name_zh": "强直性脊柱炎",
+    "abbreviation": "AS",
+    "mesh_id": "D013167",
+    "icd10": "M45",
+    "category": "Autoimmune",
+    "category_zh": "自身免疫"
+  },
+  "depression": {
+    "standard_name": "Depression",
+    "standard_name_zh": "抑郁症",
+    "abbreviation": "",
+    "mesh_id": "D003866",
+    "icd10": "F32",
+    "category": "Neurological",
+    "category_zh": "神经系统疾病"
+  },
+  "small_cell_lung_cancer": {
+    "standard_name": "Small cell lung cancer",
+    "standard_name_zh": "小细胞肺癌",
+    "abbreviation": "SCLC",
+    "mesh_id": "D055752",
+    "icd10": "C34",
+    "category": "Oncology",
+    "category_zh": "肿瘤"
+  },
+  "cystic_fibrosis": {
+    "standard_name": "Cystic fibrosis",
+    "standard_name_zh": "囊性纤维化",
+    "abbreviation": "CF",
+    "mesh_id": "D003550",
+    "icd10": "E84",
+    "category": "Respiratory",
+    "category_zh": "呼吸系统疾病"
+  },
+  "rheumatoid_arthritis": {
+    "standard_name": "Rheumatoid arthritis",
+    "standard_name_zh": "类风湿关节炎",
+    "abbreviation": "RA",
+    "mesh_id": "D001172",
+    "icd10": "M06.9",
+    "category": "Autoimmune",
+    "category_zh": "自身免疫"
+  },
+  "asthma": {
+    "standard_name": "Asthma",
+    "standard_name_zh": "哮喘",
+    "abbreviation": "",
+    "mesh_id": "D001249",
+    "icd10": "J45",
+    "category": "Respiratory",
+    "category_zh": "呼吸系统疾病"
+  },
+  "celiac": {
+    "standard_name": "Celiac disease",
+    "standard_name_zh": "乳糜泻",
+    "abbreviation": "",
+    "mesh_id": "D002446",
+    "icd10": "K90.0",
+    "category": "Gastrointestinal",
+    "category_zh": "消化系统疾病"
+  },
+  "chronic_fatigue_syndrome": {
+    "standard_name": "Chronic fatigue syndrome",
+    "standard_name_zh": "慢性疲劳综合征",
+    "abbreviation": "CFS",
+    "mesh_id": "D015673",
+    "icd10": "G93.3",
+    "category": "Neurological",
+    "category_zh": "神经系统疾病"
+  },
+  "atherosclerosis": {
+    "standard_name": "Atherosclerosis",
+    "standard_name_zh": "动脉粥样硬化",
+    "abbreviation": "",
+    "mesh_id": "D050197",
+    "icd10": "I70",
+    "category": "Cardiovascular",
+    "category_zh": "心血管疾病"
+  },
+  "STH infected": {
+    "standard_name": "Soil-transmitted helminth infection",
+    "standard_name_zh": "土源性蠕虫感染",
+    "abbreviation": "STH",
+    "mesh_id": "D006373",
+    "icd10": "B76-B79",
+    "category": "Infectious Disease",
+    "category_zh": "感染性疾病"
+  },
+  "alzheimer": {
+    "standard_name": "Alzheimer's disease",
+    "standard_name_zh": "阿尔茨海默病",
+    "abbreviation": "AD",
+    "mesh_id": "D000544",
+    "icd10": "G30",
+    "category": "Neurological",
+    "category_zh": "神经系统疾病"
+  },
+  "hepatitis_b": {
+    "standard_name": "Hepatitis B",
+    "standard_name_zh": "乙型肝炎",
+    "abbreviation": "HBV",
+    "mesh_id": "D006509",
+    "icd10": "B18.1",
+    "category": "Infectious Disease",
+    "category_zh": "感染性疾病"
+  },
+  "Necrotizing enterocolitis": {
+    "standard_name": "Necrotizing enterocolitis",
+    "standard_name_zh": "坏死性小肠结肠炎",
+    "abbreviation": "NEC",
+    "mesh_id": "D020345",
+    "icd10": "P77",
+    "category": "Pediatric",
+    "category_zh": "儿科"
+  },
+  "Bronchiolitis": {
+    "standard_name": "Bronchiolitis",
+    "standard_name_zh": "毛细支气管炎",
+    "abbreviation": "",
+    "mesh_id": "D001988",
+    "icd10": "J21",
+    "category": "Respiratory",
+    "category_zh": "呼吸系统疾病"
+  },
+  "overweight": {
+    "standard_name": "Overweight",
+    "standard_name_zh": "超重",
+    "abbreviation": "",
+    "mesh_id": "D050177",
+    "icd10": "E66.3",
+    "category": "Metabolic",
+    "category_zh": "代谢性疾病"
+  },
+  "CKD": {
+    "standard_name": "Chronic kidney disease",
+    "standard_name_zh": "慢性肾脏病",
+    "abbreviation": "CKD",
+    "mesh_id": "D051436",
+    "icd10": "N18",
+    "category": "Renal",
+    "category_zh": "肾脏疾病"
+  },
+  "Preeclampsia": {
+    "standard_name": "Preeclampsia",
+    "standard_name_zh": "子痫前期",
+    "abbreviation": "",
+    "mesh_id": "D011225",
+    "icd10": "O14",
+    "category": "Other",
+    "category_zh": "其他"
+  },
+  "Gestational diabetes mellitus": {
+    "standard_name": "Gestational diabetes mellitus",
+    "standard_name_zh": "妊娠期糖尿病",
+    "abbreviation": "GDM",
+    "mesh_id": "D016640",
+    "icd10": "O24.4",
+    "category": "Metabolic",
+    "category_zh": "代谢性疾病"
+  },
+  "cancer": {
+    "standard_name": "Cancer",
+    "standard_name_zh": "癌症",
+    "abbreviation": "",
+    "mesh_id": "D009369",
+    "icd10": "C80.1",
+    "category": "Oncology",
+    "category_zh": "肿瘤"
+  },
+  "kwashiorkor": {
+    "standard_name": "Kwashiorkor",
+    "standard_name_zh": "恶性营养不良（夸希奥科）",
+    "abbreviation": "",
+    "mesh_id": "D007732",
+    "icd10": "E40",
+    "category": "Metabolic",
+    "category_zh": "代谢性疾病"
+  },
+  "bipolar_disorder": {
+    "standard_name": "Bipolar disorder",
+    "standard_name_zh": "双相情感障碍",
+    "abbreviation": "",
+    "mesh_id": "D001714",
+    "icd10": "F31",
+    "category": "Neurological",
+    "category_zh": "神经系统疾病"
+  },
+  "Neonatal jaundice": {
+    "standard_name": "Neonatal jaundice",
+    "standard_name_zh": "新生儿黄疸",
+    "abbreviation": "",
+    "mesh_id": "D007567",
+    "icd10": "P59",
+    "category": "Pediatric",
+    "category_zh": "儿科"
+  },
+  "sepsis": {
+    "standard_name": "Sepsis",
+    "standard_name_zh": "脓毒症",
+    "abbreviation": "",
+    "mesh_id": "D018805",
+    "icd10": "A41",
+    "category": "Infectious Disease",
+    "category_zh": "感染性疾病"
+  },
+  "Immunodeficiency": {
+    "standard_name": "Immunodeficiency",
+    "standard_name_zh": "免疫缺陷",
+    "abbreviation": "",
+    "mesh_id": "D007153",
+    "icd10": "D84.9",
+    "category": "Autoimmune",
+    "category_zh": "自身免疫"
+  },
+  "metabolic_syndrome": {
+    "standard_name": "Metabolic syndrome",
+    "standard_name_zh": "代谢综合征",
+    "abbreviation": "MetS",
+    "mesh_id": "D024821",
+    "icd10": "E88.81",
+    "category": "Metabolic",
+    "category_zh": "代谢性疾病"
+  },
+  "eczema": {
+    "standard_name": "Eczema",
+    "standard_name_zh": "湿疹",
+    "abbreviation": "",
+    "mesh_id": "D004485",
+    "icd10": "L30.9",
+    "category": "Dermatological",
+    "category_zh": "皮肤疾病"
+  },
+  "Autism Spectrum Disorder": {
+    "standard_name": "Autism spectrum disorder",
+    "standard_name_zh": "自闭症谱系障碍",
+    "abbreviation": "ASD",
+    "mesh_id": "D000067877",
+    "icd10": "F84.0",
+    "category": "Neurological",
+    "category_zh": "神经系统疾病"
+  },
+  "PKD": {
+    "standard_name": "Polycystic kidney disease",
+    "standard_name_zh": "多囊肾病",
+    "abbreviation": "PKD",
+    "mesh_id": "D007690",
+    "icd10": "Q61",
+    "category": "Renal",
+    "category_zh": "肾脏疾病"
+  },
+  "colorectal_adenoma": {
+    "standard_name": "Colorectal adenoma",
+    "standard_name_zh": "结直肠腺瘤",
+    "abbreviation": "",
+    "mesh_id": "D000236",
+    "icd10": "D12",
+    "category": "Oncology",
+    "category_zh": "肿瘤"
+  },
+  "schizophrenia": {
+    "standard_name": "Schizophrenia",
+    "standard_name_zh": "精神分裂症",
+    "abbreviation": "",
+    "mesh_id": "D012559",
+    "icd10": "F20",
+    "category": "Neurological",
+    "category_zh": "神经系统疾病"
+  },
+  "hypertension": {
+    "standard_name": "Hypertension",
+    "standard_name_zh": "高血压",
+    "abbreviation": "",
+    "mesh_id": "D006973",
+    "icd10": "I10",
+    "category": "Cardiovascular",
+    "category_zh": "心血管疾病"
+  },
+  "malaria": {
+    "standard_name": "Malaria",
+    "standard_name_zh": "疟疾",
+    "abbreviation": "",
+    "mesh_id": "D008288",
+    "icd10": "B54",
+    "category": "Infectious Disease",
+    "category_zh": "感染性疾病"
+  },
+  "Graves' disease": {
+    "standard_name": "Graves' disease",
+    "standard_name_zh": "Graves病（毒性弥漫性甲状腺肿）",
+    "abbreviation": "",
+    "mesh_id": "D006111",
+    "icd10": "E05.0",
+    "category": "Autoimmune",
+    "category_zh": "自身免疫"
+  },
+  "environmental enteric dysfunction": {
+    "standard_name": "Environmental enteric dysfunction",
+    "standard_name_zh": "环境性肠功能障碍",
+    "abbreviation": "EED",
+    "mesh_id": "",
+    "icd10": "",
+    "category": "Gastrointestinal",
+    "category_zh": "消化系统疾病"
+  },
+  "anxiety": {
+    "standard_name": "Anxiety disorder",
+    "standard_name_zh": "焦虑症",
+    "abbreviation": "",
+    "mesh_id": "D001008",
+    "icd10": "F41",
+    "category": "Neurological",
+    "category_zh": "神经系统疾病"
+  },
+  "HBV-related liver cirrhosis": {
+    "standard_name": "Hepatitis B virus-related liver cirrhosis",
+    "standard_name_zh": "乙型肝炎病毒相关性肝硬化",
+    "abbreviation": "",
+    "mesh_id": "D008103",
+    "icd10": "K74.6",
+    "category": "Hepatic",
+    "category_zh": "肝脏疾病"
+  },
+  "cholesterol_gallstones": {
+    "standard_name": "Cholesterol gallstones",
+    "standard_name_zh": "胆固醇性胆石症",
+    "abbreviation": "",
+    "mesh_id": "D042882",
+    "icd10": "K80",
+    "category": "Gastrointestinal",
+    "category_zh": "消化系统疾病"
+  },
+  "allergic rhinitis": {
+    "standard_name": "Allergic rhinitis",
+    "standard_name_zh": "过敏性鼻炎",
+    "abbreviation": "AR",
+    "mesh_id": "D065631",
+    "icd10": "J30.4",
+    "category": "Autoimmune",
+    "category_zh": "自身免疫"
+  },
+  "Behcet's disease": {
+    "standard_name": "Behcet's disease",
+    "standard_name_zh": "白塞病",
+    "abbreviation": "BD",
+    "mesh_id": "D001528",
+    "icd10": "M35.2",
+    "category": "Autoimmune",
+    "category_zh": "自身免疫"
+  },
+  "meningitis": {
+    "standard_name": "Meningitis",
+    "standard_name_zh": "脑膜炎",
+    "abbreviation": "",
+    "mesh_id": "D008581",
+    "icd10": "G03",
+    "category": "Infectious Disease",
+    "category_zh": "感染性疾病"
+  },
+  "cholangitis": {
+    "standard_name": "Cholangitis",
+    "standard_name_zh": "胆管炎",
+    "abbreviation": "",
+    "mesh_id": "D002761",
+    "icd10": "K83.0",
+    "category": "Hepatic",
+    "category_zh": "肝脏疾病"
+  },
+  "acute_lymphoblastic_leukemia": {
+    "standard_name": "Acute lymphoblastic leukemia",
+    "standard_name_zh": "急性淋巴细胞白血病",
+    "abbreviation": "ALL",
+    "mesh_id": "D054198",
+    "icd10": "C91.0",
+    "category": "Hematological",
+    "category_zh": "血液疾病"
+  },
+  "acute diarrhea": {
+    "standard_name": "Acute diarrhea",
+    "standard_name_zh": "急性腹泻",
+    "abbreviation": "",
+    "mesh_id": "D003967",
+    "icd10": "A09",
+    "category": "Gastrointestinal",
+    "category_zh": "消化系统疾病"
+  },
+  "lung_cancer": {
+    "standard_name": "Lung cancer",
+    "standard_name_zh": "肺癌",
+    "abbreviation": "",
+    "mesh_id": "D008175",
+    "icd10": "C34",
+    "category": "Oncology",
+    "category_zh": "肿瘤"
+  },
+  "Myelodysplastic Syndrome": {
+    "standard_name": "Myelodysplastic syndrome",
+    "standard_name_zh": "骨髓增生异常综合征",
+    "abbreviation": "MDS",
+    "mesh_id": "D009190",
+    "icd10": "D46",
+    "category": "Hematological",
+    "category_zh": "血液疾病"
+  },
+  "hepatitis_c": {
+    "standard_name": "Hepatitis C",
+    "standard_name_zh": "丙型肝炎",
+    "abbreviation": "HCV",
+    "mesh_id": "D006526",
+    "icd10": "B18.2",
+    "category": "Infectious Disease",
+    "category_zh": "感染性疾病"
+  },
+  "gastric_cancer": {
+    "standard_name": "Gastric cancer",
+    "standard_name_zh": "胃癌",
+    "abbreviation": "",
+    "mesh_id": "D013274",
+    "icd10": "C16",
+    "category": "Oncology",
+    "category_zh": "肿瘤"
+  },
+  "epilepsy": {
+    "standard_name": "Epilepsy",
+    "standard_name_zh": "癫痫",
+    "abbreviation": "",
+    "mesh_id": "D004827",
+    "icd10": "G40",
+    "category": "Neurological",
+    "category_zh": "神经系统疾病"
+  },
+  "alcoholic_liver_disease": {
+    "standard_name": "Alcoholic liver disease",
+    "standard_name_zh": "酒精性肝病",
+    "abbreviation": "ALD",
+    "mesh_id": "D008108",
+    "icd10": "K70",
+    "category": "Hepatic",
+    "category_zh": "肝脏疾病"
+  },
+  "Down syndrome": {
+    "standard_name": "Down syndrome",
+    "standard_name_zh": "唐氏综合征",
+    "abbreviation": "",
+    "mesh_id": "D004314",
+    "icd10": "Q90",
+    "category": "Pediatric",
+    "category_zh": "儿科"
+  },
+  "pneumonia": {
+    "standard_name": "Pneumonia",
+    "standard_name_zh": "肺炎",
+    "abbreviation": "",
+    "mesh_id": "D011014",
+    "icd10": "J18",
+    "category": "Respiratory",
+    "category_zh": "呼吸系统疾病"
+  },
+  "periodontitis": {
+    "standard_name": "Periodontitis",
+    "standard_name_zh": "牙周炎",
+    "abbreviation": "",
+    "mesh_id": "D010518",
+    "icd10": "K05.3",
+    "category": "Other",
+    "category_zh": "其他"
+  },
+  "diverticular_disease": {
+    "standard_name": "Diverticular disease",
+    "standard_name_zh": "憩室病",
+    "abbreviation": "",
+    "mesh_id": "D004241",
+    "icd10": "K57",
+    "category": "Gastrointestinal",
+    "category_zh": "消化系统疾病"
+  },
+  "non_alcoholic_steatohepatitis": {
+    "standard_name": "Non-alcoholic steatohepatitis",
+    "standard_name_zh": "非酒精性脂肪性肝炎",
+    "abbreviation": "NASH",
+    "mesh_id": "D065626",
+    "icd10": "K75.81",
+    "category": "Hepatic",
+    "category_zh": "肝脏疾病"
+  },
+  "melanoma": {
+    "standard_name": "Melanoma",
+    "standard_name_zh": "黑色素瘤",
+    "abbreviation": "",
+    "mesh_id": "D008545",
+    "icd10": "C43",
+    "category": "Oncology",
+    "category_zh": "肿瘤"
+  },
+  "arthritis": {
+    "standard_name": "Arthritis",
+    "standard_name_zh": "关节炎",
+    "abbreviation": "",
+    "mesh_id": "D001168",
+    "icd10": "M13.9",
+    "category": "Autoimmune",
+    "category_zh": "自身免疫"
+  },
+  "Kawasaki disease": {
+    "standard_name": "Kawasaki disease",
+    "standard_name_zh": "川崎病",
+    "abbreviation": "KD",
+    "mesh_id": "D009080",
+    "icd10": "M30.3",
+    "category": "Pediatric",
+    "category_zh": "儿科"
+  },
+  "HIV and HCV coinfection": {
+    "standard_name": "HIV and HCV coinfection",
+    "standard_name_zh": "HIV与HCV合并感染",
+    "abbreviation": "",
+    "mesh_id": "",
+    "icd10": "",
+    "category": "Infectious Disease",
+    "category_zh": "感染性疾病"
+  },
+  "kidney_stones": {
+    "standard_name": "Kidney stones",
+    "standard_name_zh": "肾结石",
+    "abbreviation": "",
+    "mesh_id": "D007669",
+    "icd10": "N20.0",
+    "category": "Renal",
+    "category_zh": "肾脏疾病"
+  },
+  "MIS-C": {
+    "standard_name": "Multisystem inflammatory syndrome in children",
+    "standard_name_zh": "儿童多系统炎症综合征",
+    "abbreviation": "MIS-C",
+    "mesh_id": "",
+    "icd10": "M35.81",
+    "category": "Pediatric",
+    "category_zh": "儿科"
+  },
+  "hepatocellular_carcinoma": {
+    "standard_name": "Hepatocellular carcinoma",
+    "standard_name_zh": "肝细胞癌",
+    "abbreviation": "HCC",
+    "mesh_id": "D006528",
+    "icd10": "C22.0",
+    "category": "Oncology",
+    "category_zh": "肿瘤"
+  },
+  "PCOS": {
+    "standard_name": "Polycystic ovary syndrome",
+    "standard_name_zh": "多囊卵巢综合征",
+    "abbreviation": "PCOS",
+    "mesh_id": "D011085",
+    "icd10": "E28.2",
+    "category": "Metabolic",
+    "category_zh": "代谢性疾病"
+  },
+  "COVID_19": {
+    "standard_name": "COVID-19",
+    "standard_name_zh": "新型冠状病毒感染",
+    "abbreviation": "COVID-19",
+    "mesh_id": "D000086382",
+    "icd10": "U07.1",
+    "category": "Infectious Disease",
+    "category_zh": "感染性疾病"
+  },
+  "GVHD": {
+    "standard_name": "Graft-versus-host disease",
+    "standard_name_zh": "移植物抗宿主病",
+    "abbreviation": "GVHD",
+    "mesh_id": "D006086",
+    "icd10": "T86.09",
+    "category": "Autoimmune",
+    "category_zh": "自身免疫"
+  },
+  "pancreatic_cancer": {
+    "standard_name": "Pancreatic cancer",
+    "standard_name_zh": "胰腺癌",
+    "abbreviation": "",
+    "mesh_id": "D010190",
+    "icd10": "C25",
+    "category": "Oncology",
+    "category_zh": "肿瘤"
+  },
+  "multiple_sclerosis": {
+    "standard_name": "Multiple sclerosis",
+    "standard_name_zh": "多发性硬化",
+    "abbreviation": "MS",
+    "mesh_id": "D009103",
+    "icd10": "G35",
+    "category": "Autoimmune",
+    "category_zh": "自身免疫"
+  },
+  "spondyloarthritis": {
+    "standard_name": "Spondyloarthritis",
+    "standard_name_zh": "脊柱关节炎",
+    "abbreviation": "SpA",
+    "mesh_id": "D025242",
+    "icd10": "M46.9",
+    "category": "Autoimmune",
+    "category_zh": "自身免疫"
+  },
+  "Primary_immunodeficiency": {
+    "standard_name": "Primary immunodeficiency",
+    "standard_name_zh": "原发性免疫缺陷病",
+    "abbreviation": "PID",
+    "mesh_id": "D007153",
+    "icd10": "D80-D84",
+    "category": "Autoimmune",
+    "category_zh": "自身免疫"
+  },
+  "nephrotic_syndrome": {
+    "standard_name": "Nephrotic syndrome",
+    "standard_name_zh": "肾病综合征",
+    "abbreviation": "",
+    "mesh_id": "D009404",
+    "icd10": "N04",
+    "category": "Renal",
+    "category_zh": "肾脏疾病"
+  },
+  "Primary sclerosing cholangitis": {
+    "standard_name": "Primary sclerosing cholangitis",
+    "standard_name_zh": "原发性硬化性胆管炎",
+    "abbreviation": "PSC",
+    "mesh_id": "D015209",
+    "icd10": "K83.01",
+    "category": "Hepatic",
+    "category_zh": "肝脏疾病"
+  },
+  "esophageal cancer": {
+    "standard_name": "Esophageal cancer",
+    "standard_name_zh": "食管癌",
+    "abbreviation": "",
+    "mesh_id": "D004938",
+    "icd10": "C15",
+    "category": "Oncology",
+    "category_zh": "肿瘤"
+  },
+  "Recurrent CDI": {
+    "standard_name": "Recurrent Clostridioides difficile infection",
+    "standard_name_zh": "复发性艰难梭菌感染",
+    "abbreviation": "rCDI",
+    "mesh_id": "D003015",
+    "icd10": "A04.72",
+    "category": "Infectious Disease",
+    "category_zh": "感染性疾病"
+  },
+  "Dental Caries": {
+    "standard_name": "Dental caries",
+    "standard_name_zh": "龋齿",
+    "abbreviation": "",
+    "mesh_id": "D003731",
+    "icd10": "K02",
+    "category": "Other",
+    "category_zh": "其他"
+  },
+  "liver_cancer": {
+    "standard_name": "Liver cancer",
+    "standard_name_zh": "肝癌",
+    "abbreviation": "",
+    "mesh_id": "D008113",
+    "icd10": "C22",
+    "category": "Oncology",
+    "category_zh": "肿瘤"
+  },
+  "pouchitis": {
+    "standard_name": "Pouchitis",
+    "standard_name_zh": "储袋炎",
+    "abbreviation": "",
+    "mesh_id": "D019449",
+    "icd10": "K91.850",
+    "category": "Gastrointestinal",
+    "category_zh": "消化系统疾病"
+  },
+  "Enterococcal bacteremia": {
+    "standard_name": "Enterococcal bacteremia",
+    "standard_name_zh": "肠球菌菌血症",
+    "abbreviation": "",
+    "mesh_id": "",
+    "icd10": "A49.9",
+    "category": "Infectious Disease",
+    "category_zh": "感染性疾病"
+  },
+  "SLE": {
+    "standard_name": "Systemic lupus erythematosus",
+    "standard_name_zh": "系统性红斑狼疮",
+    "abbreviation": "SLE",
+    "mesh_id": "D008180",
+    "icd10": "M32",
+    "category": "Autoimmune",
+    "category_zh": "自身免疫"
+  },
+  "HBV-related hepatocellular carcinoma": {
+    "standard_name": "HBV-related hepatocellular carcinoma",
+    "standard_name_zh": "乙型肝炎病毒相关性肝细胞癌",
+    "abbreviation": "",
+    "mesh_id": "D006528",
+    "icd10": "C22.0",
+    "category": "Oncology",
+    "category_zh": "肿瘤"
+  },
+  "Drug Resistant Epilepsy": {
+    "standard_name": "Drug-resistant epilepsy",
+    "standard_name_zh": "耐药性癫痫",
+    "abbreviation": "DRE",
+    "mesh_id": "D000069279",
+    "icd10": "G40.9",
+    "category": "Neurological",
+    "category_zh": "神经系统疾病"
+  },
+  "Myeloproliferative Neoplasm": {
+    "standard_name": "Myeloproliferative neoplasm",
+    "standard_name_zh": "骨髓增殖性肿瘤",
+    "abbreviation": "MPN",
+    "mesh_id": "D009196",
+    "icd10": "D47.1",
+    "category": "Hematological",
+    "category_zh": "血液疾病"
+  },
+  "T2DM": {
+    "standard_name": "Type 2 diabetes mellitus",
+    "standard_name_zh": "2型糖尿病",
+    "abbreviation": "T2DM",
+    "mesh_id": "D003924",
+    "icd10": "E11",
+    "category": "Metabolic",
+    "category_zh": "代谢性疾病"
+  },
+  "necrotizing soft tissue infections": {
+    "standard_name": "Necrotizing soft tissue infection",
+    "standard_name_zh": "坏死性软组织感染",
+    "abbreviation": "NSTI",
+    "mesh_id": "D019115",
+    "icd10": "M72.6",
+    "category": "Infectious Disease",
+    "category_zh": "感染性疾病"
+  },
+  "Cholestatic liver disease": {
+    "standard_name": "Cholestatic liver disease",
+    "standard_name_zh": "胆汁淤积性肝病",
+    "abbreviation": "",
+    "mesh_id": "D002779",
+    "icd10": "K71.0",
+    "category": "Hepatic",
+    "category_zh": "肝脏疾病"
+  },
+  "thyroid": {
+    "standard_name": "Thyroid disease",
+    "standard_name_zh": "甲状腺疾病",
+    "abbreviation": "",
+    "mesh_id": "D013959",
+    "icd10": "E07.9",
+    "category": "Metabolic",
+    "category_zh": "代谢性疾病"
+  },
+  "endometriosis": {
+    "standard_name": "Endometriosis",
+    "standard_name_zh": "子宫内膜异位症",
+    "abbreviation": "",
+    "mesh_id": "D004715",
+    "icd10": "N80",
+    "category": "Other",
+    "category_zh": "其他"
+  },
+  "COPD": {
+    "standard_name": "Chronic obstructive pulmonary disease",
+    "standard_name_zh": "慢性阻塞性肺疾病",
+    "abbreviation": "COPD",
+    "mesh_id": "D029424",
+    "icd10": "J44",
+    "category": "Respiratory",
+    "category_zh": "呼吸系统疾病"
+  },
+  "Chronic liver disease": {
+    "standard_name": "Chronic liver disease",
+    "standard_name_zh": "慢性肝病",
+    "abbreviation": "CLD",
+    "mesh_id": "D008107",
+    "icd10": "K76.9",
+    "category": "Hepatic",
+    "category_zh": "肝脏疾病"
+  },
+  "Schistosomiasis": {
+    "standard_name": "Schistosomiasis",
+    "standard_name_zh": "血吸虫病",
+    "abbreviation": "",
+    "mesh_id": "D012552",
+    "icd10": "B65",
+    "category": "Infectious Disease",
+    "category_zh": "感染性疾病"
+  },
+  "Radiation Enteritis": {
+    "standard_name": "Radiation enteritis",
+    "standard_name_zh": "放射性肠炎",
+    "abbreviation": "",
+    "mesh_id": "",
+    "icd10": "K52.0",
+    "category": "Gastrointestinal",
+    "category_zh": "消化系统疾病"
+  },
+  "Major depressive disorder": {
+    "standard_name": "Major depressive disorder",
+    "standard_name_zh": "重度抑郁障碍",
+    "abbreviation": "MDD",
+    "mesh_id": "D003865",
+    "icd10": "F33",
+    "category": "Neurological",
+    "category_zh": "神经系统疾病"
+  },
+  "Recurrent Wheezing": {
+    "standard_name": "Recurrent wheezing",
+    "standard_name_zh": "反复喘息",
+    "abbreviation": "",
+    "mesh_id": "D012135",
+    "icd10": "R06.2",
+    "category": "Respiratory",
+    "category_zh": "呼吸系统疾病"
+  },
+  "Systemic juvenile idiopathic arthritis": {
+    "standard_name": "Systemic juvenile idiopathic arthritis",
+    "standard_name_zh": "全身型幼年特发性关节炎",
+    "abbreviation": "sJIA",
+    "mesh_id": "D001171",
+    "icd10": "M08.2",
+    "category": "Pediatric",
+    "category_zh": "儿科"
+  },
+  "acne": {
+    "standard_name": "Acne vulgaris",
+    "standard_name_zh": "寻常痤疮",
+    "abbreviation": "",
+    "mesh_id": "D000152",
+    "icd10": "L70.0",
+    "category": "Dermatological",
+    "category_zh": "皮肤疾病"
+  },
+  "dyslipidemia": {
+    "standard_name": "Dyslipidemia",
+    "standard_name_zh": "血脂异常",
+    "abbreviation": "",
+    "mesh_id": "D050171",
+    "icd10": "E78.5",
+    "category": "Metabolic",
+    "category_zh": "代谢性疾病"
+  },
+  "undernutrition": {
+    "standard_name": "Undernutrition",
+    "standard_name_zh": "营养不良",
+    "abbreviation": "",
+    "mesh_id": "D044342",
+    "icd10": "E46",
+    "category": "Metabolic",
+    "category_zh": "代谢性疾病"
+  },
+  "cerebrovascular disease": {
+    "standard_name": "Cerebrovascular disease",
+    "standard_name_zh": "脑血管疾病",
+    "abbreviation": "",
+    "mesh_id": "D002561",
+    "icd10": "I67.9",
+    "category": "Cardiovascular",
+    "category_zh": "心血管疾病"
+  },
+  "diarrhea": {
+    "standard_name": "Diarrhea",
+    "standard_name_zh": "腹泻",
+    "abbreviation": "",
+    "mesh_id": "D003967",
+    "icd10": "K59.1",
+    "category": "Gastrointestinal",
+    "category_zh": "消化系统疾病"
+  },
+  "Juvenile idiopathic arthritis": {
+    "standard_name": "Juvenile idiopathic arthritis",
+    "standard_name_zh": "幼年特发性关节炎",
+    "abbreviation": "JIA",
+    "mesh_id": "D001171",
+    "icd10": "M08",
+    "category": "Pediatric",
+    "category_zh": "儿科"
+  },
+  "IgA nephropathy": {
+    "standard_name": "IgA nephropathy",
+    "standard_name_zh": "IgA肾病",
+    "abbreviation": "",
+    "mesh_id": "D005922",
+    "icd10": "N02.8",
+    "category": "Renal",
+    "category_zh": "肾脏疾病"
+  },
+  "Steroid resistant nephrotic syndrome": {
+    "standard_name": "Steroid-resistant nephrotic syndrome",
+    "standard_name_zh": "激素抵抗型肾病综合征",
+    "abbreviation": "SRNS",
+    "mesh_id": "D009404",
+    "icd10": "N04",
+    "category": "Renal",
+    "category_zh": "肾脏疾病"
+  },
+  "stunting": {
+    "standard_name": "Stunting",
+    "standard_name_zh": "发育迟缓（矮小）",
+    "abbreviation": "",
+    "mesh_id": "D006130",
+    "icd10": "E45",
+    "category": "Pediatric",
+    "category_zh": "儿科"
+  },
+  "Inborn errors of immunity": {
+    "standard_name": "Inborn errors of immunity",
+    "standard_name_zh": "先天性免疫缺陷病",
+    "abbreviation": "IEI",
+    "mesh_id": "D007153",
+    "icd10": "D80-D84",
+    "category": "Autoimmune",
+    "category_zh": "自身免疫"
+  },
+  "Neonatal sepsis": {
+    "standard_name": "Neonatal sepsis",
+    "standard_name_zh": "新生儿败血症",
+    "abbreviation": "",
+    "mesh_id": "D000071074",
+    "icd10": "P36",
+    "category": "Pediatric",
+    "category_zh": "儿科"
+  },
+  "Functional gastrointestinal disorders": {
+    "standard_name": "Functional gastrointestinal disorders",
+    "standard_name_zh": "功能性胃肠病",
+    "abbreviation": "FGID",
+    "mesh_id": "D005767",
+    "icd10": "K59.9",
+    "category": "Gastrointestinal",
+    "category_zh": "消化系统疾病"
+  },
+  "sarcoidosis": {
+    "standard_name": "Sarcoidosis",
+    "standard_name_zh": "结节病",
+    "abbreviation": "",
+    "mesh_id": "D012507",
+    "icd10": "D86",
+    "category": "Autoimmune",
+    "category_zh": "自身免疫"
+  },
+  "Pancreatic ductal adenocarcinoma": {
+    "standard_name": "Pancreatic ductal adenocarcinoma",
+    "standard_name_zh": "胰腺导管腺癌",
+    "abbreviation": "PDAC",
+    "mesh_id": "D021441",
+    "icd10": "C25.9",
+    "category": "Oncology",
+    "category_zh": "肿瘤"
+  },
+  "Eosinophilic esophagitis": {
+    "standard_name": "Eosinophilic esophagitis",
+    "standard_name_zh": "嗜酸粒细胞性食管炎",
+    "abbreviation": "EoE",
+    "mesh_id": "D057765",
+    "icd10": "K20.0",
+    "category": "Gastrointestinal",
+    "category_zh": "消化系统疾病"
+  },
+  "barrett's esophagus": {
+    "standard_name": "Barrett's esophagus",
+    "standard_name_zh": "Barrett食管",
+    "abbreviation": "BE",
+    "mesh_id": "D001471",
+    "icd10": "K22.7",
+    "category": "Gastrointestinal",
+    "category_zh": "消化系统疾病"
+  },
+  "Chronic Lymphocytic Leukemia": {
+    "standard_name": "Chronic lymphocytic leukemia",
+    "standard_name_zh": "慢性淋巴细胞白血病",
+    "abbreviation": "CLL",
+    "mesh_id": "D015451",
+    "icd10": "C91.1",
+    "category": "Hematological",
+    "category_zh": "血液疾病"
+  },
+  "Failure to thrive": {
+    "standard_name": "Failure to thrive",
+    "standard_name_zh": "生长发育不良",
+    "abbreviation": "FTT",
+    "mesh_id": "D005183",
+    "icd10": "R62.51",
+    "category": "Pediatric",
+    "category_zh": "儿科"
+  },
+  "Wilson's disease": {
+    "standard_name": "Wilson's disease",
+    "standard_name_zh": "肝豆状核变性（Wilson病）",
+    "abbreviation": "",
+    "mesh_id": "D006527",
+    "icd10": "E83.0",
+    "category": "Metabolic",
+    "category_zh": "代谢性疾病"
+  },
+  "vitiligo": {
+    "standard_name": "Vitiligo",
+    "standard_name_zh": "白癜风",
+    "abbreviation": "",
+    "mesh_id": "D014820",
+    "icd10": "L80",
+    "category": "Dermatological",
+    "category_zh": "皮肤疾病"
+  },
+  "Growth faltering": {
+    "standard_name": "Growth faltering",
+    "standard_name_zh": "生长迟缓",
+    "abbreviation": "",
+    "mesh_id": "",
+    "icd10": "R62.51",
+    "category": "Pediatric",
+    "category_zh": "儿科"
+  },
+  "Biliary Atresia": {
+    "standard_name": "Biliary atresia",
+    "standard_name_zh": "胆道闭锁",
+    "abbreviation": "BA",
+    "mesh_id": "D001656",
+    "icd10": "Q44.2",
+    "category": "Pediatric",
+    "category_zh": "儿科"
+  },
+  "Microscopic colitis": {
+    "standard_name": "Microscopic colitis",
+    "standard_name_zh": "显微镜下结肠炎",
+    "abbreviation": "",
+    "mesh_id": "D046728",
+    "icd10": "K52.83",
+    "category": "Gastrointestinal",
+    "category_zh": "消化系统疾病"
+  },
+  "gestational diabetes": {
+    "standard_name": "Gestational diabetes mellitus",
+    "standard_name_zh": "妊娠期糖尿病",
+    "abbreviation": "GDM",
+    "mesh_id": "D016640",
+    "icd10": "O24.4",
+    "category": "Metabolic",
+    "category_zh": "代谢性疾病"
+  },
+  "short bowel syndrome": {
+    "standard_name": "Short bowel syndrome",
+    "standard_name_zh": "短肠综合征",
+    "abbreviation": "SBS",
+    "mesh_id": "D012778",
+    "icd10": "K91.2",
+    "category": "Gastrointestinal",
+    "category_zh": "消化系统疾病"
+  },
+  "Prostate cancer": {
+    "standard_name": "Prostate cancer",
+    "standard_name_zh": "前列腺癌",
+    "abbreviation": "",
+    "mesh_id": "D011471",
+    "icd10": "C61",
+    "category": "Oncology",
+    "category_zh": "肿瘤"
+  },
+  "Glioma": {
+    "standard_name": "Glioma",
+    "standard_name_zh": "胶质瘤",
+    "abbreviation": "",
+    "mesh_id": "D005910",
+    "icd10": "C71",
+    "category": "Oncology",
+    "category_zh": "肿瘤"
+  },
+  "liver_fibrosis": {
+    "standard_name": "Liver fibrosis",
+    "standard_name_zh": "肝纤维化",
+    "abbreviation": "",
+    "mesh_id": "D008103",
+    "icd10": "K74.0",
+    "category": "Hepatic",
+    "category_zh": "肝脏疾病"
+  },
+  "food sensitivity": {
+    "standard_name": "Food sensitivity",
+    "standard_name_zh": "食物敏感",
+    "abbreviation": "",
+    "mesh_id": "D005512",
+    "icd10": "T78.1",
+    "category": "Autoimmune",
+    "category_zh": "自身免疫"
+  },
+  "Wilson disease": {
+    "standard_name": "Wilson's disease",
+    "standard_name_zh": "肝豆状核变性（Wilson病）",
+    "abbreviation": "",
+    "mesh_id": "D006527",
+    "icd10": "E83.0",
+    "category": "Metabolic",
+    "category_zh": "代谢性疾病"
+  },
+  "Childhood cancer": {
+    "standard_name": "Childhood cancer",
+    "standard_name_zh": "儿童肿瘤",
+    "abbreviation": "",
+    "mesh_id": "D009369",
+    "icd10": "C80.1",
+    "category": "Pediatric",
+    "category_zh": "儿科"
+  },
+  "Nonalcoholic steatohepatitis": {
+    "standard_name": "Non-alcoholic steatohepatitis",
+    "standard_name_zh": "非酒精性脂肪性肝炎",
+    "abbreviation": "NASH",
+    "mesh_id": "D065626",
+    "icd10": "K75.81",
+    "category": "Hepatic",
+    "category_zh": "肝脏疾病"
+  },
+  "Chronic spontaneous urticaria": {
+    "standard_name": "Chronic spontaneous urticaria",
+    "standard_name_zh": "慢性自发性荨麻疹",
+    "abbreviation": "CSU",
+    "mesh_id": "D014581",
+    "icd10": "L50.1",
+    "category": "Dermatological",
+    "category_zh": "皮肤疾病"
+  },
+  "AML receiving chemotherapy": {
+    "standard_name": "Acute myeloid leukemia receiving chemotherapy",
+    "standard_name_zh": "接受化疗的急性髓系白血病",
+    "abbreviation": "AML",
+    "mesh_id": "D015470",
+    "icd10": "C92.0",
+    "category": "Hematological",
+    "category_zh": "血液疾病"
+  },
+  "PBC": {
+    "standard_name": "Primary biliary cholangitis",
+    "standard_name_zh": "原发性胆汁性胆管炎",
+    "abbreviation": "PBC",
+    "mesh_id": "D008105",
+    "icd10": "K74.3",
+    "category": "Hepatic",
+    "category_zh": "肝脏疾病"
+  },
+  "Reactive arthritis": {
+    "standard_name": "Reactive arthritis",
+    "standard_name_zh": "反应性关节炎",
+    "abbreviation": "ReA",
+    "mesh_id": "D016918",
+    "icd10": "M02",
+    "category": "Autoimmune",
+    "category_zh": "自身免疫"
+  },
+  "Helicobacter pylori gastritis": {
+    "standard_name": "Helicobacter pylori gastritis",
+    "standard_name_zh": "幽门螺杆菌相关性胃炎",
+    "abbreviation": "",
+    "mesh_id": "D016481",
+    "icd10": "K29.7",
+    "category": "Gastrointestinal",
+    "category_zh": "消化系统疾病"
+  },
+  "Leukemia": {
+    "standard_name": "Leukemia",
+    "standard_name_zh": "白血病",
+    "abbreviation": "",
+    "mesh_id": "D007938",
+    "icd10": "C95.9",
+    "category": "Hematological",
+    "category_zh": "血液疾病"
+  },
+  "gastroparesis": {
+    "standard_name": "Gastroparesis",
+    "standard_name_zh": "胃轻瘫",
+    "abbreviation": "",
+    "mesh_id": "D018589",
+    "icd10": "K31.84",
+    "category": "Gastrointestinal",
+    "category_zh": "消化系统疾病"
+  },
+  "congenital heart disease": {
+    "standard_name": "Congenital heart disease",
+    "standard_name_zh": "先天性心脏病",
+    "abbreviation": "CHD",
+    "mesh_id": "D006330",
+    "icd10": "Q24.9",
+    "category": "Cardiovascular",
+    "category_zh": "心血管疾病"
+  },
+  "premature ovarian insufficiency": {
+    "standard_name": "Premature ovarian insufficiency",
+    "standard_name_zh": "早发性卵巢功能不全",
+    "abbreviation": "POI",
+    "mesh_id": "D016649",
+    "icd10": "E28.31",
+    "category": "Other",
+    "category_zh": "其他"
+  },
+  "Breast Cancer": {
+    "standard_name": "Breast cancer",
+    "standard_name_zh": "乳腺癌",
+    "abbreviation": "",
+    "mesh_id": "D001943",
+    "icd10": "C50",
+    "category": "Oncology",
+    "category_zh": "肿瘤"
+  },
+  "Alopecia areata": {
+    "standard_name": "Alopecia areata",
+    "standard_name_zh": "斑秃",
+    "abbreviation": "AA",
+    "mesh_id": "D000506",
+    "icd10": "L63",
+    "category": "Dermatological",
+    "category_zh": "皮肤疾病"
+  },
+  "dilated cardiomyopathy": {
+    "standard_name": "Dilated cardiomyopathy",
+    "standard_name_zh": "扩张型心肌病",
+    "abbreviation": "DCM",
+    "mesh_id": "D002311",
+    "icd10": "I42.0",
+    "category": "Cardiovascular",
+    "category_zh": "心血管疾病"
+  },
+  "bile acid diarrhea": {
+    "standard_name": "Bile acid diarrhea",
+    "standard_name_zh": "胆汁酸性腹泻",
+    "abbreviation": "BAD",
+    "mesh_id": "",
+    "icd10": "K91.2",
+    "category": "Gastrointestinal",
+    "category_zh": "消化系统疾病"
+  },
+  "Pediatric Inflammatory Bowel Disease": {
+    "standard_name": "Pediatric inflammatory bowel disease",
+    "standard_name_zh": "儿童炎症性肠病",
+    "abbreviation": "PIBD",
+    "mesh_id": "D015212",
+    "icd10": "K50-K51",
+    "category": "Pediatric",
+    "category_zh": "儿科"
+  },
+  "Urinary tract infection": {
+    "standard_name": "Urinary tract infection",
+    "standard_name_zh": "尿路感染",
+    "abbreviation": "UTI",
+    "mesh_id": "D014552",
+    "icd10": "N39.0",
+    "category": "Infectious Disease",
+    "category_zh": "感染性疾病"
+  },
+  "Hirschsprung disease": {
+    "standard_name": "Hirschsprung disease",
+    "standard_name_zh": "先天性巨结肠",
+    "abbreviation": "",
+    "mesh_id": "D006627",
+    "icd10": "Q43.1",
+    "category": "Pediatric",
+    "category_zh": "儿科"
+  },
+  "IBS-D": {
+    "standard_name": "Irritable bowel syndrome with diarrhea",
+    "standard_name_zh": "腹泻型肠易激综合征",
+    "abbreviation": "IBS-D",
+    "mesh_id": "D043183",
+    "icd10": "K58.0",
+    "category": "Gastrointestinal",
+    "category_zh": "消化系统疾病"
+  },
+  "IBS-C": {
+    "standard_name": "Irritable bowel syndrome with constipation",
+    "standard_name_zh": "便秘型肠易激综合征",
+    "abbreviation": "IBS-C",
+    "mesh_id": "D043183",
+    "icd10": "K58.9",
+    "category": "Gastrointestinal",
+    "category_zh": "消化系统疾病"
+  },
+  "cystitis": {
+    "standard_name": "Cystitis",
+    "standard_name_zh": "膀胱炎",
+    "abbreviation": "",
+    "mesh_id": "D003556",
+    "icd10": "N30",
+    "category": "Infectious Disease",
+    "category_zh": "感染性疾病"
+  },
+  "nasopharyngeal carcinoma": {
+    "standard_name": "Nasopharyngeal carcinoma",
+    "standard_name_zh": "鼻咽癌",
+    "abbreviation": "NPC",
+    "mesh_id": "D002277",
+    "icd10": "C11",
+    "category": "Oncology",
+    "category_zh": "肿瘤"
+  },
+  "Hemophilia A": {
+    "standard_name": "Hemophilia A",
+    "standard_name_zh": "血友病A",
+    "abbreviation": "",
+    "mesh_id": "D006467",
+    "icd10": "D66",
+    "category": "Hematological",
+    "category_zh": "血液疾病"
+  },
+  "Type 1 Diabetes": {
+    "standard_name": "Type 1 diabetes mellitus",
+    "standard_name_zh": "1型糖尿病",
+    "abbreviation": "T1D",
+    "mesh_id": "D003922",
+    "icd10": "E10",
+    "category": "Metabolic",
+    "category_zh": "代谢性疾病"
+  },
+  "Chronic Pancreatitis": {
+    "standard_name": "Chronic pancreatitis",
+    "standard_name_zh": "慢性胰腺炎",
+    "abbreviation": "CP",
+    "mesh_id": "D050500",
+    "icd10": "K86.1",
+    "category": "Gastrointestinal",
+    "category_zh": "消化系统疾病"
+  },
+  "abdominal aortic aneurysm": {
+    "standard_name": "Abdominal aortic aneurysm",
+    "standard_name_zh": "腹主动脉瘤",
+    "abbreviation": "AAA",
+    "mesh_id": "D017544",
+    "icd10": "I71.4",
+    "category": "Cardiovascular",
+    "category_zh": "心血管疾病"
+  },
+  "Hashimoto's thyroiditis": {
+    "standard_name": "Hashimoto's thyroiditis",
+    "standard_name_zh": "桥本甲状腺炎",
+    "abbreviation": "HT",
+    "mesh_id": "D050031",
+    "icd10": "E06.3",
+    "category": "Autoimmune",
+    "category_zh": "自身免疫"
+  },
+  "Spontaneous Bacterial Peritonitis": {
+    "standard_name": "Spontaneous bacterial peritonitis",
+    "standard_name_zh": "自发性细菌性腹膜炎",
+    "abbreviation": "SBP",
+    "mesh_id": "D010538",
+    "icd10": "K65.2",
+    "category": "Infectious Disease",
+    "category_zh": "感染性疾病"
+  },
+  "Cardiac surgery": {
+    "standard_name": "Cardiac surgery",
+    "standard_name_zh": "心脏手术",
+    "abbreviation": "",
+    "mesh_id": "D006348",
+    "icd10": "",
+    "category": "Cardiovascular",
+    "category_zh": "心血管疾病"
+  },
+  "Myasthenia gravis": {
+    "standard_name": "Myasthenia gravis",
+    "standard_name_zh": "重症肌无力",
+    "abbreviation": "MG",
+    "mesh_id": "D009157",
+    "icd10": "G70.0",
+    "category": "Autoimmune",
+    "category_zh": "自身免疫"
+  },
+  "hepatitis_e": {
+    "standard_name": "Hepatitis E",
+    "standard_name_zh": "戊型肝炎",
+    "abbreviation": "HEV",
+    "mesh_id": "D016751",
+    "icd10": "B17.2",
+    "category": "Infectious Disease",
+    "category_zh": "感染性疾病"
+  },
+  "immune thrombocytopenia": {
+    "standard_name": "Immune thrombocytopenia",
+    "standard_name_zh": "免疫性血小板减少症",
+    "abbreviation": "ITP",
+    "mesh_id": "D016553",
+    "icd10": "D69.3",
+    "category": "Hematological",
+    "category_zh": "血液疾病"
+  },
+  "chronic heart failure": {
+    "standard_name": "Chronic heart failure",
+    "standard_name_zh": "慢性心力衰竭",
+    "abbreviation": "CHF",
+    "mesh_id": "D006333",
+    "icd10": "I50.9",
+    "category": "Cardiovascular",
+    "category_zh": "心血管疾病"
+  },
+  "systemic scleroderma": {
+    "standard_name": "Systemic sclerosis",
+    "standard_name_zh": "系统性硬化症",
+    "abbreviation": "SSc",
+    "mesh_id": "D012595",
+    "icd10": "M34",
+    "category": "Autoimmune",
+    "category_zh": "自身免疫"
+  },
+  "myocardial infarction": {
+    "standard_name": "Myocardial infarction",
+    "standard_name_zh": "心肌梗死",
+    "abbreviation": "MI",
+    "mesh_id": "D009203",
+    "icd10": "I21",
+    "category": "Cardiovascular",
+    "category_zh": "心血管疾病"
+  },
+  "Acute non-perforated appendicitis": {
+    "standard_name": "Acute non-perforated appendicitis",
+    "standard_name_zh": "急性非穿孔性阑尾炎",
+    "abbreviation": "",
+    "mesh_id": "D001064",
+    "icd10": "K35.80",
+    "category": "Gastrointestinal",
+    "category_zh": "消化系统疾病"
+  },
+  "localized scleroderma": {
+    "standard_name": "Localized scleroderma",
+    "standard_name_zh": "局限性硬皮病",
+    "abbreviation": "",
+    "mesh_id": "D012594",
+    "icd10": "L94.0",
+    "category": "Dermatological",
+    "category_zh": "皮肤疾病"
+  },
+  "underweight": {
+    "standard_name": "Underweight",
+    "standard_name_zh": "体重过低",
+    "abbreviation": "",
+    "mesh_id": "D013851",
+    "icd10": "R63.6",
+    "category": "Metabolic",
+    "category_zh": "代谢性疾病"
+  },
+  "aplastic anemia": {
+    "standard_name": "Aplastic anemia",
+    "standard_name_zh": "再生障碍性贫血",
+    "abbreviation": "AA",
+    "mesh_id": "D000741",
+    "icd10": "D61",
+    "category": "Hematological",
+    "category_zh": "血液疾病"
+  },
+  "IgA glomerulonephritis": {
+    "standard_name": "IgA glomerulonephritis",
+    "standard_name_zh": "IgA肾小球肾炎",
+    "abbreviation": "",
+    "mesh_id": "D005922",
+    "icd10": "N02.8",
+    "category": "Renal",
+    "category_zh": "肾脏疾病"
+  },
+  "thyloid carcinoma": {
+    "standard_name": "Thyroid carcinoma",
+    "standard_name_zh": "甲状腺癌",
+    "abbreviation": "",
+    "mesh_id": "D013964",
+    "icd10": "C73",
+    "category": "Oncology",
+    "category_zh": "肿瘤"
+  },
+  "osteoporosis": {
+    "standard_name": "Osteoporosis",
+    "standard_name_zh": "骨质疏松症",
+    "abbreviation": "",
+    "mesh_id": "D010024",
+    "icd10": "M81",
+    "category": "Other",
+    "category_zh": "其他"
+  },
+  "cerebral infarction": {
+    "standard_name": "Cerebral infarction",
+    "standard_name_zh": "脑梗死",
+    "abbreviation": "",
+    "mesh_id": "D002544",
+    "icd10": "I63",
+    "category": "Cardiovascular",
+    "category_zh": "心血管疾病"
+  }
+}
