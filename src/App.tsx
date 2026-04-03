@@ -11,6 +11,7 @@ import FilterPanel from "@/sections/FilterPanel";
 import Overview from "@/sections/Overview";
 import MapSection from "@/sections/MapSection";
 import PhenotypeCharts from "@/sections/PhenotypeCharts";
+import SankeyChart from "@/sections/SankeyChart";
 import Search from "@/sections/Search";
 import PhenotypePage from "@/sections/PhenotypePage";
 import ComparePage from "@/pages/ComparePage";
@@ -34,6 +35,7 @@ const MainPage = () => {
         <FilterPanel />
         <MapSection />
         <PhenotypeCharts />
+        <SankeyChart />
         <Search />
         <Footer />
       </main>

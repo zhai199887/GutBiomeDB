@@ -165,6 +165,143 @@
       "related_pathways": ["Glutamate decarboxylase pathway", "Tryptophan → 5-HTP → serotonin", "DOPA decarboxylase pathway"],
       "health_relevance": "Gut-brain axis disruption linked to depression, anxiety, autism, Parkinson's disease, and Alzheimer's disease.",
       "references": ["DOI:10.1038/s41593-019-0554-0"]
+    },
+    {
+      "id": "mucin_degraders",
+      "name_en": "Mucin-Degrading Bacteria",
+      "name_zh": "黏蛋白降解菌",
+      "icon": "🛡️",
+      "description": "Bacteria capable of degrading host-derived mucin glycoproteins in the intestinal mucus layer. Controlled mucin turnover supports niche balance, but excessive degradation compromises the epithelial barrier.",
+      "taxa": [
+        "Akkermansia",
+        "Bacteroides",
+        "Ruminococcus",
+        "Bifidobacterium",
+        "Clostridium",
+        "Enterocloster"
+      ],
+      "key_metabolites": ["N-acetylglucosamine", "Fucose", "Sialic acid", "Sulfate"],
+      "related_pathways": ["O-glycan degradation", "Mucin sulfatase pathway", "Fucosidase pathway"],
+      "health_relevance": "Akkermansia muciniphila supports barrier integrity and metabolic health; excessive mucin degradation linked to IBD and pathogen invasion.",
+      "references": ["DOI:10.1038/s41579-022-00710-3"]
+    },
+    {
+      "id": "amino_acid_fermenters",
+      "name_en": "Amino Acid Fermenters",
+      "name_zh": "氨基酸发酵菌",
+      "icon": "🟠",
+      "description": "Bacteria that ferment amino acids (especially aromatic and sulfur-containing amino acids) to produce phenols, indoles, amines, and branched-chain fatty acids. Excessive protein fermentation produces potentially toxic metabolites.",
+      "taxa": [
+        "Clostridium",
+        "Bacteroides",
+        "Enterococcus",
+        "Streptococcus",
+        "Veillonella",
+        "Dialister",
+        "Staphylococcus"
+      ],
+      "key_metabolites": ["p-Cresol", "Phenol", "Ammonia", "Branched-chain fatty acids (isobutyrate, isovalerate)", "Hydrogen sulfide"],
+      "related_pathways": ["Stickland reaction", "Phenylalanine deamination", "Tyrosine decarboxylation"],
+      "health_relevance": "Excessive amino acid fermentation linked to CKD uremic toxins (p-cresyl sulfate), hepatic encephalopathy (ammonia), and colon cancer.",
+      "references": ["DOI:10.1128/AEM.01992-14"]
+    },
+    {
+      "id": "hydrogen_metabolism",
+      "name_en": "Hydrogen & Methane Cycling Bacteria",
+      "name_zh": "氢气/甲烷循环菌",
+      "icon": "💨",
+      "description": "Bacteria involved in hydrogen production (fermenters) and hydrogen consumption (acetogens, sulfate reducers). Methanogenic archaea also consume H₂. This cross-feeding network regulates fermentation thermodynamics and gas production.",
+      "taxa": [
+        "Ruminococcus",
+        "Clostridium",
+        "Blautia",
+        "Roseburia",
+        "Dialister",
+        "Veillonella",
+        "Collinsella"
+      ],
+      "key_metabolites": ["Hydrogen (H₂)", "Methane (CH₄)", "Formate", "Acetate"],
+      "related_pathways": ["Hydrogenase pathway", "Wood-Ljungdahl (reductive acetogenesis)", "Methanogenesis"],
+      "health_relevance": "H₂ accumulation inhibits fermentation efficiency; methane producers linked to constipation-predominant IBS and slow transit.",
+      "references": ["DOI:10.1038/nrmicro.2014.94"]
+    },
+    {
+      "id": "lactate_producers",
+      "name_en": "Lactate Producers & Cross-Feeders",
+      "name_zh": "乳酸产生与交叉喂养菌",
+      "icon": "🥛",
+      "description": "Bacteria producing lactate as a primary fermentation end-product. Lactate serves as a critical cross-feeding substrate for butyrate-producing bacteria, linking primary fermentation to SCFA production.",
+      "taxa": [
+        "Bifidobacterium",
+        "Lactobacillus",
+        "Streptococcus",
+        "Enterococcus",
+        "Veillonella",
+        "Anaerostipes",
+        "Anaerobutyricum"
+      ],
+      "key_metabolites": ["L-Lactate", "D-Lactate", "Butyrate (via cross-feeding)", "Propionate"],
+      "related_pathways": ["Bifidum shunt", "Homofermentative glycolysis", "Lactate → butyrate cross-feeding"],
+      "health_relevance": "Lactate accumulation (D-lactic acidosis) is dangerous in short-bowel syndrome; balanced lactate cross-feeding supports gut health.",
+      "references": ["DOI:10.1038/ismej.2015.62"]
+    },
+    {
+      "id": "oxalate_degraders",
+      "name_en": "Oxalate-Degrading Bacteria",
+      "name_zh": "草酸降解菌",
+      "icon": "💎",
+      "description": "Bacteria capable of degrading dietary oxalate, reducing its intestinal absorption and lowering the risk of kidney stone formation. Loss of these bacteria after antibiotic use increases enteric hyperoxaluria.",
+      "taxa": [
+        "Lactobacillus",
+        "Bifidobacterium",
+        "Faecalibacterium",
+        "Enterococcus"
+      ],
+      "key_metabolites": ["Oxalate", "Formate", "CO₂"],
+      "related_pathways": ["Oxalyl-CoA decarboxylase pathway", "Formyl-CoA transferase"],
+      "health_relevance": "Loss of oxalate degraders linked to calcium oxalate kidney stones and enteric hyperoxaluria post-Roux-en-Y gastric bypass.",
+      "references": ["DOI:10.1128/AEM.01535-09"]
+    },
+    {
+      "id": "polysaccharide_degraders",
+      "name_en": "Complex Polysaccharide Degraders",
+      "name_zh": "复杂多糖降解菌",
+      "icon": "🌾",
+      "description": "Bacteria encoding extensive glycoside hydrolase (GH) and polysaccharide utilization loci (PUL) repertoires. These keystone species initiate dietary fiber breakdown, releasing oligosaccharides for cross-feeding to other community members.",
+      "taxa": [
+        "Bacteroides",
+        "Parabacteroides",
+        "Roseburia",
+        "Ruminococcus",
+        "Bifidobacterium",
+        "Faecalibacterium",
+        "Agathobacter",
+        "Fusicatenibacter"
+      ],
+      "key_metabolites": ["Oligosaccharides", "Acetate", "Propionate", "Succinate"],
+      "related_pathways": ["Starch utilization system (Sus)", "Arabinoxylan degradation", "Inulin-type fructan hydrolysis"],
+      "health_relevance": "Low fiber-degrader abundance associated with Westernized diet, reduced microbial diversity, and increased inflammatory disease risk.",
+      "references": ["DOI:10.1016/j.cell.2019.01.001"]
+    },
+    {
+      "id": "pathobiont_virulence",
+      "name_en": "Opportunistic Pathobionts",
+      "name_zh": "条件致病菌（病生共生体）",
+      "icon": "⚠️",
+      "description": "Normally commensal bacteria that can cause disease under conditions of dysbiosis, immune suppression, or barrier breach. These pathobionts carry virulence factors that are typically suppressed in a healthy, competitive microbial community.",
+      "taxa": [
+        "Klebsiella",
+        "Enterococcus",
+        "Staphylococcus",
+        "Shigella",
+        "Haemophilus",
+        "Streptococcus",
+        "Clostridium"
+      ],
+      "key_metabolites": ["Enterotoxins", "Hemolysins", "Gelatinase", "Cytolethal distending toxin"],
+      "related_pathways": ["Type III/VI secretion systems", "Quorum sensing", "Biofilm formation"],
+      "health_relevance": "Bloom of pathobionts observed in antibiotic-associated diarrhea, VAP, neonatal sepsis, and post-transplant infection.",
+      "references": ["DOI:10.1038/nrmicro3552"]
     }
   ]
 }
