@@ -32,3 +32,4 @@ C:/Users/
 
 # Plans and internal docs - local only
 docs/
+api/__pycache__/
