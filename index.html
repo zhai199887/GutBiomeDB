@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
     <link rel="icon" type="image/png" sizes="512x512" href="favicon.png" />
+    <link rel="apple-touch-icon" href="favicon.png" />
+    <link rel="manifest" href="manifest.json" />
 
     <title>%VITE_TITLE%</title>
     <meta name="title" content="%VITE_TITLE%" />
@@ -28,6 +30,26 @@
 
     <!-- Theme color / 主题色 -->
     <meta name="theme-color" content="#101829" />
+
+    <!-- Structured data / 结构化数据 -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "Dataset",
+      "name": "Gut Microbiome Atlas",
+      "description": "A comprehensive platform for exploring human gut microbiome across 168,000+ samples, 69 countries, 217+ diseases, and 8 life stages.",
+      "url": "https://compendiumwebsite.vercel.app",
+      "keywords": ["gut microbiome", "metagenomics", "16S rRNA", "microbiota", "human microbiome atlas"],
+      "creator": {
+        "@type": "Organization",
+        "name": "Department of Gastroenterology, The First Affiliated Hospital of China Medical University",
+        "url": "https://www.cmu.edu.cn"
+      },
+      "license": "https://creativecommons.org/licenses/by-nc/4.0/",
+      "temporalCoverage": "2025/2026",
+      "variableMeasured": ["microbial abundance", "taxonomic composition", "alpha diversity", "beta diversity"]
+    }
+    </script>
   </head>
   <body>
     <noscript>

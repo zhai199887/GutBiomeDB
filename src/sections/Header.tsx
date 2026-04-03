@@ -20,6 +20,7 @@ const Header = () => {
     { to: "/lifecycle",  label: t("nav.lifecycle") },
     { to: "/similarity", label: t("nav.similarity") },
     { to: "/search",     label: t("nav.search") },
+    { to: "/download",   label: t("nav.download") },
     { to: "/api-docs",   label: t("nav.apiDocs") },
     { to: "/about",     label: t("nav.cite") },
   ] as const;

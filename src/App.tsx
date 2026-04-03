@@ -5,6 +5,7 @@ import {
   loadGeoData,
   loadSummary,
 } from "@/data";
+import ErrorBoundary from "@/components/ErrorBoundary";
 import { I18nProvider } from "@/i18n";
 import Footer from "@/sections/Footer";
 import Header from "@/sections/Header";
@@ -30,6 +31,7 @@ const LifecyclePage = lazy(() => import("@/pages/LifecyclePage"));
 const SearchPage = lazy(() => import("@/pages/SearchPage"));
 const ApiDocsPage = lazy(() => import("@/pages/ApiDocsPage"));
 const CitePage = lazy(() => import("@/pages/CitePage"));
+const DownloadPage = lazy(() => import("@/pages/DownloadPage"));
 const NotFoundPage = lazy(() => import("@/pages/NotFoundPage"));
 
 /* ── Route-level document title / 路由级页面标题 ── */
@@ -45,6 +47,7 @@ const ROUTE_TITLES: Record<string, string> = {
   "/search": "Search",
   "/api-docs": "API Documentation",
   "/about": "About & Cite",
+  "/download": "Download",
   "/admin": "Admin",
 };
 const BASE_TITLE = "Gut Microbiome Atlas";
@@ -59,8 +62,9 @@ const DocumentTitle = ({ children }: { children: ReactNode }) => {
 };
 
 const PageLoader = () => (
-  <div style={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: "60vh" }}>
+  <div style={{ display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", minHeight: "60vh", gap: "1.5rem" }}>
     <div className="loading-spinner" />
+    <p style={{ opacity: 0.4, fontSize: "0.9rem", margin: 0 }}>Loading...</p>
   </div>
 );
 
@@ -90,6 +94,7 @@ const App = () => (
   <I18nProvider>
     <BrowserRouter>
       <a href="#main-content" className="skip-link">Skip to content</a>
+      <ErrorBoundary>
       <DocumentTitle>
       <Suspense fallback={<PageLoader />}>
         <Routes>
@@ -105,11 +110,13 @@ const App = () => (
           <Route path="/search" element={<SearchPage />} />
           <Route path="/api-docs" element={<ApiDocsPage />} />
           <Route path="/about" element={<CitePage />} />
+          <Route path="/download" element={<DownloadPage />} />
           <Route path="/admin" element={<AdminPage />} />
           <Route path="*" element={<NotFoundPage />} />
         </Routes>
       </Suspense>
       </DocumentTitle>
+      </ErrorBoundary>
     </BrowserRouter>
   </I18nProvider>
 );
