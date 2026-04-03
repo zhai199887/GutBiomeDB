@@ -38,24 +38,40 @@ keep = {
     'project':    'project',
     'age_group':  'age_group',
     'sex':        'sex',
-    'inform-all': 'disease',
 }
-df = df[list(keep.keys())].rename(columns=keep)
+# Also keep inform0-11 columns for individual disease extraction
+inform_cols = [f'inform{i}' for i in range(12)]
+keep_cols = list(keep.keys()) + [c for c in inform_cols]
+df = df[[c for c in keep_cols if c in df.columns]].rename(columns=keep)
 
 # ── Merge TW/HK/MO into CN (Taiwan & Hong Kong → China) ────────────────────
 df.loc[df['country'].isin(['TW', 'HK', 'MO']), 'country'] = 'CN'
 
-# ── Clean disease column ─────────────────────────────────────────────────────
-df['disease'] = df['disease'].fillna('unknown').str.strip()
-df.loc[df['disease'] == '', 'disease'] = 'unknown'
+# ── Extract individual diseases from inform0-11 ─────────────────────────────
+# Each sample can have multiple diseases across inform0-11 columns
+# inform-all contains combined strings like "IBS;chickenpox" — we don't use it
+inform_cols = [f'inform{i}' for i in range(12)]
+all_individual_diseases: set[str] = set()
+for col in inform_cols:
+    if col in df.columns:
+        vals = df[col].dropna().astype(str).str.strip()
+        all_individual_diseases.update(v for v in vals if v and v != 'nan' and v != '')
+
+# Create a simple 'disease' column from inform0 for backward compatibility
+if 'inform0' in df.columns:
+    df['disease'] = df['inform0'].fillna('unknown').astype(str).str.strip()
+    df.loc[df['disease'] == '', 'disease'] = 'unknown'
+else:
+    df['disease'] = 'unknown'
 
 # ── Clean sex column ─────────────────────────────────────────────────────────
 df['sex'] = df['sex'].fillna('unknown').str.strip().str.lower()
 df.loc[~df['sex'].isin(['male', 'female']), 'sex'] = 'unknown'
 
-# ── Export metadata.json ─────────────────────────────────────────────────────
+# ── Export metadata.json (without inform0-11 columns, frontend doesn't need them)
 print("Writing metadata.json...")
-records = df.to_dict(orient='records')
+export_cols = [c for c in df.columns if not c.startswith('inform')]
+records = df[export_cols].to_dict(orient='records')
 with open(METADATA_OUT, 'w', encoding='utf-8') as f:
     json.dump(records, f, ensure_ascii=False, separators=(',', ':'))
 size_mb = os.path.getsize(METADATA_OUT) / 1024 / 1024
@@ -67,7 +83,15 @@ print("Building metadata_summary.json...")
 # Global aggregations
 age_counts     = df['age_group'].value_counts().to_dict()
 sex_counts     = df['sex'].value_counts().to_dict()
-disease_counts = df['disease'].value_counts().head(50).to_dict()
+# Count individual diseases from inform0-11 (not the combined inform-all)
+disease_sample_counts: dict[str, int] = {}
+for col in inform_cols:
+    if col in df.columns:
+        for val in df[col].dropna().astype(str).str.strip():
+            if val and val != 'nan' and val != '':
+                disease_sample_counts[val] = disease_sample_counts.get(val, 0) + 1
+# Sort by count descending, take top 50 for summary
+disease_counts = dict(sorted(disease_sample_counts.items(), key=lambda x: x[1], reverse=True)[:50])
 country_counts = df['country'].value_counts().to_dict()
 region_counts  = df['region'].value_counts().to_dict()
 
@@ -79,21 +103,29 @@ age_sex = (
     .to_dict(orient='records')
 )
 
-# Age × Disease cross table (Top 20 diseases, excluding unknown)
-top20_diseases = (
-    df[df['disease'] != 'unknown']['disease']
-    .value_counts()
-    .head(20)
-    .index
-    .tolist()
-)
-age_disease = (
-    df[df['disease'].isin(top20_diseases)]
-    .groupby(['age_group', 'disease'])
-    .size()
-    .reset_index(name='count')
-    .to_dict(orient='records')
-)
+# Age × Disease cross table (Top 20 individual diseases from inform0-11)
+top20_diseases = [d for d in sorted(disease_sample_counts.items(), key=lambda x: x[1], reverse=True)
+                  if d[0] != 'unknown' and d[0] != 'NC'][:20]
+top20_diseases = [d[0] for d in top20_diseases]
+
+# Build age×disease cross table using inform0-11
+age_disease_records = []
+for col in inform_cols:
+    if col in df.columns:
+        sub = df[df[col].astype(str).str.strip().isin(top20_diseases)][['age_group', col]].copy()
+        sub = sub.rename(columns={col: 'disease'})
+        sub['disease'] = sub['disease'].astype(str).str.strip()
+        age_disease_records.append(sub)
+if age_disease_records:
+    age_disease_df = pd.concat(age_disease_records, ignore_index=True)
+    age_disease = (
+        age_disease_df.groupby(['age_group', 'disease'])
+        .size()
+        .reset_index(name='count')
+        .to_dict(orient='records')
+    )
+else:
+    age_disease = []
 
 # ── Per-country stats (for map tooltip) ─────────────────────────────────────
 print("  Computing per-country stats...")
@@ -125,13 +157,14 @@ for iso in top_countries:
         .to_dict()
     )
 
-    # Top 3 diseases (excluding unknown)
-    top_diseases = (
-        sub[sub['disease'] != 'unknown']['disease']
-        .value_counts()
-        .head(3)
-        .to_dict()
-    )
+    # Top 3 diseases from inform0-11 (excluding unknown/NC)
+    country_disease_counts: dict[str, int] = {}
+    for col in inform_cols:
+        if col in sub.columns:
+            for val in sub[col].dropna().astype(str).str.strip():
+                if val and val != 'nan' and val != '' and val != 'unknown' and val != 'NC':
+                    country_disease_counts[val] = country_disease_counts.get(val, 0) + 1
+    top_diseases = dict(sorted(country_disease_counts.items(), key=lambda x: x[1], reverse=True)[:3])
 
     country_stats[iso] = {
         'total':        total,
@@ -141,8 +174,14 @@ for iso in top_countries:
     }
 
 # ── Write summary ─────────────────────────────────────────────────────────────
+all_individual_diseases.discard('unknown')
+all_individual_diseases.discard('NC')
+all_individual_diseases.discard('nan')
+all_individual_diseases.discard('')
+
 summary = {
     'total_samples':    len(df),
+    'total_unique_diseases': len(all_individual_diseases),
     'age_counts':       age_counts,
     'sex_counts':       sex_counts,
     'disease_counts':   disease_counts,

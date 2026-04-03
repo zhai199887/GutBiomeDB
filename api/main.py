@@ -528,17 +528,16 @@ def data_stats():
         with open(version_file) as f:
             version_info = json.load(f)
 
-    # Count unique diseases across ALL inform columns / 统计所有inform列的唯一疾病数
+    # Count unique diseases from inform0-11 only (not inform-all combinations)
+    # 仅统计 inform0-11 的独立疾病（不含 inform-all 组合值）
     INFORM_COLS = [f"inform{i}" for i in range(12)]
     all_diseases: set[str] = set()
     for col in INFORM_COLS:
         if col in meta.columns:
             vals = meta[col].dropna().astype(str).str.strip()
             all_diseases.update(v for v in vals if v and v != "nan" and v != "")
-    # Also check the 'disease' column as fallback / 也检查disease列
-    if "disease" in meta.columns:
-        vals = meta["disease"].dropna().astype(str).str.strip()
-        all_diseases.update(v for v in vals if v and v != "nan" and v != "")
+    all_diseases.discard("unknown")
+    all_diseases.discard("NC")
 
     return {
         "total_samples": int(len(meta)),

@@ -40,8 +40,9 @@ const Overview = () => {
     : undefined;
 
   const diseases = apiStats?.total_diseases
+    ?? (summary as any)?.total_unique_diseases
     ?? (summary
-      ? Object.keys(summary.disease_counts).filter((k) => k !== "unknown").length
+      ? Object.keys(summary.disease_counts).filter((k) => k !== "unknown" && k !== "NC").length
       : undefined);
 
   // Feature cards with i18n / 功能卡片国际化
