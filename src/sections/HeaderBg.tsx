@@ -26,8 +26,10 @@ const NETWORK_COLOR = "rgba(170, 183, 255, 0.06)";
 const NETWORK_COLOR_NEAR = "rgba(170, 183, 255, 0.12)";
 
 /* ── 配置 ── */
-const PARTICLE_COUNT = 80;
-const CONNECTION_DIST = 160;
+const IS_MOBILE = typeof matchMedia !== "undefined" && matchMedia("(max-width: 768px)").matches;
+const PREFERS_REDUCED = typeof matchMedia !== "undefined" && matchMedia("(prefers-reduced-motion: reduce)").matches;
+const PARTICLE_COUNT = IS_MOBILE ? 30 : 80;
+const CONNECTION_DIST = IS_MOBILE ? 100 : 160;
 const MOUSE_RADIUS = 200;
 const MOUSE_FORCE = 0.8;
 
@@ -245,6 +247,11 @@ const HeaderBg = () => {
     const onResize = () => { resize(); };
 
     init();
+    if (PREFERS_REDUCED) {
+      // Draw single static frame for users who prefer reduced motion
+      animate();
+      return () => { cancelAnimationFrame(animId); };
+    }
     canvas.addEventListener("mousemove", onMouseMove);
     canvas.addEventListener("mouseleave", onMouseLeave);
     window.addEventListener("resize", onResize);
