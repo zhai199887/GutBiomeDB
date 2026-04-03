@@ -1,15 +1,21 @@
 /**
- * NetworkPage.tsx — Microbe-Disease Association Network
- * 菌群-疾病关联网络：D3 力导向图可视化
- * Ref: Peryton database network visualization
+ * NetworkPage.tsx — 网络可视化页面（含三个 Tab）
+ * Tab 1: 关联网络 (Association) — D3 力导向图
+ * Tab 2: 弦图 (Chord) — D3 chord layout
+ * Tab 3: 共现网络 (Co-occurrence) — Spearman 相关性力导向图
  */
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, lazy, Suspense } from "react";
 import { Link } from "react-router-dom";
 import * as d3 from "d3";
 import { useI18n } from "@/i18n";
 import classes from "./NetworkPage.module.css";
 
+const ChordPanel = lazy(() => import("./network/ChordPanel"));
+const CooccurrencePanel = lazy(() => import("./network/CooccurrencePanel"));
+
 const API_BASE = import.meta.env.VITE_API_URL ?? "http://localhost:8000";
+
+type TabKey = "association" | "chord" | "cooccurrence";
 
 interface NetworkNode {
   id: string;
@@ -37,27 +43,38 @@ const NetworkPage = () => {
   const svgRef = useRef<SVGSVGElement>(null);
   const [data, setData] = useState<NetworkData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
   const [diseaseZh, setDiseaseZh] = useState<Record<string, string>>({});
+  const [activeTab, setActiveTab] = useState<TabKey>("association");
 
-  // Load network data + Chinese names / 加载网络数据 + 中文名
+  // 加载关联网络数据 + 中文名
   useEffect(() => {
     fetch(`${API_BASE}/api/network?top_diseases=12&top_genera=15`)
-      .then((r) => r.json())
+      .then((r) => {
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        return r.json();
+      })
       .then((d: NetworkData) => setData(d))
-      .catch(() => {})
+      .catch((err) => setError(err.message ?? "Failed to load network data"))
       .finally(() => setLoading(false));
     fetch(`${API_BASE}/api/disease-names-zh`)
       .then((r) => r.json())
       .then(setDiseaseZh)
-      .catch(() => {});
+      .catch((err) => console.warn("disease-names-zh fetch failed:", err));
   }, []);
 
-  // Draw force-directed graph / 绘制力导向图
+  // 绘制力导向图（仅当 association tab 激活时）
   useEffect(() => {
-    if (!svgRef.current || !data) return;
+    if (!svgRef.current || !data || activeTab !== "association") return;
     const dName = (name: string) => (locale === "zh" && diseaseZh[name]) ? diseaseZh[name] : name;
     drawNetwork(svgRef.current, data, dName);
-  }, [data, locale, diseaseZh]);
+  }, [data, locale, diseaseZh, activeTab]);
+
+  const tabs: { key: TabKey; label: string }[] = [
+    { key: "association", label: t("network.tabAssociation") },
+    { key: "chord",       label: t("network.tabChord") },
+    { key: "cooccurrence", label: t("network.tabCooccurrence") },
+  ];
 
   return (
     <div className={classes.page}>
@@ -67,29 +84,60 @@ const NetworkPage = () => {
         <p>{t("network.subtitle")}</p>
       </div>
 
-      {loading && (
-        <div className={classes.loading}>{t("search.searching")}</div>
+      {/* Tab 栏 */}
+      <div className={classes.tabs}>
+        {tabs.map(({ key, label }) => (
+          <button
+            key={key}
+            className={activeTab === key ? classes.tabActive : classes.tab}
+            onClick={() => setActiveTab(key)}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {/* Tab 内容 */}
+      {activeTab === "association" && (
+        <>
+          {loading && (
+            <div className={classes.loading}>{t("search.searching")}</div>
+          )}
+          {error && (
+            <div className={classes.loading} style={{ color: "#ff6b6b" }}>{error}</div>
+          )}
+          {data && (
+            <div className={classes.graphContainer}>
+              <svg ref={svgRef} />
+              <div className={classes.legend}>
+                <div className={classes.legendItem}>
+                  <span className={classes.legendDot} style={{ background: "#ff6b6b" }} />
+                  <span>{t("network.diseaseNode")}</span>
+                </div>
+                <div className={classes.legendItem}>
+                  <span className={classes.legendDot} style={{ background: "#4ecdc4" }} />
+                  <span>{t("network.genusNode")}</span>
+                </div>
+                <div className={classes.legendItem}>
+                  <span className={classes.legendDot} style={{ background: "rgba(255,255,255,0.15)", border: "1px dashed var(--gray)" }} />
+                  <span>{t("network.edgeWeight")}</span>
+                </div>
+              </div>
+            </div>
+          )}
+        </>
       )}
 
-      {data && (
-        <div className={classes.graphContainer}>
-          <svg ref={svgRef} />
+      {activeTab === "chord" && (
+        <Suspense fallback={<div className={classes.loading}>{t("search.searching")}</div>}>
+          <ChordPanel />
+        </Suspense>
+      )}
 
-          <div className={classes.legend}>
-            <div className={classes.legendItem}>
-              <span className={classes.legendDot} style={{ background: "#ff6b6b" }} />
-              <span>{t("network.diseaseNode")}</span>
-            </div>
-            <div className={classes.legendItem}>
-              <span className={classes.legendDot} style={{ background: "#4ecdc4" }} />
-              <span>{t("network.genusNode")}</span>
-            </div>
-            <div className={classes.legendItem}>
-              <span className={classes.legendDot} style={{ background: "rgba(255,255,255,0.15)", border: "1px dashed var(--gray)" }} />
-              <span>{t("network.edgeWeight")}</span>
-            </div>
-          </div>
-        </div>
+      {activeTab === "cooccurrence" && (
+        <Suspense fallback={<div className={classes.loading}>{t("search.searching")}</div>}>
+          <CooccurrencePanel />
+        </Suspense>
       )}
     </div>
   );
@@ -108,28 +156,28 @@ function drawNetwork(svgEl: SVGSVGElement, rawData: NetworkData, dName: (n: stri
   const H = container.clientHeight;
   svg.attr("viewBox", `0 0 ${W} ${H}`);
 
-  // Deep copy data for D3 mutation / 深拷贝，D3 会修改原数据
+  // 深拷贝，D3 会修改原数据
   const nodes: NetworkNode[] = rawData.nodes.map((n) => ({ ...n }));
   const edges: NetworkEdge[] = rawData.edges.map((e) => ({ ...e }));
 
-  // Edge weight scale / 边权重比例尺
+  // 边权重比例尺
   const maxWeight = d3.max(edges, (e) => e.weight) ?? 1;
   const edgeOpacity = d3.scaleLinear().domain([0, maxWeight]).range([0.05, 0.5]);
   const edgeWidth = d3.scaleLinear().domain([0, maxWeight]).range([0.5, 3]);
 
-  // Node size scale / 节点大小比例尺
+  // 节点大小比例尺
   const diseaseNodes = nodes.filter((n) => n.type === "disease");
   const maxSize = d3.max(diseaseNodes, (n) => n.size) ?? 1;
   const nodeRadius = d3.scaleLinear().domain([0, maxSize]).range([8, 28]);
 
-  // Create zoom container / 创建缩放容器
+  // 创建缩放容器
   const g = svg.append("g");
   const zoom = d3.zoom<SVGSVGElement, unknown>()
     .scaleExtent([0.3, 4])
     .on("zoom", (event) => g.attr("transform", event.transform));
   svg.call(zoom);
 
-  // Draw edges / 绘制边
+  // 绘制边
   const link = g.append("g")
     .selectAll("line")
     .data(edges)
@@ -138,7 +186,7 @@ function drawNetwork(svgEl: SVGSVGElement, rawData: NetworkData, dName: (n: stri
     .attr("stroke-opacity", (d) => edgeOpacity(d.weight))
     .attr("stroke-width", (d) => edgeWidth(d.weight));
 
-  // Draw nodes / 绘制节点
+  // 绘制节点
   const node = g.append("g")
     .selectAll("circle")
     .data(nodes)
@@ -167,14 +215,14 @@ function drawNetwork(svgEl: SVGSVGElement, rawData: NetworkData, dName: (n: stri
         })
     );
 
-  // Node labels / 节点标签
+  // 节点标签
   const label = g.append("g")
     .selectAll("text")
     .data(nodes)
     .join("text")
     .text((d) => {
       const label = d.type === "disease" ? dName(d.id) : d.id;
-      return label.length > 14 ? label.slice(0, 12) + "…" : label;
+      return label.length > 14 ? label.slice(0, 12) + "\u2026" : label;
     })
     .attr("font-size", (d) => d.type === "disease" ? 11 : 9)
     .attr("font-style", (d) => d.type === "genus" ? "italic" : "normal")
@@ -185,7 +233,7 @@ function drawNetwork(svgEl: SVGSVGElement, rawData: NetworkData, dName: (n: stri
     .style("pointer-events", "none")
     .style("text-shadow", "0 1px 4px rgba(0,0,0,0.9)");
 
-  // Force simulation / 力学模拟
+  // 力学模拟
   const simulation = d3.forceSimulation(nodes)
     .force("link", d3.forceLink(edges).id((d: any) => d.id).distance(120).strength(0.3))
     .force("charge", d3.forceManyBody().strength(-200))

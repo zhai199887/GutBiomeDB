@@ -238,6 +238,108 @@
   border-bottom: 1px solid rgba(255,255,255,0.04);
 }
 
+/* Tabs — 疾病页面内 Tab 切换 */
+.tabs {
+  display: flex;
+  gap: 4px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  margin-bottom: 1.5rem;
+}
+.tab {
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--light-gray);
+  padding: 8px 16px;
+  font-size: 0.9rem;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.25s ease;
+}
+.tab:hover { color: var(--white); }
+.tabActive {
+  composes: tab;
+  color: var(--primary);
+  border-bottom-color: var(--primary);
+}
+
+/* Biomarker 面板控制栏 */
+.biomarkerControls {
+  display: flex;
+  align-items: flex-end;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+}
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.field label {
+  font-size: 0.78rem;
+  color: var(--light-gray);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+.inlineSelect {
+  padding: 6px 12px;
+  border: 1px solid var(--gray);
+  border-radius: 6px;
+  background: var(--dark-gray);
+  color: var(--white);
+  font-size: 0.85rem;
+  font-family: inherit;
+  outline: none;
+}
+.inlineSelect:focus { border-color: var(--primary); }
+.runBtn {
+  padding: 8px 20px;
+  border: none;
+  border-radius: 6px;
+  background: var(--primary);
+  color: var(--black);
+  font-size: 0.85rem;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+.runBtn:hover { opacity: 0.9; }
+.runBtn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* 错误提示 */
+.errorMsg {
+  background: rgba(255, 107, 107, 0.12);
+  border: 1px solid rgba(255, 107, 107, 0.3);
+  border-radius: 8px;
+  color: #ff6b6b;
+  padding: 12px 16px;
+  margin-bottom: 1.5rem;
+  font-size: 0.9rem;
+}
+
+/* Lollipop 图例 */
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 12px;
+}
+.legendItem {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.8rem;
+  color: var(--light-gray);
+}
+.legendDot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
 /* Responsive */
 @media (max-width: 768px) {
   .layout {

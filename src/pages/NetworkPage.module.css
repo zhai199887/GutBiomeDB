@@ -79,6 +79,31 @@
   flex-shrink: 0;
 }
 
+/* Tab 栏 */
+.tabs {
+  display: flex;
+  gap: 4px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  margin: 0 40px 1.5rem;
+}
+.tab {
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--light-gray);
+  padding: 8px 16px;
+  font-size: 0.9rem;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.25s ease;
+}
+.tab:hover { color: var(--white); }
+.tabActive {
+  composes: tab;
+  color: var(--primary);
+  border-bottom-color: var(--primary);
+}
+
 /* Controls */
 .controls {
   position: absolute;

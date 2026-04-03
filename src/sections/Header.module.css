@@ -61,47 +61,6 @@
   background: rgba(255, 255, 255, 0.15);
 }
 
-/* Dropdown trigger button reset / 下拉按钮重置浏览器默认样式 */
-button.navLink {
-  background: transparent;
-  cursor: pointer;
-  font-family: inherit;
-}
-
-/* Dropdown / 下拉菜单 */
-.dropdown {
-  position: relative;
-  display: inline-block;
-}
-
-.dropdownMenu {
-  position: absolute;
-  top: calc(100% + 6px);
-  left: 50%;
-  transform: translateX(-50%);
-  background: rgba(10, 10, 30, 0.95);
-  border: 1px solid var(--gray);
-  border-radius: 8px;
-  padding: 0.4rem 0;
-  min-width: 150px;
-  z-index: 100;
-  backdrop-filter: blur(12px);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
-}
-
-.dropdownItem {
-  display: block;
-  padding: 0.5rem 1rem;
-  color: var(--white);
-  text-decoration: none;
-  font-size: 0.95rem;
-  white-space: nowrap;
-  transition: background 0.12s;
-}
-
-.dropdownItem:hover {
-  background: rgba(255, 255, 255, 0.12);
-}
 
 @media (max-width: 500px) {
   .title {

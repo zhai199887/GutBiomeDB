@@ -9,6 +9,8 @@ import { Link } from "react-router-dom";
 import * as d3 from "d3";
 import { useI18n } from "@/i18n";
 import "@/components/tooltip";
+import BiomarkerPanel from "./disease/BiomarkerPanel";
+import LollipopPanel from "./disease/LollipopPanel";
 import classes from "./DiseasePage.module.css";
 
 const API_BASE = import.meta.env.VITE_API_URL ?? "http://localhost:8000";
@@ -51,6 +53,7 @@ const DiseasePage = () => {
   const [profile, setProfile] = useState<DiseaseProfile | null>(null);
   const [loading, setLoading] = useState(false);
   const [diseaseZh, setDiseaseZh] = useState<Record<string, string>>({});
+  const [activeTab, setActiveTab] = useState<"profile" | "biomarker" | "lollipop">("profile");
 
   // Load disease list + Chinese names / 加载疾病列表 + 中文名
   useEffect(() => {
@@ -86,6 +89,7 @@ const DiseasePage = () => {
   // Select disease / 选择疾病
   const selectDisease = useCallback((name: string) => {
     setSelected(name);
+    setActiveTab("profile");
     setLoading(true);
     setProfile(null);
     fetch(`${API_BASE}/api/disease-profile?disease=${encodeURIComponent(name)}`)
@@ -146,7 +150,34 @@ const DiseasePage = () => {
             <div className={classes.loading}>{t("search.searching")}</div>
           )}
 
-          {profile && <ProfileView profile={profile} dName={dName} />}
+          {/* Tab 栏 — 选中疾病后显示 */}
+          {selected && !loading && (
+            <div className={classes.tabs}>
+              <button
+                className={activeTab === "profile" ? classes.tabActive : classes.tab}
+                onClick={() => setActiveTab("profile")}
+              >
+                {t("disease.tabProfile") ?? "画像"}
+              </button>
+              <button
+                className={activeTab === "biomarker" ? classes.tabActive : classes.tab}
+                onClick={() => setActiveTab("biomarker")}
+              >
+                {t("disease.tabBiomarker") ?? "标志物"}
+              </button>
+              <button
+                className={activeTab === "lollipop" ? classes.tabActive : classes.tab}
+                onClick={() => setActiveTab("lollipop")}
+              >
+                {t("disease.tabLollipop") ?? "差异丰度"}
+              </button>
+            </div>
+          )}
+
+          {/* Tab 内容 */}
+          {activeTab === "profile" && profile && <ProfileView profile={profile} dName={dName} />}
+          {activeTab === "biomarker" && selected && <BiomarkerPanel disease={selected} />}
+          {activeTab === "lollipop" && selected && <LollipopPanel disease={selected} />}
         </div>
       </div>
     </div>
