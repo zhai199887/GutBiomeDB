@@ -1,0 +1,170 @@
+{
+  "version": "1.0",
+  "last_updated": "2026-04-03",
+  "categories": [
+    {
+      "id": "scfa_producers",
+      "name_en": "Short-Chain Fatty Acid Producers",
+      "name_zh": "短链脂肪酸产生菌",
+      "icon": "🧪",
+      "description": "Bacteria that produce short-chain fatty acids (SCFAs) such as butyrate, propionate, and acetate through fermentation of dietary fiber. SCFAs are critical for colonocyte energy, immune regulation, and gut barrier integrity.",
+      "taxa": [
+        "Faecalibacterium",
+        "Roseburia",
+        "Eubacterium",
+        "Bifidobacterium",
+        "Akkermansia",
+        "Coprococcus",
+        "Butyrivibrio",
+        "Anaerostipes",
+        "Subdoligranulum",
+        "Ruminococcus"
+      ],
+      "key_metabolites": ["Butyrate", "Propionate", "Acetate"],
+      "related_pathways": ["Pyruvate fermentation", "Wood-Ljungdahl pathway", "Acrylate pathway"],
+      "health_relevance": "Low SCFA producers are associated with IBD, colorectal cancer, obesity, and metabolic syndrome.",
+      "references": ["DOI:10.1038/nrmicro.2016.8", "DOI:10.1016/j.chom.2019.01.028"]
+    },
+    {
+      "id": "bile_acid_metabolism",
+      "name_en": "Bile Acid Metabolizing Bacteria",
+      "name_zh": "胆汁酸代谢菌",
+      "icon": "🟡",
+      "description": "Bacteria with bile salt hydrolase (BSH) or 7α-dehydroxylation activity that transform primary bile acids (cholic acid, chenodeoxycholic acid) into secondary bile acids. These metabolites act as signaling molecules affecting TGR5 and FXR receptors.",
+      "taxa": [
+        "Clostridium",
+        "Lachnoclostridium",
+        "Blautia",
+        "Lactobacillus",
+        "Bifidobacterium",
+        "Bacteroides",
+        "Parabacteroides",
+        "Alistipes",
+        "Collinsella"
+      ],
+      "key_metabolites": ["Lithocholic acid (LCA)", "Deoxycholic acid (DCA)", "Ursodeoxycholic acid (UDCA)", "Isoursodeoxycholic acid"],
+      "related_pathways": ["BSH pathway", "bai operon (7α-dehydroxylation)", "UDCA biosynthesis"],
+      "health_relevance": "Dysregulated bile acid metabolism is linked to cholestatic liver disease, gallstones, colorectal cancer, and T2D.",
+      "references": ["DOI:10.1038/s41575-019-0142-6"]
+    },
+    {
+      "id": "tryptophan_metabolism",
+      "name_en": "Tryptophan Metabolizing Bacteria",
+      "name_zh": "色氨酸代谢菌",
+      "icon": "🔵",
+      "description": "Bacteria that convert dietary tryptophan into indole derivatives, tryptamine, and serotonin precursors. These metabolites modulate gut motility, host immunity, and the gut-brain axis.",
+      "taxa": [
+        "Lactobacillus",
+        "Clostridium",
+        "Peptostreptococcus",
+        "Ruminococcus",
+        "Escherichia",
+        "Bacteroides",
+        "Fusobacterium"
+      ],
+      "key_metabolites": ["Indole", "Indole-3-propionic acid (IPA)", "Tryptamine", "Indole-3-acetic acid (IAA)", "Serotonin precursors"],
+      "related_pathways": ["Tryptophanase pathway", "ArAT pathway", "Kynurenine pathway"],
+      "health_relevance": "Altered tryptophan metabolism is implicated in IBS, depression, autism spectrum disorder, and inflammatory diseases.",
+      "references": ["DOI:10.1016/j.cell.2015.11.028"]
+    },
+    {
+      "id": "sulfur_metabolism",
+      "name_en": "Sulfur / Hydrogen Sulfide Producers",
+      "name_zh": "硫化物产生菌",
+      "icon": "⚫",
+      "description": "Bacteria capable of dissimilatory sulfate reduction, producing H₂S. At high concentrations, H₂S inhibits colonocyte respiration and compromises the epithelial barrier, contributing to IBD pathology.",
+      "taxa": [
+        "Desulfovibrio",
+        "Bilophila",
+        "Fusobacterium",
+        "Desulfobacter",
+        "Desulfomonas"
+      ],
+      "key_metabolites": ["Hydrogen sulfide (H₂S)", "Sulfate", "Thiosulfate"],
+      "related_pathways": ["Dissimilatory sulfate reduction", "Cysteine degradation"],
+      "health_relevance": "Elevated H₂S producers associated with UC, colorectal cancer, and high-fat diet consumption.",
+      "references": ["DOI:10.1136/gutjnl-2014-308656"]
+    },
+    {
+      "id": "tmao_producers",
+      "name_en": "TMAO Precursor Producers",
+      "name_zh": "TMAO前体产生菌",
+      "icon": "❤️",
+      "description": "Bacteria producing trimethylamine (TMA) from dietary choline, betaine, or L-carnitine. TMA is hepatically oxidized to TMAO, a proatherogenic metabolite associated with cardiovascular disease risk.",
+      "taxa": [
+        "Clostridium",
+        "Desulfovibrio",
+        "Enterococcus",
+        "Escherichia",
+        "Proteus",
+        "Klebsiella",
+        "Anaerococcus",
+        "Providencia"
+      ],
+      "key_metabolites": ["Trimethylamine (TMA)", "Trimethylamine N-oxide (TMAO)", "Betaine aldehyde"],
+      "related_pathways": ["Choline TMA-lyase (CutC/D)", "Carnitine Rieske-type oxygenase (CntA/B)", "Betaine reductase"],
+      "health_relevance": "High TMAO levels are predictive of major adverse cardiovascular events (MACE), thrombosis, and CKD progression.",
+      "references": ["DOI:10.1038/nature10582", "DOI:10.1056/NEJMoa1109400"]
+    },
+    {
+      "id": "lps_producers",
+      "name_en": "LPS / Endotoxin Producers",
+      "name_zh": "内毒素产生菌（革兰氏阴性）",
+      "icon": "🔴",
+      "description": "Gram-negative bacteria whose outer membrane contains lipopolysaccharide (LPS). Translocation of LPS into systemic circulation ('metabolic endotoxemia') triggers TLR4/NF-κB signaling and chronic low-grade inflammation.",
+      "taxa": [
+        "Escherichia",
+        "Klebsiella",
+        "Enterobacter",
+        "Bacteroides",
+        "Prevotella",
+        "Pseudomonas",
+        "Salmonella"
+      ],
+      "key_metabolites": ["Lipopolysaccharide (LPS)", "Lipid A"],
+      "related_pathways": ["TLR4/NF-κB signaling", "NLRP3 inflammasome activation"],
+      "health_relevance": "Metabolic endotoxemia linked to obesity, T2D, NAFLD, and systemic inflammatory conditions.",
+      "references": ["DOI:10.1096/fj.08-100354"]
+    },
+    {
+      "id": "folate_b12_producers",
+      "name_en": "Folate & B12 Producers",
+      "name_zh": "叶酸和B12合成菌",
+      "icon": "🟢",
+      "description": "Bacteria capable of de novo synthesis of folate (vitamin B9) and cobalamin (vitamin B12), contributing to host B-vitamin status, one-carbon metabolism, and DNA methylation.",
+      "taxa": [
+        "Bifidobacterium",
+        "Lactobacillus",
+        "Faecalibacterium",
+        "Roseburia",
+        "Akkermansia",
+        "Prevotella",
+        "Bacteroides"
+      ],
+      "key_metabolites": ["Folate (B9)", "Cobalamin (B12)", "Riboflavin (B2)", "Thiamine (B1)"],
+      "related_pathways": ["De novo folate biosynthesis", "Adenosylcobalamin biosynthesis", "One-carbon metabolism"],
+      "health_relevance": "Microbial B-vitamin production impacts host epigenetics, neural tube development, and anemia susceptibility.",
+      "references": ["DOI:10.1016/j.cell.2019.08.047"]
+    },
+    {
+      "id": "neurotransmitter_related",
+      "name_en": "Neurotransmitter-Related Bacteria",
+      "name_zh": "神经递质相关菌",
+      "icon": "🧠",
+      "description": "Bacteria that produce or modulate neurotransmitters and their precursors, influencing the gut-brain axis through vagal signaling, enteroendocrine cells, and systemic metabolite circulation.",
+      "taxa": [
+        "Lactobacillus",
+        "Bifidobacterium",
+        "Escherichia",
+        "Enterococcus",
+        "Streptococcus",
+        "Clostridium",
+        "Bacteroides"
+      ],
+      "key_metabolites": ["GABA", "Serotonin (5-HT)", "Dopamine precursors", "Acetylcholine", "Histamine"],
+      "related_pathways": ["Glutamate decarboxylase pathway", "Tryptophan → 5-HTP → serotonin", "DOPA decarboxylase pathway"],
+      "health_relevance": "Gut-brain axis disruption linked to depression, anxiety, autism, Parkinson's disease, and Alzheimer's disease.",
+      "references": ["DOI:10.1038/s41593-019-0554-0"]
+    }
+  ]
+}
