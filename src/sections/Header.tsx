@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import Logo from "@/assets/logo.svg?react";
 import LangSwitch from "@/components/LangSwitch";
@@ -9,6 +9,14 @@ import classes from "./Header.module.css";
 const Header = () => {
   const { t } = useI18n();
   const [menuOpen, setMenuOpen] = useState(false);
+
+  // Close mobile menu on Escape key
+  useEffect(() => {
+    if (!menuOpen) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setMenuOpen(false); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [menuOpen]);
 
   const NAV_LINKS = [
     { to: "/",           label: t("nav.home") },

@@ -171,9 +171,9 @@ const CitePage = () => {
             <caption className="sr-only">{t("cite.versionHistory")}</caption>
             <thead>
               <tr>
-                <th>{t("cite.versionCol")}</th>
-                <th>{t("cite.dateCol")}</th>
-                <th>{t("cite.changesCol")}</th>
+                <th scope="col">{t("cite.versionCol")}</th>
+                <th scope="col">{t("cite.dateCol")}</th>
+                <th scope="col">{t("cite.changesCol")}</th>
               </tr>
             </thead>
             <tbody>
