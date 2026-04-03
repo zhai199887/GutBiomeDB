@@ -42,6 +42,9 @@ keep = {
 }
 df = df[list(keep.keys())].rename(columns=keep)
 
+# ── Merge TW/HK/MO into CN (Taiwan & Hong Kong → China) ────────────────────
+df.loc[df['country'].isin(['TW', 'HK', 'MO']), 'country'] = 'CN'
+
 # ── Clean disease column ─────────────────────────────────────────────────────
 df['disease'] = df['disease'].fillna('unknown').str.strip()
 df.loc[df['disease'] == '', 'disease'] = 'unknown'

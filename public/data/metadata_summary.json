@@ -70,7 +70,7 @@
   "country_counts": {
     "US": 59994,
     "unknown": 28192,
-    "CN": 10235,
+    "CN": 11163,
     "DK": 5980,
     "JP": 5575,
     "CA": 5341,
@@ -96,8 +96,6 @@
     "IE": 740,
     "CM": 590,
     "NO": 471,
-    "TW": 468,
-    "HK": 460,
     "MX": 430,
     "SG": 425,
     "MG": 415,
@@ -723,20 +721,20 @@
       }
     },
     "CN": {
-      "total": 10235,
+      "total": 11163,
       "sex": {
         "female_pct": 47,
         "male_pct": 53,
         "known": 1098
       },
       "top_ages": {
-        "Infant": 2378,
+        "Infant": 2564,
         "Adult": 1553,
         "Child": 204
       },
       "top_diseases": {
-        "NC": 5822,
-        "colorectal_cancer": 651,
+        "NC": 6380,
+        "colorectal_cancer": 881,
         "Type 2 diabetes Mellitus with Hyperlipidemia": 372
       }
     },
@@ -1175,36 +1173,6 @@
         "NC": 423,
         "Chronic alcohol overconsumption": 33,
         "chickenpox": 3
-      }
-    },
-    "TW": {
-      "total": 468,
-      "sex": {
-        "female_pct": null,
-        "male_pct": null,
-        "known": 0
-      },
-      "top_ages": {
-        "Infant": 186
-      },
-      "top_diseases": {
-        "NC": 305,
-        "colorectal_cancer": 127,
-        "adenoma": 36
-      }
-    },
-    "HK": {
-      "total": 460,
-      "sex": {
-        "female_pct": null,
-        "male_pct": null,
-        "known": 0
-      },
-      "top_ages": {},
-      "top_diseases": {
-        "NC": 253,
-        "adenoma": 104,
-        "colorectal_cancer": 103
       }
     },
     "MX": {
@@ -1669,6 +1637,39 @@
       "top_diseases": {
         "NC": 20,
         "Type 1 diabetes": 20
+      }
+    },
+    "LT": {
+      "total": 12,
+      "sex": {
+        "female_pct": 9,
+        "male_pct": 91,
+        "known": 11
+      },
+      "top_ages": {
+        "Infant": 11,
+        "Older_Adult": 1
+      },
+      "top_diseases": {
+        "vesicoureteral reflux": 11,
+        "thyroid;fungal_overgrowth;autoimmune;chickenpox;acid_reflux;Small Intestinal Bacterial Overgrowth;lung_disease;liver_disease": 1
+      }
+    },
+    "HU": {
+      "total": 7,
+      "sex": {
+        "female_pct": 0,
+        "male_pct": 100,
+        "known": 3
+      },
+      "top_ages": {
+        "Adult": 6,
+        "Older_Adult": 1
+      },
+      "top_diseases": {
+        "chickenpox": 2,
+        "chickenpox;acid_reflux": 2,
+        "autoimmune;IBS;skin_condition; acid_reflux": 1
       }
     }
   }

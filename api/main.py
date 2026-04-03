@@ -82,14 +82,29 @@ def get_metadata() -> pd.DataFrame:
     # Normalize column names / 规范化列名
     df.columns = [c.strip() for c in df.columns]
 
-    # Extract country from geo_loc_name (format: "china:beijing" → "china")
-    # 从 geo_loc_name 提取国家（格式："china:beijing" → "china"）
-    if "geo_loc_name" in df.columns:
+    # Use iso column for country (matches frontend data model)
+    # 使用 iso 列作为国家代码（与前端一致，如 US/CN/JP）
+    if "iso" in df.columns:
+        df["country"] = df["iso"].fillna("unknown").astype(str).str.strip()
+        # Merge TW (Taiwan) and HK (Hong Kong) into CN (China)
+        # 将台湾和香港的样本归入中国
+        df.loc[df["country"].isin(["TW", "HK", "MO"]), "country"] = "CN"
+    elif "geo_loc_name" in df.columns:
         df["country"] = df["geo_loc_name"].str.split(":").str[0].str.strip().str.lower()
     else:
         df["country"] = "unknown"
 
-    # Unify disease column name / 统一疾病列名
+    # Disease columns: keep inform0-11 for per-disease matching
+    # 疾病列：保留 inform0-11 用于单病种匹配
+    # inform-all contains combined diseases (e.g. "IBS;chickenpox;IBD")
+    # inform0-11 are individual diseases split from inform-all
+    # A sample with inform-all="IBS;IBD" has inform0="IBS", inform1="IBD"
+    INFORM_COLS = [f"inform{i}" for i in range(12)]
+    for col in INFORM_COLS:
+        if col not in df.columns:
+            df[col] = pd.NA
+
+    # Legacy: keep "disease" as inform-all for backward compatibility
     if "inform-all" in df.columns:
         df["disease"] = df["inform-all"].fillna("unknown").astype(str).str.strip()
     else:
@@ -159,9 +174,15 @@ def apply_filter(df: pd.DataFrame, f: GroupFilter) -> pd.DataFrame:
     if f.country:
         result = result[result["country"].str.lower() == f.country.lower()]
     if f.disease:
-        # Exact match on disease field
-        # 疾病字段精确匹配
-        result = result[result["disease"] == f.disease]
+        # Match if ANY of inform0-11 contains the disease
+        # 只要 inform0-11 中任一列匹配即算有该疾病
+        INFORM_COLS = [f"inform{i}" for i in range(12)]
+        disease_lower = f.disease.strip().lower()
+        mask = pd.Series(False, index=result.index)
+        for col in INFORM_COLS:
+            if col in result.columns:
+                mask |= result[col].fillna("").astype(str).str.strip().str.lower() == disease_lower
+        result = result[mask]
     if f.age_group:
         if "age_group" in result.columns:
             result = result[result["age_group"].str.lower() == f.age_group.lower()]
@@ -278,7 +299,16 @@ def filter_options():
     meta = get_metadata()
 
     countries = sorted(meta["country"].dropna().unique().tolist())
-    diseases = sorted(meta["disease"].dropna().unique().tolist())
+
+    # Extract individual diseases from inform0-11 columns
+    # 从 inform0-11 列提取独立疾病（非组合值）
+    INFORM_COLS = [f"inform{i}" for i in range(12)]
+    all_diseases: set[str] = set()
+    for col in INFORM_COLS:
+        if col in meta.columns:
+            vals = meta[col].dropna().astype(str).str.strip().unique()
+            all_diseases.update(v for v in vals if v and v != "nan")
+    diseases = sorted(all_diseases)
 
     age_groups: list[str] = []
     if "age_group" in meta.columns:
