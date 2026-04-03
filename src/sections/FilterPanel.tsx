@@ -1,3 +1,4 @@
+import { useI18n } from "@/i18n";
 import { useData, setFilters, resetFilters, DEFAULT_FILTERS } from "@/data";
 import { formatNumber } from "@/util/string";
 import classes from "./FilterPanel.module.css";
@@ -14,15 +15,14 @@ const AGE_GROUPS = [
 ];
 
 const FilterPanel = () => {
+  const { t } = useI18n();
   const summary = useData((s) => s.summary);
   const filters = useData((s) => s.filters);
 
   if (!summary) return null;
 
-  /** count samples matching current filters (approximation from summary) */
   const countFiltered = () => {
     let total = summary.total_samples;
-
     if (filters.sex !== "all") {
       total = summary.sex_counts[filters.sex] ?? 0;
     }
@@ -62,19 +62,26 @@ const FilterPanel = () => {
 
   const filteredCount = countFiltered();
 
+  const SEX_LABELS: Record<string, string> = {
+    all: t("filter.all"),
+    female: t("filter.female"),
+    male: t("filter.male"),
+    unknown: t("filter.unknown"),
+  };
+
   return (
     <section className={classes.panel}>
       <div className={classes.header}>
-        <h2>Filter</h2>
+        <h2>{t("filter.title")}</h2>
         <span className={classes.count}>
-          Showing{" "}
+          {t("filter.showing")}{" "}
           <b>{formatNumber(isDefault ? summary.total_samples : filteredCount, false)}</b>
-          {" "}of{" "}
-          <b>{formatNumber(summary.total_samples, false)}</b> samples
+          {" "}{t("filter.of")}{" "}
+          <b>{formatNumber(summary.total_samples, false)}</b> {t("filter.samples")}
         </span>
         {!isDefault && (
           <button className={classes.reset} onClick={resetFilters}>
-            Reset filters
+            {t("filter.reset")}
           </button>
         )}
       </div>
@@ -82,7 +89,7 @@ const FilterPanel = () => {
       <div className={classes.row}>
         {/* Sex filter */}
         <div className={classes.group}>
-          <label className={classes.label}>Sex</label>
+          <label className={classes.label}>{t("filter.sex")}</label>
           <div className={classes.buttons}>
             {(["all", "female", "male", "unknown"] as const).map((s) => (
               <button
@@ -91,7 +98,7 @@ const FilterPanel = () => {
                 data-active={filters.sex === s}
                 onClick={() => setFilters({ sex: s })}
               >
-                {s === "all" ? "All" : s.charAt(0).toUpperCase() + s.slice(1)}
+                {SEX_LABELS[s] ?? s}
               </button>
             ))}
           </div>
@@ -99,7 +106,7 @@ const FilterPanel = () => {
 
         {/* Age group filter */}
         <div className={classes.group}>
-          <label className={classes.label}>Age Group</label>
+          <label className={classes.label}>{t("filter.ageGroup")}</label>
           <div className={classes.buttons}>
             {AGE_GROUPS.map((g) => (
               <button
@@ -116,7 +123,7 @@ const FilterPanel = () => {
 
         {/* Disease filter */}
         <div className={classes.group}>
-          <label className={classes.label}>Disease (Top 20)</label>
+          <label className={classes.label}>{t("filter.disease")}</label>
           <div className={classes.buttons}>
             {summary.top20_diseases.map((d) => (
               <button

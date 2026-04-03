@@ -5,6 +5,7 @@ import {
   loadGeoData,
   loadSummary,
 } from "@/data";
+import { I18nProvider } from "@/i18n";
 import Footer from "@/sections/Footer";
 import Header from "@/sections/Header";
 import FilterPanel from "@/sections/FilterPanel";
@@ -53,18 +54,20 @@ const MainPage = () => {
 };
 
 const App = () => (
-  <BrowserRouter>
-    <Suspense fallback={<PageLoader />}>
-      <Routes>
-        <Route path="/" element={<MainPage />} />
-        <Route path="/phenotype" element={<PhenotypePage />} />
-        <Route path="/compare" element={<ComparePage />} />
-        <Route path="/metabolism" element={<MetabolismPage />} />
-        <Route path="/species/:taxon" element={<SpeciesPage />} />
-        <Route path="/admin" element={<AdminPage />} />
-      </Routes>
-    </Suspense>
-  </BrowserRouter>
+  <I18nProvider>
+    <BrowserRouter>
+      <Suspense fallback={<PageLoader />}>
+        <Routes>
+          <Route path="/" element={<MainPage />} />
+          <Route path="/phenotype" element={<PhenotypePage />} />
+          <Route path="/compare" element={<ComparePage />} />
+          <Route path="/metabolism" element={<MetabolismPage />} />
+          <Route path="/species/:taxon" element={<SpeciesPage />} />
+          <Route path="/admin" element={<AdminPage />} />
+        </Routes>
+      </Suspense>
+    </BrowserRouter>
+  </I18nProvider>
 );
 
 export default App;

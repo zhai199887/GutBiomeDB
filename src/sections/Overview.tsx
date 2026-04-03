@@ -4,35 +4,15 @@ import BarsIcon from "@/assets/bars.svg?react";
 import EarthIcon from "@/assets/earth.svg?react";
 import MicroscopeIcon from "@/assets/microscope.svg?react";
 import Placeholder from "@/components/Placeholder";
+import { useI18n } from "@/i18n";
 import { useData } from "@/data";
 import { formatNumber } from "@/util/string";
 import classes from "./Overview.module.css";
 
 const API_BASE = import.meta.env.VITE_API_URL ?? "http://localhost:8000";
 
-// Quick-access feature cards / 快速入口功能卡片
-const FEATURE_CARDS = [
-  {
-    to: "/phenotype",
-    title: "Phenotype Explorer",
-    desc: "Compare microbiome composition across age groups, sexes, and diseases",
-    color: "var(--secondary)",
-  },
-  {
-    to: "/compare",
-    title: "Differential Analysis",
-    desc: "Statistical comparison between two user-defined sample groups (differential abundance, volcano plot, PCoA)",
-    color: "var(--primary)",
-  },
-  {
-    to: "/metabolism",
-    title: "Metabolic Functions",
-    desc: "Browse microbiota by metabolic role: SCFAs, bile acids, tryptophan, TMAO, and more",
-    color: "var(--secondary-light)",
-  },
-] as const;
-
 const Overview = () => {
+  const { t } = useI18n();
   const summary = useData((state) => state.summary);
 
   // API stats (if backend running) / 后端统计数据（后端启动后可用）
@@ -61,12 +41,34 @@ const Overview = () => {
     ? Object.keys(summary.disease_counts).filter((k) => k !== "unknown").length
     : undefined;
 
+  // Feature cards with i18n / 功能卡片国际化
+  const FEATURE_CARDS = [
+    {
+      to: "/phenotype",
+      title: t("feature.phenotype.title"),
+      desc: t("feature.phenotype.desc"),
+      color: "var(--secondary)",
+    },
+    {
+      to: "/compare",
+      title: t("feature.compare.title"),
+      desc: t("feature.compare.desc"),
+      color: "var(--primary)",
+    },
+    {
+      to: "/metabolism",
+      title: t("feature.metabolism.title"),
+      desc: t("feature.metabolism.desc"),
+      color: "var(--secondary-light)",
+    },
+  ];
+
   const tiles = [
     {
       icon: MicroscopeIcon,
       text: (
         <>
-          {formatNumber(summary?.total_samples, false)} samples
+          {formatNumber(summary?.total_samples, false)} {t("overview.samples")}
         </>
       ),
     },
@@ -74,9 +76,9 @@ const Overview = () => {
       icon: EarthIcon,
       text: (
         <>
-          {formatNumber(countries)} countries
+          {formatNumber(countries)} {t("overview.countries")}
           <br />
-          {formatNumber(regions)} regions
+          {formatNumber(regions)} {t("overview.regions")}
         </>
       ),
     },
@@ -84,9 +86,9 @@ const Overview = () => {
       icon: BarsIcon,
       text: (
         <>
-          {formatNumber(diseases)} disease types
+          {formatNumber(diseases)} {t("overview.diseaseTypes")}
           <br />
-          from <i>inform-all</i>
+          {t("overview.from")} <i>inform-all</i>
         </>
       ),
     },
@@ -94,24 +96,17 @@ const Overview = () => {
 
   return (
     <section>
-      <h2>Overview</h2>
+      <h2>{t("overview.title")}</h2>
 
       <p>
-        This platform lets you explore{" "}
         {summary
-          ? "over " + formatNumber(
-              Math.floor((summary.total_samples || 0) / 10000) * 10000,
-            )
-          : "thousands of"}{" "}
-        publicly available human gut microbiome samples, annotated with age,
-        sex, and disease metadata.
+          ? t("overview.intro")
+          : t("overview.intro")}
       </p>
 
       <p className={classes.methodology}>
-        <b>Data &amp; Methods:</b>{" "}
-        Taxonomic profiles generated with MetaPhlAn.
-        Differential abundance uses Wilcoxon rank-sum test with Benjamini–Hochberg FDR correction (adj. p &lt; 0.05).
-        Beta diversity computed as Bray–Curtis dissimilarity, visualised by PCoA.
+        <b>{t("overview.methods")}</b>{" "}
+        {t("overview.methods.detail")}
       </p>
 
       {summary ? (
@@ -134,7 +129,7 @@ const Overview = () => {
       {/* Data version badge / 数据版本徽章 */}
       {apiStats?.last_updated && (
         <p className={classes.versionBadge}>
-          Data version: <b>{apiStats.version}</b> · Last updated: {apiStats.last_updated}
+          {t("overview.dataVersion")} <b>{apiStats.version}</b> · {t("overview.lastUpdated")} {apiStats.last_updated}
         </p>
       )}
 

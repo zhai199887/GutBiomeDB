@@ -5,6 +5,7 @@
  */
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import { useI18n } from "@/i18n";
 import "@/components/tooltip";
 import classes from "./ComparePage.module.css";
 
@@ -22,13 +23,14 @@ import { API_BASE, TAXONOMY_LEVELS, METHODS } from "./compare/types";
 // ── Main component / 主组件 ───────────────────────────────────────────────────
 
 const ComparePage = () => {
+  const { t } = useI18n();
   const [filterOptions, setFilterOptions] = useState<FilterOptions | null>(null);
   const [filterLoading, setFilterLoading] = useState(true);
 
   const [groupA, setGroupA] = useState<GroupFilter>({ country: "", disease: "", age_group: "", sex: "" });
   const [groupB, setGroupB] = useState<GroupFilter>({ country: "", disease: "", age_group: "", sex: "" });
   const [taxLevel, setTaxLevel] = useState<"genus" | "phylum">("genus");
-  const [method, setMethod] = useState<"wilcoxon" | "t-test">("wilcoxon");
+  const [method, setMethod] = useState<string>("wilcoxon");
 
   const [result, setResult] = useState<DiffResult | null>(null);
   const [loading, setLoading] = useState(false);
@@ -45,7 +47,7 @@ const ComparePage = () => {
       })
       .catch(() => {
         setFilterLoading(false);
-        setError("Differential analysis backend is under development. Stay tuned! / 差异分析后端正在开发中，敬请期待！");
+        setError(t("compare.backendError"));
       });
   }, []);
 
@@ -112,30 +114,49 @@ const ComparePage = () => {
     URL.revokeObjectURL(url);
   };
 
+  // All available methods / 所有可选统计方法
+  const ALL_METHODS = ["wilcoxon", "t-test", "lefse", "permanova"] as const;
+
+  // Tabs including LEfSe & PERMANOVA / 包含 LEfSe 和 PERMANOVA 的标签
+  const TABS: [Tab, string][] = [
+    ["bar", t("compare.tab.bar")],
+    ["volcano", t("compare.tab.volcano")],
+    ["alpha", t("compare.tab.alpha")],
+    ["beta", t("compare.tab.beta")],
+  ];
+
+  // Add LEfSe and PERMANOVA tabs when those methods are selected
+  if (result?.lefse_results) {
+    TABS.push(["lefse", t("compare.tab.lefse")]);
+  }
+  if (result?.permanova) {
+    TABS.push(["permanova", t("compare.tab.permanova")]);
+  }
+
   return (
     <div className={classes.page}>
       {/* Navigation / 导航栏 */}
       <div className={classes.nav}>
-        <Link to="/" className={classes.back}>← Back to Atlas</Link>
-        <h1 className={classes.title}>Differential Analysis</h1>
-        <span className={classes.subtitle}>Compare gut microbiome composition between two groups</span>
+        <Link to="/" className={classes.back}>{t("compare.back")}</Link>
+        <h1 className={classes.title}>{t("compare.title")}</h1>
+        <span className={classes.subtitle}>{t("compare.subtitle")}</span>
       </div>
 
       {/* Filter panel / 筛选面板 */}
       <section className={classes.filterSection}>
         {filterLoading ? (
-          <p className={classes.hint}>Loading filter options…</p>
+          <p className={classes.hint}>{t("compare.loading")}</p>
         ) : (
           <div className={classes.filterGrid}>
             <GroupFilterPanel
-              label="Group A"
+              label={t("compare.groupA")}
               color="var(--secondary)"
               value={groupA}
               onChange={setGroupA}
               options={filterOptions}
             />
             <GroupFilterPanel
-              label="Group B"
+              label={t("compare.groupB")}
               color="var(--primary)"
               value={groupB}
               onChange={setGroupB}
@@ -147,7 +168,7 @@ const ComparePage = () => {
         {/* Method controls / 方法控制 */}
         <div className={classes.controls}>
           <div className={classes.control}>
-            <label>Taxonomy level</label>
+            <label>{t("compare.taxLevel")}</label>
             <div className={classes.btnGroup}>
               {TAXONOMY_LEVELS.map((l) => (
                 <button
@@ -162,16 +183,16 @@ const ComparePage = () => {
             </div>
           </div>
           <div className={classes.control}>
-            <label>Statistical test</label>
+            <label>{t("compare.statTest")}</label>
             <div className={classes.btnGroup}>
-              {METHODS.map((m) => (
+              {ALL_METHODS.map((m) => (
                 <button
                   key={m}
                   className={classes.ctrlBtn}
                   data-active={method === m}
                   onClick={() => setMethod(m)}
                 >
-                  {m}
+                  {m === "lefse" ? "LEfSe" : m === "permanova" ? "PERMANOVA" : m}
                 </button>
               ))}
             </div>
@@ -181,7 +202,7 @@ const ComparePage = () => {
             onClick={runAnalysis}
             disabled={loading}
           >
-            {loading ? "Analyzing…" : "Run Analysis"}
+            {loading ? t("compare.analyzing") : t("compare.run")}
           </button>
         </div>
       </section>
@@ -198,7 +219,7 @@ const ComparePage = () => {
               <b style={{ color: "var(--secondary)" }}>{result.summary.group_a_name}</b>
               {" "}(n={result.summary.group_a_n})
             </span>
-            <span className={classes.vs}>vs</span>
+            <span className={classes.vs}>{t("compare.vs")}</span>
             <span>
               <b style={{ color: "var(--primary)" }}>{result.summary.group_b_name}</b>
               {" "}(n={result.summary.group_b_n})
@@ -210,12 +231,7 @@ const ComparePage = () => {
 
           {/* Tab bar / 标签栏 */}
           <div className={classes.tabs}>
-            {([
-              ["bar", "Differential Abundance"],
-              ["volcano", "Volcano Plot"],
-              ["alpha", "Alpha Diversity"],
-              ["beta", "Beta Diversity (PCoA)"],
-            ] as [Tab, string][]).map(([id, label]) => (
+            {TABS.map(([id, label]) => (
               <button
                 key={id}
                 className={classes.tab}
@@ -233,15 +249,98 @@ const ComparePage = () => {
             {activeTab === "volcano" && <VolcanoChart result={result} />}
             {activeTab === "alpha"   && <AlphaBoxChart result={result} />}
             {activeTab === "beta"    && <BetaPCoAChart result={result} />}
+            {activeTab === "lefse"   && <LefseResults result={result} />}
+            {activeTab === "permanova" && <PermanovaResults result={result} />}
           </div>
 
           {/* Export buttons / 导出按钮 */}
           <div className={classes.exportRow}>
-            <button className={classes.exportBtn} onClick={exportCsv}>⬇ Export CSV</button>
-            <button className={classes.exportBtn} onClick={exportSvg}>⬇ Export SVG</button>
+            <button className={classes.exportBtn} onClick={exportCsv}>{t("compare.export.csv")}</button>
+            <button className={classes.exportBtn} onClick={exportSvg}>{t("compare.export.svg")}</button>
           </div>
         </section>
       )}
+    </div>
+  );
+};
+
+// ── LEfSe results display / LEfSe 结果展示 ──────────────────────────────────
+
+const LefseResults = ({ result }: { result: DiffResult }) => {
+  if (!result.lefse_results || result.lefse_results.length === 0) {
+    return <p style={{ color: "var(--light-gray)", padding: "2rem" }}>No significant LEfSe features found.</p>;
+  }
+
+  const maxLda = Math.max(...result.lefse_results.map((r) => Math.abs(r.lda_score)));
+
+  return (
+    <div style={{ padding: "1rem" }}>
+      <p style={{ color: "var(--light-gray)", fontSize: "0.85rem", marginBottom: "1rem" }}>
+        LEfSe (LDA Effect Size) — features with LDA score ≥ 2.0 and Kruskal-Wallis p &lt; 0.05
+      </p>
+      <svg className="compare-chart" viewBox={`0 0 700 ${Math.max(200, result.lefse_results.length * 24 + 40)}`}
+        style={{ width: "100%", maxWidth: 700 }}>
+        {result.lefse_results.map((feat, i) => {
+          const barWidth = (Math.abs(feat.lda_score) / maxLda) * 400;
+          const isGroupA = feat.enriched_group === "A";
+          const color = isGroupA ? "var(--secondary)" : "var(--primary)";
+          return (
+            <g key={feat.taxon} transform={`translate(200, ${i * 24 + 10})`}>
+              <text x={-5} y={14} textAnchor="end" fill="currentColor" fontSize={11}>
+                {feat.taxon.length > 22 ? feat.taxon.slice(0, 20) + "…" : feat.taxon}
+              </text>
+              <rect x={0} y={2} width={barWidth} height={18} fill={color} opacity={0.8} rx={2} />
+              <text x={barWidth + 5} y={15} fill="currentColor" fontSize={10}>
+                {feat.lda_score.toFixed(2)}
+              </text>
+            </g>
+          );
+        })}
+      </svg>
+    </div>
+  );
+};
+
+// ── PERMANOVA results display / PERMANOVA 结果展示 ───────────────────────────
+
+const PermanovaResults = ({ result }: { result: DiffResult }) => {
+  if (!result.permanova) {
+    return <p style={{ color: "var(--light-gray)", padding: "2rem" }}>No PERMANOVA results available.</p>;
+  }
+
+  const p = result.permanova;
+  const sigStyle = { color: p.p_value < 0.05 ? "var(--primary)" : "var(--light-gray)" };
+
+  return (
+    <div style={{ padding: "2rem" }}>
+      <h3 style={{ marginBottom: "1rem" }}>PERMANOVA Results</h3>
+      <p style={{ color: "var(--light-gray)", fontSize: "0.85rem", marginBottom: "1.5rem" }}>
+        Permutational Multivariate Analysis of Variance — tests whether group centroids differ
+        in Bray-Curtis distance space ({p.permutations} permutations)
+      </p>
+      <table style={{ borderCollapse: "collapse", width: "100%", maxWidth: 500 }}>
+        <tbody>
+          {[
+            ["F-statistic (pseudo-F)", p.f_statistic.toFixed(4)],
+            ["p-value", <span style={sigStyle}>{p.p_value.toFixed(4)}{p.p_value < 0.05 ? " *" : ""}</span>],
+            ["R² (effect size)", p.r_squared.toFixed(4)],
+            ["Permutations", String(p.permutations)],
+            ["Samples (A)", String(p.n_a)],
+            ["Samples (B)", String(p.n_b)],
+          ].map(([label, val], i) => (
+            <tr key={i} style={{ borderBottom: "1px solid var(--gray)" }}>
+              <td style={{ padding: "0.5rem 1rem", color: "var(--light-gray)" }}>{label}</td>
+              <td style={{ padding: "0.5rem 1rem", fontWeight: 600 }}>{val}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <p style={{ color: "var(--light-gray)", fontSize: "0.8rem", marginTop: "1rem" }}>
+        {p.p_value < 0.05
+          ? "The two groups have significantly different microbiome compositions (p < 0.05)."
+          : "No significant difference in microbiome composition between the two groups."}
+        {" "}R² = {(p.r_squared * 100).toFixed(1)}% of variation explained by grouping.
+      </p>
     </div>
   );
 };

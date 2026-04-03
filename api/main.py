@@ -163,7 +163,7 @@ class DiffAnalysisRequest(BaseModel):
     group_a_filter: GroupFilter
     group_b_filter: GroupFilter
     taxonomy_level: str = "genus"   # phylum / genus
-    method: str = "wilcoxon"        # wilcoxon / t-test
+    method: str = "wilcoxon"        # wilcoxon / t-test / lefse / permanova
 
 
 # ── Helper functions / 辅助函数 ────────────────────────────────────────────────
@@ -280,6 +280,162 @@ def bray_curtis_pcoa(matrix_a: np.ndarray, matrix_b: np.ndarray,
          "group": "A" if i < n_a else "B"}
         for i in range(n_pts)
     ]
+
+
+def lefse_analysis(
+    agg_a: np.ndarray,
+    agg_b: np.ndarray,
+    taxa: list[str],
+    lda_threshold: float = 2.0,
+    p_threshold: float = 0.05,
+) -> list[dict]:
+    """
+    Simplified LEfSe: Kruskal-Wallis test + LDA effect size estimation.
+    简化版 LEfSe：Kruskal-Wallis 检验 + LDA 效应值估计
+
+    Steps:
+    1. Kruskal-Wallis test per taxon (non-parametric ANOVA)
+    2. Estimate LDA score from between/within group variance ratio
+    3. Filter by p-value and LDA threshold
+    """
+    results = []
+    for i, taxon in enumerate(taxa):
+        vals_a = agg_a[:, i]
+        vals_b = agg_b[:, i]
+
+        # Skip taxa with no variation / 跳过无变异的分类
+        if np.std(vals_a) == 0 and np.std(vals_b) == 0:
+            continue
+
+        # Kruskal-Wallis test (non-parametric one-way ANOVA)
+        try:
+            kw_stat, kw_p = stats.kruskal(vals_a, vals_b)
+        except Exception:
+            continue
+
+        if kw_p >= p_threshold:
+            continue
+
+        # LDA effect size estimation / LDA 效应值估计
+        # Approximation: log10(1 + abs(mean_diff) * scaling_factor)
+        mean_a = float(np.mean(vals_a))
+        mean_b = float(np.mean(vals_b))
+        grand_mean = float(np.mean(np.concatenate([vals_a, vals_b])))
+
+        # Between-class variance / 组间方差
+        n_a, n_b = len(vals_a), len(vals_b)
+        between_var = (n_a * (mean_a - grand_mean) ** 2 +
+                       n_b * (mean_b - grand_mean) ** 2) / (n_a + n_b)
+
+        # Within-class variance / 组内方差
+        within_var = (n_a * float(np.var(vals_a)) +
+                      n_b * float(np.var(vals_b))) / (n_a + n_b)
+
+        # LDA score approximation / LDA 分数近似
+        if within_var > 0:
+            lda_score = math.log10(1 + abs(between_var / within_var) * abs(mean_a - mean_b) * 1e6)
+        else:
+            lda_score = math.log10(1 + abs(mean_a - mean_b) * 1e6)
+
+        if lda_score < lda_threshold:
+            continue
+
+        enriched = "A" if mean_a > mean_b else "B"
+        results.append({
+            "taxon": taxon,
+            "lda_score": round(lda_score, 4),
+            "p_value": round(float(kw_p), 6),
+            "enriched_group": enriched,
+        })
+
+    # Sort by LDA score descending / 按 LDA 分数降序
+    results.sort(key=lambda x: x["lda_score"], reverse=True)
+    return results[:100]  # top 100
+
+
+def permanova_test(
+    agg_a: np.ndarray,
+    agg_b: np.ndarray,
+    n_permutations: int = 999,
+    max_samples: int = 300,
+) -> dict:
+    """
+    PERMANOVA (Permutational Multivariate Analysis of Variance).
+    Tests if group centroids differ in Bray-Curtis distance space.
+    检验两组在 Bray-Curtis 距离空间中的质心是否显著不同
+
+    Returns F-statistic, p-value, R² (effect size).
+    """
+    np.random.seed(42)
+
+    # Subsample for performance / 抽样以提高性能
+    if len(agg_a) > max_samples:
+        idx = np.random.choice(len(agg_a), max_samples, replace=False)
+        agg_a = agg_a[idx]
+    if len(agg_b) > max_samples:
+        idx = np.random.choice(len(agg_b), max_samples, replace=False)
+        agg_b = agg_b[idx]
+
+    n_a, n_b = len(agg_a), len(agg_b)
+    combined = np.vstack([agg_a, agg_b])
+    n = n_a + n_b
+    labels = np.array([0] * n_a + [1] * n_b)
+
+    # Compute Bray-Curtis distance matrix / 计算 Bray-Curtis 距离矩阵
+    bc_dist = cdist(combined, combined, metric="braycurtis")
+    bc_dist = np.nan_to_num(bc_dist)
+
+    # Calculate pseudo-F statistic / 计算伪 F 统计量
+    def calc_pseudo_f(dist_matrix: np.ndarray, group_labels: np.ndarray) -> tuple[float, float]:
+        """Calculate pseudo-F and R² from distance matrix and group labels."""
+        n_total = len(group_labels)
+        groups = np.unique(group_labels)
+        k = len(groups)
+
+        # Total sum of squared distances / 总距离平方和
+        ss_total = np.sum(dist_matrix ** 2) / (2 * n_total)
+
+        # Within-group sum of squares / 组内平方和
+        ss_within = 0.0
+        for g in groups:
+            mask = group_labels == g
+            n_g = np.sum(mask)
+            if n_g > 1:
+                sub_dist = dist_matrix[np.ix_(mask, mask)]
+                ss_within += np.sum(sub_dist ** 2) / (2 * n_g)
+
+        ss_between = ss_total - ss_within
+
+        # Pseudo-F
+        df_between = k - 1
+        df_within = n_total - k
+        if df_within <= 0 or ss_within == 0:
+            return 0.0, 0.0
+
+        f_stat = (ss_between / df_between) / (ss_within / df_within)
+        r_squared = ss_between / ss_total if ss_total > 0 else 0.0
+        return float(f_stat), float(r_squared)
+
+    observed_f, r_squared = calc_pseudo_f(bc_dist, labels)
+
+    # Permutation test / 置换检验
+    count_ge = 0
+    for _ in range(n_permutations):
+        perm_labels = np.random.permutation(labels)
+        perm_f, _ = calc_pseudo_f(bc_dist, perm_labels)
+        if perm_f >= observed_f:
+            count_ge += 1
+
+    p_value = (count_ge + 1) / (n_permutations + 1)
+
+    return {
+        "f_statistic": round(observed_f, 4),
+        "p_value": round(float(p_value), 4),
+        "r_squared": round(r_squared, 4),
+        "permutations": n_permutations,
+        "n_a": n_a,
+        "n_b": n_b,
+    }
 
 
 # ── API endpoints / API端点 ───────────────────────────────────────────────────
@@ -423,6 +579,10 @@ def diff_analysis(req: DiffAnalysisRequest):
     agg_b, _    = group_by_level(mat_b, col_names, req.taxonomy_level)
 
     # ── Differential abundance test / 差异丰度统计检验 ─────────────────────────
+    # Use wilcoxon as base test for LEfSe/PERMANOVA methods too
+    # LEfSe/PERMANOVA 同时运行 wilcoxon 作为基础差异分析
+    base_method = req.method if req.method in ("wilcoxon", "t-test") else "wilcoxon"
+
     diff_results = []
     p_values = []
 
@@ -439,10 +599,9 @@ def diff_analysis(req: DiffAnalysisRequest):
         log2fc = math.log2((mean_a + pseudo) / (mean_b + pseudo))
 
         # Statistical test / 统计检验
-        # Statistical test / 统计检验（单次调用，复用结果计算效应量）
         u_stat = 0.0
         try:
-            if req.method == "wilcoxon":
+            if base_method == "wilcoxon":
                 mwu = stats.mannwhitneyu(vals_a, vals_b, alternative="two-sided")
                 u_stat, p = float(mwu.statistic), float(mwu.pvalue)
             else:
@@ -451,10 +610,9 @@ def diff_analysis(req: DiffAnalysisRequest):
         except Exception:
             p = 1.0
 
-        # Effect size (rank-biserial correlation for MWU, Cohen's d for t-test)
-        # 效应量（MWU的秩双列相关；t检验的Cohen's d）
+        # Effect size / 效应量
         n_a, n_b = len(vals_a), len(vals_b)
-        if req.method == "wilcoxon":
+        if base_method == "wilcoxon":
             effect_size = float(1 - 2 * u_stat / (n_a * n_b)) if n_a * n_b > 0 else 0.0
         else:
             pooled_std = float(np.std(np.concatenate([vals_a, vals_b])))
@@ -467,7 +625,7 @@ def diff_analysis(req: DiffAnalysisRequest):
             "mean_b": mean_b,
             "log2fc": log2fc,
             "p_value": float(p),
-            "adjusted_p": 0.0,   # filled after BH / BH校正后填充
+            "adjusted_p": 0.0,
             "effect_size": effect_size,
         })
 
@@ -478,6 +636,16 @@ def diff_analysis(req: DiffAnalysisRequest):
 
     # Sort by adjusted p-value / 按校正p值排序
     diff_results.sort(key=lambda x: x["adjusted_p"])
+
+    # ── LEfSe analysis (if requested) / LEfSe 分析 ───────────────────────────
+    lefse_results = None
+    if req.method == "lefse":
+        lefse_results = lefse_analysis(agg_a, agg_b, taxa)
+
+    # ── PERMANOVA (if requested) / PERMANOVA 分析 ────────────────────────────
+    permanova_result = None
+    if req.method == "permanova":
+        permanova_result = permanova_test(agg_a, agg_b)
 
     # ── Alpha diversity / Alpha多样性 ─────────────────────────────────────────
     shannon_a = [shannon_diversity(r) for r in agg_a]
@@ -515,7 +683,7 @@ def diff_analysis(req: DiffAnalysisRequest):
     group_a_name = filter_to_label(req.group_a_filter)
     group_b_name = filter_to_label(req.group_b_filter)
 
-    return {
+    response = {
         "summary": {
             "group_a_name": group_a_name,
             "group_b_name": group_b_name,
@@ -531,6 +699,15 @@ def diff_analysis(req: DiffAnalysisRequest):
             "pcoa_coords": pcoa_coords,
         },
     }
+
+    # Attach LEfSe and PERMANOVA results if computed
+    # 附加 LEfSe 和 PERMANOVA 结果
+    if lefse_results is not None:
+        response["lefse_results"] = lefse_results
+    if permanova_result is not None:
+        response["permanova"] = permanova_result
+
+    return response
 
 
 # ── Data management endpoints / 数据管理端点 ──────────────────────────────────

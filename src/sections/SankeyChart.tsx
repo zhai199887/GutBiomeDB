@@ -6,6 +6,7 @@
 import { useEffect, useRef, useState } from "react";
 import { renderToString } from "react-dom/server";
 import * as d3 from "d3";
+import { useI18n } from "@/i18n";
 import { useData } from "@/data";
 import { getCssVariable } from "@/util/dom";
 import "@/components/tooltip";
@@ -77,6 +78,7 @@ const PHYLUM_COLORS: Record<string, string> = {
 // ── Component / 组件 ────────────────────────────────────────────────────────
 
 const SankeyChart = () => {
+  const { t } = useI18n();
   const svgRef = useRef<SVGSVGElement>(null);
   const abundance = useData((s) => s.abundance);
   const [highlight, setHighlight] = useState<string | null>(null);
@@ -304,7 +306,7 @@ const SankeyChart = () => {
 
   return (
     <div className="sub-section" style={{ marginTop: "1.5rem" }}>
-      <h3>Taxonomy Composition Flow (Phylum → Genus)</h3>
+      <h3>{t("sankey.title")}</h3>
       <p style={{ color: "var(--light-gray)", fontSize: "0.85rem", margin: "0.3rem 0 0.8rem" }}>
         Hover to highlight connections. Width proportional to mean relative abundance.
       </p>

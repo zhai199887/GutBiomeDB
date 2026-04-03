@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { renderToString } from "react-dom/server";
 import { Link } from "react-router-dom";
 import * as d3 from "d3";
+import { useI18n } from "@/i18n";
 import { loadAbundance, useData } from "@/data";
 import { getCssVariable } from "@/util/dom";
 import { formatNumber } from "@/util/string";
@@ -20,6 +21,7 @@ const AGE_GROUPS = [
 type DimType = "age" | "sex" | "disease";
 
 const PhenotypePage = () => {
+  const { t } = useI18n();
   const abundance = useData((s) => s.abundance);
   const summary = useData((s) => s.summary);
 
@@ -62,15 +64,15 @@ const PhenotypePage = () => {
           to="/"
           style={{ color: "var(--primary)", textDecoration: "none" }}
         >
-          ← Back to main
+          {t("phenotype.back")}
         </Link>
       </div>
 
       <h1 style={{ fontSize: "1.6rem", marginBottom: "0.5rem" }}>
-        Phenotype Association Analysis
+        {t("phenotype.title")}
       </h1>
       <p style={{ color: "var(--light-gray)", marginBottom: "2rem" }}>
-        Compare microbiome composition (Top 20 genera) between two groups.
+        {t("phenotype.subtitle")}
       </p>
 
       <div
@@ -92,7 +94,7 @@ const PhenotypePage = () => {
               marginBottom: "0.4rem",
             }}
           >
-            Compare by
+            {t("phenotype.compareBy")}
           </div>
           <div style={{ display: "flex", gap: "0.4rem" }}>
             {(["age", "sex", "disease"] as DimType[]).map((d) => (
@@ -183,7 +185,7 @@ const PhenotypePage = () => {
       </div>
 
       {!abundance ? (
-        <p style={{ color: "var(--light-gray)" }}>Loading abundance data…</p>
+        <p style={{ color: "var(--light-gray)" }}>{t("phenotype.loading")}</p>
       ) : (
         <svg
           id="phenotype-chart"

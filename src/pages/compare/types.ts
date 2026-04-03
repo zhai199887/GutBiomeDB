@@ -20,6 +20,22 @@ export interface DiffTaxon {
   effect_size: number;
 }
 
+export interface LefseFeature {
+  taxon: string;
+  lda_score: number;
+  p_value: number;
+  enriched_group: "A" | "B";
+}
+
+export interface PermanovaResult {
+  f_statistic: number;
+  p_value: number;
+  r_squared: number;
+  permutations: number;
+  n_a: number;
+  n_b: number;
+}
+
 export interface DiffResult {
   summary: {
     group_a_name: string;
@@ -38,6 +54,8 @@ export interface DiffResult {
   beta_diversity: {
     pcoa_coords: { x: number; y: number; group: "A" | "B" }[];
   };
+  lefse_results?: LefseFeature[];
+  permanova?: PermanovaResult;
 }
 
 export interface FilterOptions {
@@ -49,5 +67,5 @@ export interface FilterOptions {
 
 export const API_BASE = import.meta.env.VITE_API_URL ?? "http://localhost:8000";
 export const TAXONOMY_LEVELS = ["genus", "phylum"] as const;
-export const METHODS = ["wilcoxon", "t-test"] as const;
-export type Tab = "bar" | "volcano" | "alpha" | "beta";
+export const METHODS = ["wilcoxon", "t-test", "lefse", "permanova"] as const;
+export type Tab = "bar" | "volcano" | "alpha" | "beta" | "lefse" | "permanova";
