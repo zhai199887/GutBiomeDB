@@ -26,7 +26,44 @@ export const COUNTRY_NAMES: Record<string, string> = {
   VE: "Venezuela", VN: "Vietnam", ZA: "South Africa", ZM: "Zambia", ZW: "Zimbabwe",
 };
 
+/** Chinese country names / 中文国名 */
+export const COUNTRY_NAMES_ZH: Record<string, string> = {
+  AE: "阿联酋", AF: "阿富汗", AL: "阿尔巴尼亚", AM: "亚美尼亚", AT: "奥地利",
+  AU: "澳大利亚", AZ: "阿塞拜疆", BD: "孟加拉国", BE: "比利时",
+  BF: "布基纳法索", BG: "保加利亚", BR: "巴西", BW: "博茨瓦纳",
+  CA: "加拿大", CF: "中非共和国", CH: "瑞士", CM: "喀麦隆",
+  CN: "中国", CO: "哥伦比亚", CZ: "捷克", DE: "德国", DK: "丹麦",
+  EC: "厄瓜多尔", EE: "爱沙尼亚", EG: "埃及", ES: "西班牙", ET: "埃塞俄比亚",
+  FI: "芬兰", FJ: "斐济", FR: "法国", GA: "加蓬", GB: "英国",
+  GH: "加纳", GR: "希腊", GT: "危地马拉", HK: "香港", HN: "洪都拉斯",
+  HR: "克罗地亚", HU: "匈牙利", ID: "印度尼西亚", IE: "爱尔兰", IL: "以色列",
+  IN: "印度", IR: "伊朗", IS: "冰岛", IT: "意大利", JM: "牙买加",
+  JO: "约旦", JP: "日本", KE: "肯尼亚", KR: "韩国", KZ: "哈萨克斯坦",
+  LK: "斯里兰卡", LT: "立陶宛", LV: "拉脱维亚", MA: "摩洛哥", MD: "摩尔多瓦",
+  MG: "马达加斯加", ML: "马里", MM: "缅甸", MN: "蒙古", MW: "马拉维",
+  MX: "墨西哥", MY: "马来西亚", MZ: "莫桑比克", NG: "尼日利亚", NL: "荷兰",
+  NO: "挪威", NP: "尼泊尔", NZ: "新西兰", PE: "秘鲁", PG: "巴布亚新几内亚",
+  PH: "菲律宾", PK: "巴基斯坦", PL: "波兰", PT: "葡萄牙", RO: "罗马尼亚",
+  RS: "塞尔维亚", RU: "俄罗斯", RW: "卢旺达", SA: "沙特阿拉伯", SE: "瑞典",
+  SG: "新加坡", SI: "斯洛文尼亚", SK: "斯洛伐克", SN: "塞内加尔", SV: "萨尔瓦多",
+  TH: "泰国", TN: "突尼斯", TR: "土耳其", TW: "台湾", TZ: "坦桑尼亚",
+  UA: "乌克兰", UG: "乌干达", US: "美国", UZ: "乌兹别克斯坦",
+  VE: "委内瑞拉", VN: "越南", ZA: "南非", ZM: "赞比亚", ZW: "津巴布韦",
+};
+
+/** Age group Chinese names / 年龄组中文名 */
+export const AGE_GROUP_ZH: Record<string, string> = {
+  Infant: "婴儿", Child: "儿童", Adolescent: "青少年", Adult: "成人",
+  Older_Adult: "老年人", Centenarian: "百岁老人", Oldest_Old: "高龄老人", Unknown: "未知",
+};
+
+/** Sex Chinese names / 性别中文名 */
+export const SEX_ZH: Record<string, string> = {
+  male: "男", female: "女", unknown: "未知",
+};
+
 /** Convert ISO code to display name, fallback to code if not found */
-export function countryName(iso: string): string {
+export function countryName(iso: string, locale?: string): string {
+  if (locale === "zh") return COUNTRY_NAMES_ZH[iso] ?? COUNTRY_NAMES[iso] ?? iso;
   return COUNTRY_NAMES[iso] ?? iso;
 }
