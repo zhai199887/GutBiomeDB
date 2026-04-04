@@ -121,7 +121,7 @@ function drawChord(svgEl: SVGSVGElement, data: ChordData, dName: (n: string) => 
   }
 
   const size = 600;
-  const outerRadius = size / 2 - 60;
+  const outerRadius = size / 2 - 80;
   const innerRadius = outerRadius - 20;
 
   svg.attr("viewBox", `0 0 ${size} ${size}`);
@@ -168,15 +168,16 @@ function drawChord(svgEl: SVGSVGElement, data: ChordData, dName: (n: string) => 
     .attr("transform", d => {
       const angle = ((d as any).angle * 180) / Math.PI - 90;
       const flip = (d as any).angle > Math.PI;
-      return `rotate(${angle}) translate(${outerRadius + 8}) ${flip ? "rotate(180)" : ""}`;
+      return `rotate(${angle}) translate(${outerRadius + 10}) ${flip ? "rotate(180)" : ""}`;
     })
     .attr("text-anchor", d => (d as any).angle > Math.PI ? "end" : "start")
-    .attr("font-size", 9)
+    .attr("font-size", 12)
     .attr("fill", "currentColor")
+    .attr("font-weight", 500)
     .attr("font-style", d => d.index >= diseases.length ? "italic" : "normal")
     .text(d => {
       const name = nameOf(d.index);
-      return name.length > 14 ? name.slice(0, 12) + "\u2026" : name;
+      return name.length > 18 ? name.slice(0, 16) + "\u2026" : name;
     });
 
   const ribbons = g.selectAll(".ribbon")

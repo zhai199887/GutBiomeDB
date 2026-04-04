@@ -71,7 +71,13 @@ const ComparePage = () => {
       });
       if (!res.ok) {
         const err = await res.json();
-        throw new Error(err.detail ?? "Analysis failed");
+        const detail: string = err.detail ?? "Analysis failed";
+        // Translate backend error messages for i18n
+        if (detail.includes("no samples match")) {
+          const group = detail.startsWith("Group A") ? "A" : "B";
+          throw new Error(t("compare.noSamples", { group }));
+        }
+        throw new Error(detail);
       }
       const data: DiffResult = await res.json();
       setResult(data);

@@ -161,6 +161,7 @@ def warmup_data():
             "http://127.0.0.1:8000/api/data-stats",
             "http://127.0.0.1:8000/api/disease-list",
             "http://127.0.0.1:8000/api/network?top_diseases=12&top_genera=15",
+            "http://127.0.0.1:8000/api/disease-profile?disease=NC",
         ]
         for url in endpoints:
             try:
@@ -739,8 +740,16 @@ def data_stats(request: Request):
          description="Returns Chinese translations for disease names.")
 @limiter.limit("120/minute")
 def get_disease_names_zh(request: Request):
-    """Return disease name Chinese translations / 返回疾病名称中文翻译字典"""
-    return DISEASE_NAMES_ZH
+    """Return disease name Chinese translations / 返回疾病名称中文翻译字典
+    Merges disease_names_zh.json + disease_ontology standard_name_zh"""
+    merged = dict(DISEASE_NAMES_ZH)
+    # Add translations from ontology that aren't in the manual file
+    for key, info in DISEASE_ONTOLOGY.items():
+        if key not in merged:
+            zh = info.get("standard_name_zh", "")
+            if zh:
+                merged[key] = zh
+    return merged
 
 
 @app.get("/api/disease-display-names",
