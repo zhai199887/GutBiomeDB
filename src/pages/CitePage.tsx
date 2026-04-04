@@ -8,9 +8,8 @@ import classes from "./CitePage.module.css";
 const API_BASE = import.meta.env.VITE_API_URL ?? "http://localhost:8000";
 
 const BIBTEX = `@unpublished{zhai2026gutmicrobiomeatlas,
-  title   = {Gut Microbiome Atlas: an integrated analytical platform for
-             168,464 human gut microbiome samples across diseases,
-             geography, and lifespan},
+  title   = {Gut Microbiome Atlas: an analytical platform for
+             168,464 human gut microbiome samples},
   author  = {Zhai, Jinxia and Li, Yingjie and Liu, Jiameng and Su, Xinyi
              and Cui, Runze and Zheng, Dianyu and Sun, Yuhan and Yu, Jingsheng
              and Dai, Cong},
