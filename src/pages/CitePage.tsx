@@ -7,14 +7,15 @@ import classes from "./CitePage.module.css";
 
 const API_BASE = import.meta.env.VITE_API_URL ?? "http://localhost:8000";
 
-const BIBTEX = `@unpublished{zhai2025gutmicrobiomeatlas,
-  title   = {Gut Microbiome Atlas: a comprehensive platform for exploring
-             human gut microbiome across diseases, geography, and lifespan},
+const BIBTEX = `@unpublished{zhai2026gutmicrobiomeatlas,
+  title   = {Gut Microbiome Atlas: an integrated analytical platform for
+             168,464 human gut microbiome samples across diseases,
+             geography, and lifespan},
   author  = {Zhai, Jinxia and Li, Yingjie and Liu, Jiameng and Su, Xinyi
              and Cui, Runze and Zheng, Dianyu and Sun, Yuhan and Yu, Jingsheng
              and Dai, Cong},
   note    = {Manuscript in preparation},
-  year    = {2025}
+  year    = {2026}
 }`;
 
 const CitePage = () => {
@@ -41,7 +42,7 @@ const CitePage = () => {
     { key: "samples", value: apiStats?.total_samples?.toLocaleString() ?? "168,464", labelKey: "cite.statSamples" as const },
     { key: "genera", value: "4,680", labelKey: "cite.statGenera" as const },
     { key: "countries", value: apiStats?.total_countries?.toString() ?? "66", labelKey: "cite.statCountries" as const },
-    { key: "diseases", value: apiStats?.total_diseases ? `${apiStats.total_diseases}+` : "217+", labelKey: "cite.statDiseases" as const },
+    { key: "diseases", value: apiStats?.total_diseases ? `${apiStats.total_diseases}+` : "218+", labelKey: "cite.statDiseases" as const },
     { key: "stages", value: "8", labelKey: "cite.statStages" as const },
   ];
 

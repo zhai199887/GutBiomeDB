@@ -51,18 +51,27 @@ const NetworkPage = () => {
 
   // 加载关联网络数据 + 中文名
   useEffect(() => {
-    fetch(`${API_BASE}/api/network?top_diseases=12&top_genera=15`)
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 30000);
+    fetch(`${API_BASE}/api/network?top_diseases=12&top_genera=15`, { signal: controller.signal })
       .then((r) => {
         if (!r.ok) throw new Error(`HTTP ${r.status}`);
         return r.json();
       })
       .then((d: NetworkData) => setData(d))
-      .catch((err) => setError(err.message ?? "Failed to load network data"))
-      .finally(() => setLoading(false));
+      .catch((err) => {
+        if (err.name === "AbortError") {
+          setError(t("compare.backendError"));
+        } else {
+          setError(t("compare.backendError"));
+        }
+      })
+      .finally(() => { clearTimeout(timeout); setLoading(false); });
     fetch(`${API_BASE}/api/disease-names-zh`)
       .then((r) => r.json())
       .then(setDiseaseZh)
       .catch((err) => console.warn("disease-names-zh fetch failed:", err));
+    return () => { clearTimeout(timeout); controller.abort(); };
   }, []);
 
   // 绘制力导向图（仅当 association tab 激活时）

@@ -3,7 +3,7 @@ import { renderToString } from "react-dom/server";
 import { Link } from "react-router-dom";
 import * as d3 from "d3";
 import { useI18n } from "@/i18n";
-import { loadAbundance, useData } from "@/data";
+import { loadAbundance, loadSummary, useData } from "@/data";
 import { getCssVariable } from "@/util/dom";
 import { formatNumber } from "@/util/string";
 import "@/components/tooltip";
@@ -30,10 +30,9 @@ const PhenotypePage = () => {
   const [groupB, setGroupB] = useState("male");
 
   useEffect(() => {
-    if (!abundance) {
-      loadAbundance();
-    }
-  }, [abundance]);
+    if (!abundance) loadAbundance();
+    if (!summary) loadSummary();
+  }, [abundance, summary]);
 
   useEffect(() => {
     if (!abundance) return;
