@@ -40,7 +40,7 @@ const CitePage = () => {
   const STATS = [
     { key: "samples", value: apiStats?.total_samples?.toLocaleString() ?? "168,464", labelKey: "cite.statSamples" as const },
     { key: "genera", value: "4,680", labelKey: "cite.statGenera" as const },
-    { key: "countries", value: apiStats?.total_countries?.toString() ?? "69", labelKey: "cite.statCountries" as const },
+    { key: "countries", value: apiStats?.total_countries?.toString() ?? "66", labelKey: "cite.statCountries" as const },
     { key: "diseases", value: apiStats?.total_diseases ? `${apiStats.total_diseases}+` : "217+", labelKey: "cite.statDiseases" as const },
     { key: "stages", value: "8", labelKey: "cite.statStages" as const },
   ];

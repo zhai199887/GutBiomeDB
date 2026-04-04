@@ -652,7 +652,7 @@ def data_stats(request: Request):
 
     return {
         "total_samples": int(len(meta)),
-        "total_countries": int(meta["country"].nunique()) if "country" in meta.columns else 0,
+        "total_countries": int(meta.loc[meta["country"] != "unknown", "country"].nunique()) if "country" in meta.columns else 0,
         "total_diseases": len(all_diseases),
         "last_updated": version_info.get("last_updated", datetime.now().strftime("%Y-%m-%d")),
         "version": version_info.get("version", f"v1.0_{datetime.now().strftime('%Y%m%d')}"),

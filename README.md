@@ -2,7 +2,7 @@
 
 A comprehensive platform for exploring the human gut microbiome across diseases, geography, and lifespan.
 
-**168,464 samples | 4,680 genera | 69 countries | 217+ diseases | 8 life stages**
+**168,464 samples | 4,680 genera | 66 countries | 217+ diseases | 8 life stages**
 
 ## Features
 
