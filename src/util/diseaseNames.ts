@@ -423,12 +423,30 @@ export function diseaseDisplayName(key: string): string {
   return key.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
+// Build normalized lookup for fuzzy matching (once)
+// 构建归一化查找表用于模糊匹配（仅构建一次）
+const _DISEASE_ZH_NORM: Record<string, string> = {};
+for (const [k, v] of Object.entries(DISEASE_ZH)) {
+  _DISEASE_ZH_NORM[k.toLowerCase().replace(/[_\s-]+/g, " ").trim()] = v;
+}
+
+function lookupDiseaseZh(key: string): string | undefined {
+  // 1. Exact match
+  if (DISEASE_ZH[key]) return DISEASE_ZH[key];
+  // 2. Normalized match (case-insensitive, underscore/hyphen → space)
+  const norm = key.toLowerCase().replace(/[_\s-]+/g, " ").trim();
+  return _DISEASE_ZH_NORM[norm];
+}
+
 /**
  * 获取疾病的国际化显示名称
  * locale === "zh" 时返回中文名（内嵌映射），否则返回英文标准名
  */
 export function diseaseDisplayNameI18n(key: string, locale: string): string {
-  if (locale === "zh" && DISEASE_ZH[key]) return DISEASE_ZH[key];
+  if (locale === "zh") {
+    const zh = lookupDiseaseZh(key);
+    if (zh) return zh;
+  }
   return diseaseDisplayName(key);
 }
 

@@ -169,6 +169,9 @@ const en = {
   "species.cooccurrence.positive": "Positive",
   "species.cooccurrence.negative": "Negative",
 
+  // Metabolism tags
+  "species.metabolism.title": "Metabolic Functions",
+
   // Biomarker Profile
   "species.biomarker.title": "Cross-Disease Biomarker Profile",
   "species.biomarker.enriched": "Enriched",
@@ -678,6 +681,9 @@ const zh: Record<keyof typeof en, string> = {
   "species.cooccurrence.type": "相关性",
   "species.cooccurrence.positive": "正相关",
   "species.cooccurrence.negative": "负相关",
+
+  // 代谢功能标签
+  "species.metabolism.title": "代谢功能",
 
   // 跨疾病标志物画像
   "species.biomarker.title": "跨疾病标志物画像",

@@ -171,12 +171,13 @@ const translateName = (name: string, locale: string, type: string): string => {
 // ── Metabolism tags ──────────────────────────────────────────
 
 const MetabolismTags = ({ genus }: { genus: string }) => {
-  const [categories, setCategories] = useState<{ id: string; name_en: string; icon: string }[]>([]);
+  const { t, locale } = useI18n();
+  const [categories, setCategories] = useState<{ id: string; name_en: string; name_zh: string; icon: string }[]>([]);
 
   useEffect(() => {
     fetch("/data/metabolism_mapping.json")
       .then((r) => r.json())
-      .then((data: { categories: { id: string; name_en: string; icon: string; taxa: string[] }[] }) => {
+      .then((data: { categories: { id: string; name_en: string; name_zh: string; icon: string; taxa: string[] }[] }) => {
         const matches = data.categories.filter((c) =>
           c.taxa.some((t) => t.toLowerCase().includes(genus.toLowerCase()) ||
             genus.toLowerCase().includes(t.toLowerCase()))
@@ -190,11 +191,11 @@ const MetabolismTags = ({ genus }: { genus: string }) => {
 
   return (
     <div className={classes.chartCard}>
-      <h3>Metabolic Functions</h3>
+      <h3>{t("species.metabolism.title")}</h3>
       <div className={classes.tagList}>
         {categories.map((c) => (
           <Link key={c.id} to="/metabolism" className={classes.metaTag}>
-            {c.icon} {c.name_en}
+            {c.icon} {locale === "zh" ? c.name_zh : c.name_en}
           </Link>
         ))}
       </div>
@@ -430,7 +431,8 @@ function drawBarChart(
   const svg = d3.select(svgEl);
   svg.selectAll("*").remove();
 
-  const margin = { top: 10, right: 80, bottom: 30, left: 180 };
+  const isDisease = nameType === "disease";
+  const margin = { top: 10, right: 80, bottom: 30, left: isDisease ? 220 : 180 };
   const W = 800, H = Math.max(200, data.length * 24 + margin.top + margin.bottom);
   svg.attr("viewBox", `0 0 ${W} ${H}`);
 
@@ -485,7 +487,8 @@ function drawBarChart(
   g.append("g")
     .call(d3.axisLeft(yScale).tickFormat((d) => {
       const translated = translateName(d, locale, nameType);
-      return translated.length > 24 ? translated.slice(0, 22) + "\u2026" : translated;
+      const limit = isDisease ? 28 : 24;
+      return translated.length > limit ? translated.slice(0, limit - 2) + "…" : translated;
     }))
     .attr("font-size", 10);
 
