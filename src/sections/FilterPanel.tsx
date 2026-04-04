@@ -2,6 +2,7 @@ import { useI18n } from "@/i18n";
 import { useData, setFilters, resetFilters, DEFAULT_FILTERS } from "@/data";
 import { formatNumber } from "@/util/string";
 import { diseaseShortNameI18n } from "@/util/diseaseNames";
+import { AGE_GROUP_ZH } from "@/util/countries";
 import classes from "./FilterPanel.module.css";
 
 const AGE_GROUPS = [
@@ -116,7 +117,7 @@ const FilterPanel = () => {
                 data-active={filters.age_groups.includes(g)}
                 onClick={() => toggleAge(g)}
               >
-                {g.replace("_", " ")}
+                {locale === "zh" ? (AGE_GROUP_ZH[g] ?? g.replace("_", " ")) : g.replace("_", " ")}
               </button>
             ))}
           </div>

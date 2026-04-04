@@ -1,7 +1,6 @@
 /**
  * SpeciesPage.tsx — Species Detail Page
  * 物种详情页：通过后端 API 获取属的疾病/国家/年龄/性别分布
- * 从搜索结果或疾病浏览页跳转过来
  */
 import { useEffect, useRef, useState } from "react";
 import { renderToString } from "react-dom/server";
@@ -9,6 +8,8 @@ import { Link, useParams } from "react-router-dom";
 import * as d3 from "d3";
 import { useI18n } from "@/i18n";
 import { cachedFetch } from "@/util/apiCache";
+import { diseaseShortNameI18n } from "@/util/diseaseNames";
+import { countryName, AGE_GROUP_ZH, SEX_ZH } from "@/util/countries";
 import "@/components/tooltip";
 import classes from "./SpeciesPage.module.css";
 
@@ -72,28 +73,34 @@ const SpeciesPage = () => {
 
 export default SpeciesPage;
 
-// ── Profile detail view / 详情视图 ─────────────────────────────────────────
+// ── Profile detail view ─────────────────────────────────────────
 
 const ProfileDetail = ({ profile }: { profile: SpeciesProfile }) => {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const diseaseRef = useRef<SVGSVGElement>(null);
   const countryRef = useRef<SVGSVGElement>(null);
   const ageRef = useRef<SVGSVGElement>(null);
+  const sexRef = useRef<SVGSVGElement>(null);
 
   useEffect(() => {
     if (!diseaseRef.current || profile.by_disease.length === 0) return;
-    drawBarChart(diseaseRef.current, profile.by_disease.slice(0, 20), "#ff6b6b");
-  }, [profile]);
+    drawBarChart(diseaseRef.current, profile.by_disease.slice(0, 20), "#ff6b6b", locale, "disease");
+  }, [profile, locale]);
 
   useEffect(() => {
     if (!countryRef.current || profile.by_country.length === 0) return;
-    drawBarChart(countryRef.current, profile.by_country.slice(0, 20), "#4ecdc4");
-  }, [profile]);
+    drawBarChart(countryRef.current, profile.by_country.slice(0, 20), "#4ecdc4", locale, "country");
+  }, [profile, locale]);
 
   useEffect(() => {
     if (!ageRef.current || profile.by_age_group.length === 0) return;
-    drawBarChart(ageRef.current, profile.by_age_group, "var(--primary)");
-  }, [profile]);
+    drawBarChart(ageRef.current, profile.by_age_group, "var(--primary)", locale, "age");
+  }, [profile, locale]);
+
+  useEffect(() => {
+    if (!sexRef.current || profile.by_sex.length === 0) return;
+    drawBarChart(sexRef.current, profile.by_sex, "#a78bfa", locale, "sex");
+  }, [profile, locale]);
 
   return (
     <div className={classes.content}>
@@ -103,7 +110,7 @@ const ProfileDetail = ({ profile }: { profile: SpeciesProfile }) => {
           <StatItem value={profile.total_samples.toLocaleString("en")} label={t("search.totalSamples")} />
           <StatItem value={profile.present_samples.toLocaleString("en")} label={t("search.presentIn")} />
           <StatItem value={`${(profile.prevalence * 100).toFixed(1)}%`} label={t("search.prevalence")} />
-          <StatItem value={`${(profile.mean_abundance * 100).toFixed(4)}%`} label={t("search.meanAbundance")} />
+          <StatItem value={`${profile.mean_abundance.toFixed(4)}%`} label={t("search.meanAbundance")} />
         </div>
       </div>
 
@@ -131,41 +138,14 @@ const ProfileDetail = ({ profile }: { profile: SpeciesProfile }) => {
       {profile.by_sex.length > 0 && (
         <div className={classes.chartCard}>
           <h3>{t("search.bySex")}</h3>
-          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.9rem" }}>
-            <thead>
-              <tr>
-                <th style={{ textAlign: "left", padding: "6px 8px", color: "var(--light-gray)", borderBottom: "1px solid var(--gray)" }}>
-                  {t("filter.sex")}
-                </th>
-                <th style={{ textAlign: "left", padding: "6px 8px", color: "var(--light-gray)", borderBottom: "1px solid var(--gray)" }}>
-                  {t("search.meanAbundance")}
-                </th>
-                <th style={{ textAlign: "left", padding: "6px 8px", color: "var(--light-gray)", borderBottom: "1px solid var(--gray)" }}>
-                  {t("search.prevalence")}
-                </th>
-                <th style={{ textAlign: "left", padding: "6px 8px", color: "var(--light-gray)", borderBottom: "1px solid var(--gray)" }}>n</th>
-              </tr>
-            </thead>
-            <tbody>
-              {profile.by_sex.map((s) => (
-                <tr key={s.name}>
-                  <td style={{ padding: "6px 8px", borderBottom: "1px solid rgba(255,255,255,0.04)" }}>{s.name}</td>
-                  <td style={{ padding: "6px 8px", borderBottom: "1px solid rgba(255,255,255,0.04)" }}>{(s.mean_abundance * 100).toFixed(4)}%</td>
-                  <td style={{ padding: "6px 8px", borderBottom: "1px solid rgba(255,255,255,0.04)" }}>{(s.prevalence * 100).toFixed(1)}%</td>
-                  <td style={{ padding: "6px 8px", borderBottom: "1px solid rgba(255,255,255,0.04)" }}>{s.sample_count.toLocaleString("en")}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <svg ref={sexRef} className={classes.chart} role="img" aria-label="Sex abundance chart" />
         </div>
       )}
 
-      {/* Biomarker Profile — cross-disease differential view */}
+      {/* Biomarker Profile */}
       <BiomarkerProfile genus={profile.genus} />
-
-      {/* Co-occurring microbes — auto-detected partners */}
+      {/* Co-occurring microbes */}
       <CooccurrencePartners genus={profile.genus} />
-
       {/* Metabolism tags */}
       <MetabolismTags genus={profile.genus} />
     </div>
@@ -179,7 +159,16 @@ const StatItem = ({ value, label }: { value: string; label: string }) => (
   </div>
 );
 
-// ── Metabolism tags / 代谢功能标签 ──────────────────────────────────────────
+// ── i18n name helpers ──────────────────────────────────────────
+const translateName = (name: string, locale: string, type: string): string => {
+  if (type === "disease") return diseaseShortNameI18n(name, locale, 30);
+  if (type === "country") return countryName(name, locale);
+  if (type === "age") return locale === "zh" ? (AGE_GROUP_ZH[name] ?? name.replace(/_/g, " ")) : name.replace(/_/g, " ");
+  if (type === "sex") return locale === "zh" ? (SEX_ZH[name] ?? name) : name;
+  return name;
+};
+
+// ── Metabolism tags ──────────────────────────────────────────
 
 const MetabolismTags = ({ genus }: { genus: string }) => {
   const [categories, setCategories] = useState<{ id: string; name_en: string; icon: string }[]>([]);
@@ -213,7 +202,7 @@ const MetabolismTags = ({ genus }: { genus: string }) => {
   );
 };
 
-// ── Co-occurrence Partners / 共现微生物 ──────────────────────────────────────
+// ── Co-occurrence Partners ──────────────────────────────────────
 
 interface CooccurrencePartner {
   genus: string;
@@ -278,7 +267,7 @@ const CooccurrencePartners = ({ genus }: { genus: string }) => {
   );
 };
 
-// ── Biomarker Profile / 跨疾病标志物画像 ──────────────────────────────────────
+// ── Biomarker Profile ──────────────────────────────────────
 
 interface BiomarkerEntry {
   disease: string;
@@ -301,7 +290,7 @@ interface BiomarkerProfileData {
 }
 
 const BiomarkerProfile = ({ genus }: { genus: string }) => {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const svgRef = useRef<SVGSVGElement>(null);
   const [data, setData] = useState<BiomarkerProfileData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -326,9 +315,9 @@ const BiomarkerProfile = ({ genus }: { genus: string }) => {
     const svg = d3.select(svgRef.current);
     svg.selectAll("*").remove();
 
-    const margin = { top: 20, right: 80, bottom: 30, left: 160 };
+    const margin = { top: 20, right: 80, bottom: 30, left: 200 };
     const barH = 18;
-    const W = 700;
+    const W = 800;
     const H = Math.max(200, display.length * (barH + 4) + margin.top + margin.bottom);
     svg.attr("viewBox", `0 0 ${W} ${H}`);
 
@@ -363,7 +352,7 @@ const BiomarkerProfile = ({ genus }: { genus: string }) => {
       .attr("data-tooltip", (d) =>
         renderToString(
           <div className="tooltip-table">
-            <span>{t("species.biomarker.disease")}</span><span>{d.disease}</span>
+            <span>{locale === "zh" ? "\u75be\u75c5" : "Disease"}</span><span>{diseaseShortNameI18n(d.disease, locale, 30)}</span>
             <span>log2FC</span><span>{d.log2fc.toFixed(3)}</span>
             <span>FDR</span><span>{d.adjusted_p < 0.001 ? d.adjusted_p.toExponential(2) : d.adjusted_p.toFixed(4)}</span>
             <span>n</span><span>{d.n_samples.toLocaleString("en")}</span>
@@ -386,7 +375,7 @@ const BiomarkerProfile = ({ genus }: { genus: string }) => {
 
     // Y axis
     g.append("g")
-      .call(d3.axisLeft(yScale).tickFormat((d) => (d.length > 22 ? d.slice(0, 20) + "…" : d)))
+      .call(d3.axisLeft(yScale).tickFormat((d) => diseaseShortNameI18n(d, locale, 28)))
       .attr("font-size", 9);
 
     // X axis
@@ -400,9 +389,9 @@ const BiomarkerProfile = ({ genus }: { genus: string }) => {
       .attr("x", iW / 2).attr("y", iH + 26)
       .attr("text-anchor", "middle")
       .attr("font-size", 10).attr("fill", "var(--light-gray)")
-      .text("log₂ Fold Change (vs Healthy)");
+      .text(locale === "zh" ? "log\u2082 \u5dee\u5f02\u500d\u6570 (vs \u5065\u5eb7\u5bf9\u7167)" : "log\u2082 Fold Change (vs Healthy)");
 
-  }, [data, showAll, t]);
+  }, [data, showAll, t, locale]);
 
   if (loading) return null;
   if (!data || data.profiles.length === 0) return null;
@@ -411,8 +400,8 @@ const BiomarkerProfile = ({ genus }: { genus: string }) => {
     <div className={classes.chartCard}>
       <h3>{t("species.biomarker.title")}</h3>
       <div style={{ display: "flex", gap: "1.5rem", flexWrap: "wrap", marginBottom: 12, fontSize: "0.82rem" }}>
-        <span style={{ color: "#ef4444" }}>▲ {t("species.biomarker.enriched")}: {data.n_enriched}</span>
-        <span style={{ color: "#3b82f6" }}>▼ {t("species.biomarker.depleted")}: {data.n_depleted}</span>
+        <span style={{ color: "#ef4444" }}>{"\u25b2"} {t("species.biomarker.enriched")}: {data.n_enriched}</span>
+        <span style={{ color: "#3b82f6" }}>{"\u25bc"} {t("species.biomarker.depleted")}: {data.n_depleted}</span>
         <span style={{ color: "var(--light-gray)" }}>{t("species.biomarker.tested")}: {data.n_diseases_tested}</span>
         <label style={{ marginLeft: "auto", cursor: "pointer", color: "var(--light-gray)" }}>
           <input
@@ -429,14 +418,20 @@ const BiomarkerProfile = ({ genus }: { genus: string }) => {
   );
 };
 
-// ── D3 horizontal bar chart / D3 水平柱状图 ─────────────────────────────────
+// ── D3 horizontal bar chart with i18n ─────────────────────────────────
 
-function drawBarChart(svgEl: SVGSVGElement, data: ProfileEntry[], color: string) {
+function drawBarChart(
+  svgEl: SVGSVGElement,
+  data: ProfileEntry[],
+  color: string,
+  locale: string = "en",
+  nameType: string = "",
+) {
   const svg = d3.select(svgEl);
   svg.selectAll("*").remove();
 
-  const margin = { top: 10, right: 60, bottom: 30, left: 130 };
-  const W = 640, H = Math.max(200, data.length * 22 + margin.top + margin.bottom);
+  const margin = { top: 10, right: 80, bottom: 30, left: 180 };
+  const W = 800, H = Math.max(200, data.length * 24 + margin.top + margin.bottom);
   svg.attr("viewBox", `0 0 ${W} ${H}`);
 
   const g = svg.append("g").attr("transform", `translate(${margin.left},${margin.top})`);
@@ -469,10 +464,10 @@ function drawBarChart(svgEl: SVGSVGElement, data: ProfileEntry[], color: string)
     .attr("data-tooltip", (d) =>
       renderToString(
         <div className="tooltip-table">
-          <span>Name</span><span>{d.name}</span>
-          <span>Abundance</span><span>{(d.mean_abundance * 100).toFixed(4)}%</span>
-          <span>Prevalence</span><span>{(d.prevalence * 100).toFixed(1)}%</span>
-          <span>Samples</span><span>{d.sample_count.toLocaleString("en")}</span>
+          <span>{locale === "zh" ? "\u540d\u79f0" : "Name"}</span><span>{translateName(d.name, locale, nameType)}</span>
+          <span>{locale === "zh" ? "\u5e73\u5747\u4e30\u5ea6" : "Abundance"}</span><span>{d.mean_abundance.toFixed(4)}%</span>
+          <span>{locale === "zh" ? "\u68c0\u51fa\u7387" : "Prevalence"}</span><span>{(d.prevalence * 100).toFixed(1)}%</span>
+          <span>{locale === "zh" ? "\u6837\u672c\u6570" : "Samples"}</span><span>{d.sample_count.toLocaleString("en")}</span>
         </div>
       )
     );
@@ -485,14 +480,17 @@ function drawBarChart(svgEl: SVGSVGElement, data: ProfileEntry[], color: string)
     .attr("dominant-baseline", "middle")
     .attr("font-size", 9)
     .attr("fill", "currentColor")
-    .text((d) => `${(d.mean_abundance * 100).toFixed(3)}%`);
+    .text((d) => `${d.mean_abundance.toFixed(3)}%`);
 
   g.append("g")
-    .call(d3.axisLeft(yScale).tickFormat((d) => d.length > 16 ? d.slice(0, 14) + "…" : d))
+    .call(d3.axisLeft(yScale).tickFormat((d) => {
+      const translated = translateName(d, locale, nameType);
+      return translated.length > 24 ? translated.slice(0, 22) + "\u2026" : translated;
+    }))
     .attr("font-size", 10);
 
   g.append("g")
     .attr("transform", `translate(0,${iH})`)
-    .call(d3.axisBottom(xScale).ticks(4).tickFormat((d) => `${(Number(d) * 100).toFixed(2)}%`))
+    .call(d3.axisBottom(xScale).ticks(4).tickFormat((d) => `${Number(d).toFixed(2)}%`))
     .attr("font-size", 9);
 }

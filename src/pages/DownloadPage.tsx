@@ -2,16 +2,28 @@
  * DownloadPage.tsx — Data Download Center
  * 数据下载中心：仅提供聚合统计数据，不提供原始样本数据
  */
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { useI18n } from "@/i18n";
+import { diseaseShortNameI18n } from "@/util/diseaseNames";
 import classes from "./DownloadPage.module.css";
 
 const API_BASE = import.meta.env.VITE_API_URL ?? "http://localhost:8000";
 
 const DownloadPage = () => {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const [formats, setFormats] = useState<Record<string, string>>({});
+  const [diseaseList, setDiseaseList] = useState<string[]>([]);
+  const [selectedDisease, setSelectedDisease] = useState("");
+
+  useEffect(() => {
+    fetch(`${API_BASE}/api/disease-list`)
+      .then((r) => r.json())
+      .then((data: { diseases: { name: string }[] }) => {
+        setDiseaseList(data.diseases.map((d) => d.name).filter((n) => n !== "NC"));
+      })
+      .catch(() => {});
+  }, []);
 
   const getFormat = (key: string) => formats[key] ?? "csv";
   const setFormat = (key: string, fmt: string) =>
@@ -68,18 +80,20 @@ const DownloadPage = () => {
           <h3>{t("download.diseaseProfile")}</h3>
           <p>{t("download.diseaseProfileDesc")}</p>
           <div className={classes.formatRow}>
-            <input
-              type="text"
-              placeholder={t("download.diseasePlaceholder")}
+            <select
               className={classes.formatSelect}
-              id="disease-input"
-            />
+              value={selectedDisease}
+              onChange={(e) => setSelectedDisease(e.target.value)}
+            >
+              <option value="">{t("download.diseasePlaceholder")}</option>
+              {diseaseList.map((d) => (
+                <option key={d} value={d}>{diseaseShortNameI18n(d, locale, 40)}</option>
+              ))}
+            </select>
             <button className={classes.downloadBtn} onClick={() => {
-              const input = document.getElementById("disease-input") as HTMLInputElement;
-              const disease = input?.value?.trim();
-              if (disease) {
+              if (selectedDisease) {
                 const fmt = getFormat("disease-profile");
-                window.open(`${API_BASE}/api/download/disease-profile?disease=${encodeURIComponent(disease)}&format=${fmt}`, "_blank");
+                window.open(`${API_BASE}/api/download/disease-profile?disease=${encodeURIComponent(selectedDisease)}&format=${fmt}`, "_blank");
               }
             }}>
               {t("download.download")}

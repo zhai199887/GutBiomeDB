@@ -4,8 +4,8 @@ import * as d3 from "d3";
 import Placeholder from "@/components/Placeholder";
 import { useI18n } from "@/i18n";
 import { useData } from "@/data";
-import { diseaseDisplayNameI18n } from "@/util/diseaseNames";
-import { AGE_GROUP_ZH } from "@/util/countries";
+import { diseaseShortNameI18n } from "@/util/diseaseNames";
+import { AGE_GROUP_ZH, SEX_ZH } from "@/util/countries";
 import { getCssVariable } from "@/util/dom";
 import { formatNumber } from "@/util/string";
 import classes from "./PhenotypeCharts.module.css";
@@ -21,50 +21,36 @@ const AGE_ORDER = [
   "Unknown",
 ];
 
-/** Translate helpers for chart functions */
-type NameFn = (key: string) => string;
-
 const PhenotypeCharts = () => {
   const summary = useData((s) => s.summary);
   const filters = useData((s) => s.filters);
   const { t, locale } = useI18n();
 
-  const dName: NameFn = (k) => diseaseDisplayNameI18n(k, locale);
-  const ageName: NameFn = (k) => locale === "zh" ? (AGE_GROUP_ZH[k] ?? k.replace(/_/g, " ")) : k.replace(/_/g, " ");
-  const sexName: NameFn = (k) => locale === "zh" ? ({ female: "女", male: "男", unknown: "未知" }[k] ?? k) : k;
-
   useEffect(() => {
     if (!summary) return;
-    drawAgeChart(summary.age_counts, summary.age_sex_cross, filters.age_groups, ageName, sexName, locale);
-    drawDiseaseChart(summary.disease_counts, filters.diseases, dName, locale);
-    drawHeatmap(
-      summary.age_disease_cross,
-      summary.top20_diseases.slice(0, 15),
-      dName, ageName, locale,
-    );
+    drawAgeChart(summary.age_counts, summary.age_sex_cross, filters.age_groups, locale);
+    drawDiseaseChart(summary.disease_counts, filters.diseases, locale);
+    drawHeatmap(summary.age_disease_cross, summary.top20_diseases.slice(0, 15), locale);
   }, [summary, filters, locale]);
 
   if (!summary)
-    return <Placeholder height={300}>{t("phenotype.loading" as any) || "Loading charts..."}</Placeholder>;
+    return <Placeholder height={300}>Loading charts...</Placeholder>;
 
   return (
     <section>
-      <h2>{locale === "zh" ? "表型概览" : "Phenotype Overview"}</h2>
-
+      <h2>{t("home.phenotypeOverview")}</h2>
       <div className={classes.grid}>
         <div className="sub-section">
-          <h3>{locale === "zh" ? "年龄组分布" : "Age Group Distribution"}</h3>
+          <h3>{t("home.ageDistribution")}</h3>
           <svg id="age-chart" className="chart" viewBox="-80 -40 480 380" style={{ minHeight: 360 }} />
         </div>
-
         <div className="sub-section">
-          <h3>{locale === "zh" ? "Top 20 疾病" : "Top 20 Diseases"}</h3>
+          <h3>{t("home.top20Diseases")}</h3>
           <svg id="disease-chart" className="chart" viewBox="-200 -20 700 560" style={{ minHeight: 420 }} />
         </div>
       </div>
-
       <div className="sub-section" style={{ marginTop: "1.5rem" }}>
-        <h3>{locale === "zh" ? "年龄 × 疾病 热图" : "Age × Disease Heatmap"}</h3>
+        <h3>{t("home.heatmapTitle")}</h3>
         <svg id="heatmap" className="chart" viewBox="-160 -80 960 490" />
       </div>
     </section>
@@ -73,72 +59,39 @@ const PhenotypeCharts = () => {
 
 export default PhenotypeCharts;
 
-/** Age group bar chart, stacked by sex, with optional highlighting
- * 年龄组柱状图，按性别堆叠，支持筛选高亮 */
+const ageName = (key: string, locale: string) =>
+  locale === "zh" ? (AGE_GROUP_ZH[key] ?? key.replace(/_/g, " ")) : key.replace(/_/g, " ");
+const sexName = (key: string, locale: string) =>
+  locale === "zh" ? (SEX_ZH[key] ?? key) : key;
+const dName = (key: string, locale: string, maxLen = 22) =>
+  diseaseShortNameI18n(key, locale, maxLen);
+
 const drawAgeChart = (
   ageCounts: Record<string, number>,
   ageSex: { age_group: string; sex: string; count: number }[],
   activeAgeGroups: string[] = [],
-  ageName: NameFn = (k) => k.replace(/_/g, " "),
-  sexName: NameFn = (k) => k,
   locale: string = "en",
 ) => {
   const svg = d3.select<SVGSVGElement, unknown>("#age-chart");
   if (!svg.node()) return;
   svg.selectAll("*").remove();
-
-  const W = 400;
-  const H = 340;
+  const W = 400, H = 340;
   const primary = getCssVariable("--primary");
   const secondary = getCssVariable("--secondary");
-
   const groups = AGE_ORDER.filter((g) => ageCounts[g] > 0);
-
-  const sexColors: Record<string, string> = {
-    female: secondary,
-    male: primary,
-    unknown: getCssVariable("--gray"),
-  };
-
-  /** stack data per age group */
+  const sexColors: Record<string, string> = { female: secondary, male: primary, unknown: getCssVariable("--gray") };
   const data = groups.map((g) => {
-    const bySex = Object.fromEntries(
-      ageSex.filter((r) => r.age_group === g).map((r) => [r.sex, r.count]),
-    );
-    return {
-      group: g,
-      female: bySex["female"] ?? 0,
-      male: bySex["male"] ?? 0,
-      unknown: bySex["unknown"] ?? 0,
-      total: ageCounts[g] ?? 0,
-    };
+    const bySex = Object.fromEntries(ageSex.filter((r) => r.age_group === g).map((r) => [r.sex, r.count]));
+    return { group: g, female: bySex["female"] ?? 0, male: bySex["male"] ?? 0, unknown: bySex["unknown"] ?? 0, total: ageCounts[g] ?? 0 };
   });
-
   const xMax = d3.max(data, (d) => d.total) ?? 1;
   const xScale = d3.scaleLinear().domain([0, xMax]).range([0, W]);
-  const yScale = d3
-    .scaleBand()
-    .domain(groups)
-    .range([0, H])
-    .padding(0.2);
-
-  /** stacked horizontal bars */
+  const yScale = d3.scaleBand().domain(groups).range([0, H]).padding(0.2);
   const sexKeys = ["female", "male", "unknown"] as const;
   for (const sex of sexKeys) {
-    svg
-      .selectAll(`.bar-${sex}`)
-      .data(data)
-      .join("rect")
+    svg.selectAll(`.bar-${sex}`).data(data).join("rect")
       .attr("class", `bar-${sex}`)
-      .attr("x", (d) => {
-        const offset =
-          sex === "male"
-            ? xScale(d.female)
-            : sex === "unknown"
-              ? xScale(d.female + d.male)
-              : 0;
-        return offset;
-      })
+      .attr("x", (d) => sex === "male" ? xScale(d.female) : sex === "unknown" ? xScale(d.female + d.male) : 0)
       .attr("y", (d) => yScale(d.group) ?? 0)
       .attr("width", (d) => xScale(d[sex]))
       .attr("height", yScale.bandwidth())
@@ -149,103 +102,38 @@ const drawAgeChart = (
         return activeAgeGroups.includes(d.group) ? baseOp : 0.15;
       })
       .attr("role", "graphics-symbol")
-      .attr("data-tooltip", (d) =>
-        renderToString(
-          <div className="tooltip-table">
-            <span>{locale === "zh" ? "年龄组" : "Age Group"}</span>
-            <span>{ageName(d.group)}</span>
-            <span>{locale === "zh" ? "总计" : "Total"}</span>
-            <span>{formatNumber(d.total, false)}</span>
-            <span>{sexName("female")}</span>
-            <span>{formatNumber(d.female, false)}</span>
-            <span>{sexName("male")}</span>
-            <span>{formatNumber(d.male, false)}</span>
-            <span>{locale === "zh" ? "未知性别" : "Unknown sex"}</span>
-            <span>{formatNumber(d.unknown, false)}</span>
-          </div>,
-        ),
-      );
+      .attr("data-tooltip", (d) => renderToString(
+        <div className="tooltip-table">
+          <span>{locale === "zh" ? "\u5e74\u9f84\u7ec4" : "Age Group"}</span><span>{ageName(d.group, locale)}</span>
+          <span>{locale === "zh" ? "\u603b\u8ba1" : "Total"}</span><span>{formatNumber(d.total, false)}</span>
+          <span>{sexName("female", locale)}</span><span>{formatNumber(d.female, false)}</span>
+          <span>{sexName("male", locale)}</span><span>{formatNumber(d.male, false)}</span>
+          <span>{locale === "zh" ? "\u6027\u522b\u672a\u77e5" : "Unknown sex"}</span><span>{formatNumber(d.unknown, false)}</span>
+        </div>,
+      ));
   }
-
-  /** y axis */
-  svg
-    .append("g")
-    .call(
-      d3
-        .axisLeft(yScale)
-        .tickFormat((d) => ageName(d)),
-    )
-    .attr("font-size", "14px");
-
-  /** x axis */
-  svg
-    .append("g")
-    .attr("transform", `translate(0,${H})`)
-    .call(
-      d3
-        .axisBottom(xScale)
-        .ticks(4)
-        .tickFormat((d) => formatNumber(Number(d))),
-    )
-    .attr("font-size", "12px");
-
-  /** legend */
+  svg.append("g").call(d3.axisLeft(yScale).tickFormat((d) => ageName(d, locale))).attr("font-size", "14px");
+  svg.append("g").attr("transform", `translate(0,${H})`).call(d3.axisBottom(xScale).ticks(4).tickFormat((d) => formatNumber(Number(d)))).attr("font-size", "12px");
   const legendX = W + 10;
   sexKeys.forEach((s, i) => {
-    svg
-      .append("rect")
-      .attr("x", legendX)
-      .attr("y", i * 20)
-      .attr("width", 14)
-      .attr("height", 14)
-      .attr("fill", sexColors[s])
-      .attr("opacity", s === "unknown" ? 0.4 : 0.85);
-    svg
-      .append("text")
-      .attr("x", legendX + 18)
-      .attr("y", i * 20 + 11)
-      .text(sexName(s))
-      .attr("font-size", "13px")
-      .attr("fill", "currentColor");
+    svg.append("rect").attr("x", legendX).attr("y", i * 20).attr("width", 14).attr("height", 14).attr("fill", sexColors[s]).attr("opacity", s === "unknown" ? 0.4 : 0.85);
+    svg.append("text").attr("x", legendX + 18).attr("y", i * 20 + 11).text(sexName(s, locale)).attr("font-size", "13px").attr("fill", "currentColor");
   });
 };
 
-/** Disease horizontal bar chart with optional highlighting
- * 疾病柱状图，支持筛选高亮 */
-const drawDiseaseChart = (diseaseCounts: Record<string, number>, activeDiseases: string[] = [], dName: NameFn = (k) => k, locale: string = "en") => {
+const drawDiseaseChart = (diseaseCounts: Record<string, number>, activeDiseases: string[] = [], locale: string = "en") => {
   const svg = d3.select<SVGSVGElement, unknown>("#disease-chart");
   if (!svg.node()) return;
   svg.selectAll("*").remove();
-
-  const W = 420;
-  const H = 530;
+  const W = 420, H = 530;
   const primary = getCssVariable("--primary");
   const secondary = getCssVariable("--secondary");
-
-  const data = Object.entries(diseaseCounts)
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 20);
-
-  const xScale = d3
-    .scaleLog()
-    .domain([1, d3.max(data, (d) => d[1]) ?? 1])
-    .range([0, W]);
-
-  const yScale = d3
-    .scaleBand()
-    .domain(data.map((d) => d[0]))
-    .range([0, H])
-    .padding(0.15);
-
-  const highlight = (name: string) =>
-    name === "NC" ? secondary : name === "unknown" ? getCssVariable("--gray") : primary;
-
-  svg
-    .selectAll(".bar")
-    .data(data)
-    .join("rect")
-    .attr("class", "bar")
-    .attr("x", 0)
+  const data = Object.entries(diseaseCounts).sort((a, b) => b[1] - a[1]).slice(0, 20);
+  const xScale = d3.scaleLog().domain([1, d3.max(data, (d) => d[1]) ?? 1]).range([0, W]);
+  const yScale = d3.scaleBand().domain(data.map((d) => d[0])).range([0, H]).padding(0.15);
+  const highlight = (name: string) => name === "NC" ? secondary : name === "unknown" ? getCssVariable("--gray") : primary;
+  svg.selectAll(".bar").data(data).join("rect")
+    .attr("class", "bar").attr("x", 0)
     .attr("y", (d) => yScale(d[0]) ?? 0)
     .attr("width", (d) => xScale(d[1]))
     .attr("height", yScale.bandwidth())
@@ -255,77 +143,32 @@ const drawDiseaseChart = (diseaseCounts: Record<string, number>, activeDiseases:
       return activeDiseases.includes(d[0]) ? 1 : 0.15;
     })
     .attr("role", "graphics-symbol")
-    .attr("data-tooltip", ([name, count]) =>
-      renderToString(
-        <div className="tooltip-table">
-          <span>{locale === "zh" ? "疾病" : "Disease"}</span>
-          <span>{dName(name)}</span>
-          <span>{locale === "zh" ? "样本数" : "Samples"}</span>
-          <span>{formatNumber(count, false)}</span>
-        </div>,
-      ),
-    );
-
-  svg
-    .append("g")
-    .call(
-      d3.axisLeft(yScale).tickFormat((d) => {
-        const name = dName(d);
-        return name.length > 22 ? name.slice(0, 20) + "…" : name;
-      }),
-    )
-    .attr("font-size", "13px");
-
-  svg
-    .append("g")
-    .attr("transform", `translate(0,${H})`)
-    .call(
-      d3
-        .axisBottom(xScale)
-        .ticks(4)
-        .tickFormat((d) => formatNumber(Number(d))),
-    )
-    .attr("font-size", "12px");
+    .attr("data-tooltip", ([name, count]) => renderToString(
+      <div className="tooltip-table">
+        <span>{locale === "zh" ? "\u75be\u75c5" : "Disease"}</span><span>{dName(name, locale, 30)}</span>
+        <span>{locale === "zh" ? "\u6837\u672c\u6570" : "Samples"}</span><span>{formatNumber(count, false)}</span>
+      </div>,
+    ));
+  svg.append("g").call(d3.axisLeft(yScale).tickFormat((d) => dName(d, locale, 22))).attr("font-size", "13px");
+  svg.append("g").attr("transform", `translate(0,${H})`).call(d3.axisBottom(xScale).ticks(4).tickFormat((d) => formatNumber(Number(d)))).attr("font-size", "12px");
 };
 
-/** Age × Disease heatmap – interactive with row/column highlighting
- * 年龄×疾病热图 – 支持行/列高亮和点击交互 */
 const drawHeatmap = (
   crossData: { age_group: string; disease: string; count: number }[],
   diseases: string[],
-  dName: NameFn = (k) => k,
-  ageName: NameFn = (k) => k.replace(/_/g, " "),
   locale: string = "en",
 ) => {
   const svg = d3.select<SVGSVGElement, unknown>("#heatmap");
   if (!svg.node()) return;
   svg.selectAll("*").remove();
-
-  const W = 780;
-  const H = 320;
+  const W = 780, H = 320;
   const primary = getCssVariable("--primary");
-
-  const ages = AGE_ORDER.filter((a) =>
-    crossData.some((r) => r.age_group === a),
-  );
-
+  const ages = AGE_ORDER.filter((a) => crossData.some((r) => r.age_group === a));
   const filteredData = crossData.filter((d) => diseases.includes(d.disease));
-
-  const xScale = d3
-    .scaleBand()
-    .domain(diseases)
-    .range([0, W])
-    .padding(0.05);
-
+  const xScale = d3.scaleBand().domain(diseases).range([0, W]).padding(0.05);
   const yScale = d3.scaleBand().domain(ages).range([0, H]).padding(0.05);
-
   const maxVal = d3.max(filteredData, (d) => d.count) ?? 1;
-  const color = d3
-    .scaleSequential()
-    .domain([0, maxVal])
-    .interpolator(d3.interpolate("#1a1a2e", primary));
-
-  // State for highlighting / 高亮状态
+  const color = d3.scaleSequential().domain([0, maxVal]).interpolator(d3.interpolate("#1a1a2e", primary));
   let highlightAge: string | null = null;
   let highlightDisease: string | null = null;
 
@@ -344,8 +187,6 @@ const drawHeatmap = (
         return matchAge && matchDisease ? "var(--white)" : "none";
       })
       .attr("stroke-width", 1.5);
-
-    // Show value labels on highlighted cells / 高亮单元格显示数值
     svg.selectAll(".cell-label").remove();
     if (highlightAge || highlightDisease) {
       svg.selectAll(".cell-label")
@@ -354,25 +195,17 @@ const drawHeatmap = (
           const matchDisease = !highlightDisease || d.disease === highlightDisease;
           return matchAge && matchDisease && d.count > 0;
         }))
-        .join("text")
-        .attr("class", "cell-label")
+        .join("text").attr("class", "cell-label")
         .attr("x", (d) => (xScale(d.disease) ?? 0) + xScale.bandwidth() / 2)
         .attr("y", (d) => (yScale(d.age_group) ?? 0) + yScale.bandwidth() / 2)
-        .attr("text-anchor", "middle")
-        .attr("dominant-baseline", "middle")
+        .attr("text-anchor", "middle").attr("dominant-baseline", "middle")
         .attr("fill", (d) => d.count > maxVal * 0.5 ? "#fff" : "var(--light-gray)")
-        .attr("font-size", 9)
-        .attr("font-weight", 600)
-        .attr("pointer-events", "none")
+        .attr("font-size", 9).attr("font-weight", 600).attr("pointer-events", "none")
         .text((d) => formatNumber(d.count));
     }
   };
 
-  // Draw cells / 绘制单元格
-  const cells = svg
-    .selectAll(".cell")
-    .data(filteredData)
-    .join("rect")
+  const cells = svg.selectAll(".cell").data(filteredData).join("rect")
     .attr("class", "cell")
     .attr("x", (d) => xScale(d.disease) ?? 0)
     .attr("y", (d) => yScale(d.age_group) ?? 0)
@@ -382,80 +215,36 @@ const drawHeatmap = (
     .attr("rx", 2)
     .style("cursor", "pointer")
     .attr("role", "graphics-symbol")
-    .attr("data-tooltip", (d) =>
-      renderToString(
-        <div className="tooltip-table">
-          <span>{locale === "zh" ? "年龄组" : "Age Group"}</span>
-          <span>{ageName(d.age_group)}</span>
-          <span>{locale === "zh" ? "疾病" : "Disease"}</span>
-          <span>{dName(d.disease)}</span>
-          <span>{locale === "zh" ? "样本数" : "Samples"}</span>
-          <span>{formatNumber(d.count, false)}</span>
-        </div>,
-      ),
-    )
-    .on("mouseenter", (_, d) => {
-      highlightAge = d.age_group;
-      highlightDisease = d.disease;
-      updateHighlight();
-    })
-    .on("mouseleave", () => {
-      highlightAge = null;
-      highlightDisease = null;
-      updateHighlight();
-    });
+    .attr("data-tooltip", (d) => renderToString(
+      <div className="tooltip-table">
+        <span>{locale === "zh" ? "\u5e74\u9f84\u7ec4" : "Age Group"}</span><span>{ageName(d.age_group, locale)}</span>
+        <span>{locale === "zh" ? "\u75be\u75c5" : "Disease"}</span><span>{dName(d.disease, locale, 30)}</span>
+        <span>{locale === "zh" ? "\u6837\u672c\u6570" : "Samples"}</span><span>{formatNumber(d.count, false)}</span>
+      </div>,
+    ))
+    .on("mouseenter", (_, d) => { highlightAge = d.age_group; highlightDisease = d.disease; updateHighlight(); })
+    .on("mouseleave", () => { highlightAge = null; highlightDisease = null; updateHighlight(); });
 
-  /** x axis */
-  svg
-    .append("g")
-    .attr("transform", `translate(0,${H})`)
-    .call(d3.axisBottom(xScale).tickFormat((d) => {
-      const name = dName(d);
-      return name.length > 12 ? name.slice(0, 11) + "…" : name;
-    }))
+  svg.append("g").attr("transform", `translate(0,${H})`)
+    .call(d3.axisBottom(xScale).tickFormat((d) => dName(d, locale, 12)))
     .attr("font-size", "11px")
-    .selectAll("text")
-    .attr("transform", "rotate(-30)")
-    .attr("text-anchor", "end")
+    .selectAll("text").attr("transform", "rotate(-30)").attr("text-anchor", "end")
     .style("cursor", "pointer")
-    .on("click", (_, d) => {
-      highlightDisease = highlightDisease === d ? null : (d as string);
-      highlightAge = null;
-      updateHighlight();
-    });
+    .on("click", (_, d) => { highlightDisease = highlightDisease === d ? null : (d as string); highlightAge = null; updateHighlight(); });
 
-  /** y axis */
-  svg
-    .append("g")
-    .call(d3.axisLeft(yScale).tickFormat((d) => ageName(d)))
+  svg.append("g")
+    .call(d3.axisLeft(yScale).tickFormat((d) => ageName(d, locale)))
     .attr("font-size", "13px")
-    .selectAll("text")
-    .style("cursor", "pointer")
-    .on("click", (_, d) => {
-      highlightAge = highlightAge === d ? null : (d as string);
-      highlightDisease = null;
-      updateHighlight();
-    });
+    .selectAll("text").style("cursor", "pointer")
+    .on("click", (_, d) => { highlightAge = highlightAge === d ? null : (d as string); highlightDisease = null; updateHighlight(); });
 
-  // Color legend / 色阶图例
   const legendW = 200, legendH = 10, legendY = H + 55;
   const defs = svg.append("defs");
-  const gradId = "heatmap-gradient";
-  const grad = defs.append("linearGradient").attr("id", gradId)
-    .attr("x1", "0%").attr("x2", "100%");
+  const grad = defs.append("linearGradient").attr("id", "heatmap-gradient").attr("x1", "0%").attr("x2", "100%");
   grad.append("stop").attr("offset", "0%").attr("stop-color", "#1a1a2e");
   grad.append("stop").attr("offset", "100%").attr("stop-color", primary);
-
-  svg.append("rect")
-    .attr("x", W / 2 - legendW / 2).attr("y", legendY)
-    .attr("width", legendW).attr("height", legendH)
-    .attr("fill", `url(#${gradId})`).attr("rx", 3);
-  svg.append("text").attr("x", W / 2 - legendW / 2).attr("y", legendY + legendH + 14)
-    .attr("font-size", 10).attr("fill", "var(--light-gray)").text("0");
-  svg.append("text").attr("x", W / 2 + legendW / 2).attr("y", legendY + legendH + 14)
-    .attr("text-anchor", "end").attr("font-size", 10).attr("fill", "var(--light-gray)")
-    .text(formatNumber(maxVal));
-  svg.append("text").attr("x", W / 2).attr("y", legendY + legendH + 14)
-    .attr("text-anchor", "middle").attr("font-size", 10).attr("fill", "var(--light-gray)")
-    .text(locale === "zh" ? "样本数" : "Samples");
+  svg.append("rect").attr("x", W / 2 - legendW / 2).attr("y", legendY).attr("width", legendW).attr("height", legendH).attr("fill", "url(#heatmap-gradient)").attr("rx", 3);
+  svg.append("text").attr("x", W / 2 - legendW / 2).attr("y", legendY + legendH + 14).attr("font-size", 10).attr("fill", "var(--light-gray)").text("0");
+  svg.append("text").attr("x", W / 2 + legendW / 2).attr("y", legendY + legendH + 14).attr("text-anchor", "end").attr("font-size", 10).attr("fill", "var(--light-gray)").text(formatNumber(maxVal));
+  svg.append("text").attr("x", W / 2).attr("y", legendY + legendH + 14).attr("text-anchor", "middle").attr("font-size", 10).attr("fill", "var(--light-gray)").text(locale === "zh" ? "\u6837\u672c\u6570" : "Samples");
 };

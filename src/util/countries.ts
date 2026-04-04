@@ -20,7 +20,7 @@ export const COUNTRY_NAMES: Record<string, string> = {
   NO: "Norway", NP: "Nepal", NZ: "New Zealand", PE: "Peru", PG: "Papua New Guinea",
   PH: "Philippines", PK: "Pakistan", PL: "Poland", PT: "Portugal", RO: "Romania",
   RS: "Serbia", RU: "Russia", RW: "Rwanda", SA: "Saudi Arabia", SE: "Sweden",
-  SG: "Singapore", SI: "Slovenia", SK: "Slovakia", SN: "Senegal", SV: "El Salvador",
+  SD: "Sudan", SG: "Singapore", SI: "Slovenia", SK: "Slovakia", SN: "Senegal", SV: "El Salvador",
   TH: "Thailand", TN: "Tunisia", TR: "Turkey", TW: "Taiwan", TZ: "Tanzania",
   UA: "Ukraine", UG: "Uganda", US: "United States", UZ: "Uzbekistan",
   VE: "Venezuela", VN: "Vietnam", ZA: "South Africa", ZM: "Zambia", ZW: "Zimbabwe",
@@ -63,8 +63,19 @@ export const SEX_ZH: Record<string, string> = {
   male: "男", female: "女", unknown: "未知",
 };
 
-/** Convert ISO code to display name, fallback to code if not found */
-export function countryName(iso: string, locale?: string): string {
-  if (locale === "zh") return COUNTRY_NAMES_ZH[iso] ?? COUNTRY_NAMES[iso] ?? iso;
-  return COUNTRY_NAMES[iso] ?? iso;
+// Reverse map: English name → ISO code (built once)
+const EN_TO_ISO: Record<string, string> = {};
+for (const [iso, en] of Object.entries(COUNTRY_NAMES)) EN_TO_ISO[en] = iso;
+
+/** Convert ISO code OR English name to display name */
+export function countryName(codeOrName: string, locale?: string): string {
+  // Try direct ISO lookup first
+  if (COUNTRY_NAMES[codeOrName]) {
+    if (locale === "zh") return COUNTRY_NAMES_ZH[codeOrName] ?? COUNTRY_NAMES[codeOrName];
+    return COUNTRY_NAMES[codeOrName];
+  }
+  // Try reverse lookup (English name → ISO → target locale)
+  const iso = EN_TO_ISO[codeOrName];
+  if (iso && locale === "zh") return COUNTRY_NAMES_ZH[iso] ?? codeOrName;
+  return codeOrName;
 }

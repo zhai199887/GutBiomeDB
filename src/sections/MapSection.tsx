@@ -6,6 +6,7 @@ import { clamp } from "lodash";
 import Placeholder from "@/components/Placeholder";
 import type { Data, Filters, MetadataSummary, CountryStat } from "@/data";
 import { DEFAULT_FILTERS, setSelectedFeature, useData } from "@/data";
+import { useI18n } from "@/i18n";
 import { downloadSvg, getCssVariable } from "@/util/dom";
 import { formatNumber } from "@/util/string";
 import classes from "./Map.module.css";
@@ -30,10 +31,16 @@ const estimateFilteredCount = (
   let ratio = 1.0;
 
   // Sex filter
-  if (filters.sex !== "all" && stat.sex.known > 0) {
-    const pct = filters.sex === "female" ? stat.sex.female_pct : filters.sex === "male" ? stat.sex.male_pct : null;
-    if (pct !== null) ratio *= pct / 100;
-    else ratio *= 0;
+  if (filters.sex !== "all") {
+    if (filters.sex === "unknown") {
+      // unknown = samples without sex annotation; estimate as 1 - known/total
+      const knownRatio = stat.sex.known > 0 ? stat.sex.known / total : 0;
+      ratio *= Math.max(0, 1 - knownRatio);
+    } else if (stat.sex.known > 0) {
+      const pct = filters.sex === "female" ? stat.sex.female_pct : stat.sex.male_pct;
+      if (pct !== null) ratio *= pct / 100;
+      else ratio *= 0;
+    }
   }
 
   // Age filter: use per-country stats if available, else global proportion
@@ -67,6 +74,7 @@ const estimateFilteredCount = (
 };
 
 const MapSection = () => {
+  const { t } = useI18n();
   const byCountry = useData((s) => s.byCountry);
   const summary = useData((s) => s.summary);
   const selectedFeature = useData((s) => s.selectedFeature);
@@ -88,7 +96,7 @@ const MapSection = () => {
 
   return (
     <section>
-      <h2>Geographic Distribution</h2>
+      <h2>{t("home.geographicDistribution")}</h2>
       <div className="sub-section">
         <svg
           viewBox={[0, 0, width, height].join(" ")}
@@ -111,12 +119,12 @@ const MapSection = () => {
         </svg>
 
         <div className={classes.legend}>
-          <span>Fewer Samples</span>
+          <span>{t("home.fewerSamples")}</span>
           <span
             className={classes.gradient}
             data-inactive={!!selectedFeature}
           />
-          <span>More Samples</span>
+          <span>{t("home.moreSamples")}</span>
         </div>
       </div>
     </section>

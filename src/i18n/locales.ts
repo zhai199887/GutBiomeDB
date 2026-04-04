@@ -44,6 +44,15 @@ const en = {
   "overview.dataVersion": "Data version:",
   "overview.lastUpdated": "Last updated:",
 
+  // Homepage section titles
+  "home.phenotypeOverview": "Phenotype Overview",
+  "home.ageDistribution": "Age Group Distribution",
+  "home.top20Diseases": "Top 20 Diseases",
+  "home.heatmapTitle": "Age \u00d7 Disease Heatmap",
+  "home.geographicDistribution": "Geographic Distribution",
+  "home.fewerSamples": "Fewer Samples",
+  "home.moreSamples": "More Samples",
+
   // Feature cards
   "feature.phenotype.title": "Phenotype Explorer",
   "feature.phenotype.desc": "Compare microbiome composition across age groups, sexes, and diseases",
@@ -545,6 +554,15 @@ const zh: Record<keyof typeof en, string> = {
   "overview.dataVersion": "数据版本：",
   "overview.lastUpdated": "最后更新：",
 
+  // Homepage section titles
+  "home.phenotypeOverview": "表型概览",
+  "home.ageDistribution": "年龄组分布",
+  "home.top20Diseases": "前20种疾病",
+  "home.heatmapTitle": "年龄 \u00d7 疾病热图",
+  "home.geographicDistribution": "地理分布",
+  "home.fewerSamples": "较少样本",
+  "home.moreSamples": "较多样本",
+
   // Feature cards
   "feature.phenotype.title": "表型探索",
   "feature.phenotype.desc": "按年龄组、性别和疾病比较微生物组组成",
@@ -961,7 +979,7 @@ const zh: Record<keyof typeof en, string> = {
   "cite.pipelineText": "所有样本经过统一流程处理（Abdill et al., Cell 2025）：质控与去噪（DADA2 v1.14.0）、嵌合体检测（consensus-based）、分类注释（SILVA 138.1，属级水平）、丰度标准化（相对丰度）。",
   "cite.howToCite": "如何引用",
   "cite.citeText": "如果您在研究中使用了肠道微生物图谱，请引用：",
-  "cite.citation": "翟锦霞1, 李盈洁2, 刘佳梦1, 苏鑫怡1, 崔润泽1, 郑典宇1, 孙宇涵1, 于景晟3, 戴聪1*. Gut Microbiome Atlas：基于168,464份人类肠道微生物组样本的分析平台。[稿件准备中]. 1. 中国医科大学附属第一医院消化内科. 2. 锦州医科大学附属第一医院消化内科. 3. 北京协和医院罕见病科. *通讯作者: cdai@cmu.edu.cn",
+  "cite.citation": "翟锦霞1, 李迎杰2, 刘佳梦1, 苏心怡1, 崔润泽1, 郑殿宇1, 孙羽晗1, 于景晟3, 戴聪1*. Gut Microbiome Atlas：基于168,464份人类肠道微生物组样本的分析平台。[稿件准备中]. 1. 中国医科大学附属第一医院消化内科. 2. 锦州医科大学附属第一医院消化内科. 3. 北京协和医院罕见病科. *通讯作者: cdai@cmu.edu.cn",
   "cite.contact": "联系方式",
   "cite.contactText": "如有问题、数据请求或合作咨询：",
   "cite.disclaimer": "免责声明",
@@ -1000,7 +1018,7 @@ const zh: Record<keyof typeof en, string> = {
   "cite.githubLabel": "GitHub",
 
   // Language switch
-  "lang.switch": "EN",
+  "lang.switch": "English",
 
   // 404 page
   "notFound.message": "您访问的页面不存在。",
