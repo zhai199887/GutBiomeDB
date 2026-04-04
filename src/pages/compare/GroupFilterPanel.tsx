@@ -6,7 +6,7 @@ import { useEffect, useState } from "react";
 import type { GroupFilter, FilterOptions } from "./types";
 import { useI18n } from "@/i18n";
 import { countryName, AGE_GROUP_ZH, SEX_ZH } from "@/util/countries";
-import { diseaseDisplayName } from "@/util/diseaseNames";
+import { diseaseDisplayNameI18n } from "@/util/diseaseNames";
 import classes from "../ComparePage.module.css";
 
 const API_BASE = import.meta.env.VITE_API_URL ?? "http://localhost:8000";
@@ -40,7 +40,7 @@ const GroupFilterPanel = ({
   const set = (key: keyof GroupFilter) => (e: React.ChangeEvent<HTMLSelectElement>) =>
     onChange({ ...value, [key]: e.target.value });
 
-  const dName = (name: string) => (locale === "zh" && diseaseZh[name]) ? diseaseZh[name] : diseaseDisplayName(name);
+  const dName = (name: string) => (locale === "zh" && diseaseZh[name]) ? diseaseZh[name] : diseaseDisplayNameI18n(name, locale);
   const ageName = (name: string) => locale === "zh" ? (AGE_GROUP_ZH[name] ?? name.replace(/_/g, " ")) : name.replace(/_/g, " ");
   const sexName = (name: string) => locale === "zh" ? (SEX_ZH[name] ?? name) : name;
 

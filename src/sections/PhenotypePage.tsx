@@ -6,6 +6,7 @@ import { useI18n } from "@/i18n";
 import { loadAbundance, loadSummary, useData } from "@/data";
 import { getCssVariable } from "@/util/dom";
 import { formatNumber } from "@/util/string";
+import { diseaseDisplayNameI18n } from "@/util/diseaseNames";
 import "@/components/tooltip";
 
 const AGE_GROUPS = [
@@ -21,7 +22,7 @@ const AGE_GROUPS = [
 type DimType = "age" | "sex" | "disease";
 
 const PhenotypePage = () => {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const abundance = useData((s) => s.abundance);
   const summary = useData((s) => s.summary);
 
@@ -34,10 +35,13 @@ const PhenotypePage = () => {
     if (!summary) loadSummary();
   }, [abundance, summary]);
 
+  const dLabel = (g: string) =>
+    dimType === "disease" ? diseaseDisplayNameI18n(g, locale) : g.replace(/_/g, " ");
+
   useEffect(() => {
     if (!abundance) return;
-    drawChart(abundance, dimType, groupA, groupB);
-  }, [abundance, dimType, groupA, groupB]);
+    drawChart(abundance, dimType, groupA, groupB, dLabel);
+  }, [abundance, dimType, groupA, groupB, locale]);
 
   const groupOptions = (): string[] => {
     if (dimType === "age") return AGE_GROUPS;
@@ -141,7 +145,7 @@ const PhenotypePage = () => {
           >
             {groupOptions().map((g) => (
               <option key={g} value={g}>
-                {g.replace(/_/g, " ")}
+                {dLabel(g)}
               </option>
             ))}
           </select>
@@ -176,7 +180,7 @@ const PhenotypePage = () => {
           >
             {groupOptions().map((g) => (
               <option key={g} value={g}>
-                {g.replace(/_/g, " ")}
+                {dLabel(g)}
               </option>
             ))}
           </select>
@@ -203,6 +207,7 @@ const drawChart = (
   dimType: string,
   groupA: string,
   groupB: string,
+  labelFn: (g: string) => string = (g) => g.replace(/_/g, " "),
 ) => {
   const svg = d3.select<SVGSVGElement, unknown>("#phenotype-chart");
   if (!svg.node()) return;
@@ -274,7 +279,7 @@ const drawChart = (
         <div className="tooltip-table">
           <span>Genus</span>
           <span>{d.genus}</span>
-          <span>{groupA.replace(/_/g, " ")}</span>
+          <span>{labelFn(groupA)}</span>
           <span>{(d.a * 100).toFixed(3)}%</span>
         </div>,
       ),
@@ -298,7 +303,7 @@ const drawChart = (
         <div className="tooltip-table">
           <span>Genus</span>
           <span>{d.genus}</span>
-          <span>{groupB.replace(/_/g, " ")}</span>
+          <span>{labelFn(groupB)}</span>
           <span>{(d.b * 100).toFixed(3)}%</span>
         </div>,
       ),
@@ -341,7 +346,7 @@ const drawChart = (
     .append("text")
     .attr("x", -W / 2 + 18)
     .attr("y", ly + 11)
-    .text(groupA.replace(/_/g, " "))
+    .text(labelFn(groupA))
     .attr("font-size", 14)
     .attr("fill", "currentColor");
 
@@ -356,7 +361,7 @@ const drawChart = (
     .append("text")
     .attr("x", 38)
     .attr("y", ly + 11)
-    .text(groupB.replace(/_/g, " "))
+    .text(labelFn(groupB))
     .attr("font-size", 14)
     .attr("fill", "currentColor");
 

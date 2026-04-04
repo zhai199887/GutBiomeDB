@@ -8,7 +8,7 @@ import * as d3 from "d3";
 import { useI18n } from "@/i18n";
 import { exportTable } from "@/util/export";
 import { exportSVG, exportPNG } from "@/util/chartExport";
-import { diseaseDisplayName } from "@/util/diseaseNames";
+import { diseaseDisplayNameI18n } from "@/util/diseaseNames";
 import { countryName, AGE_GROUP_ZH } from "@/util/countries";
 import classes from "./LifecyclePage.module.css";
 
@@ -44,7 +44,7 @@ const LifecyclePage = () => {
   const [error, setError] = useState("");
   const svgRef = useRef<SVGSVGElement>(null);
 
-  const dName = (n: string) => (locale === "zh" && diseaseZh[n]) ? diseaseZh[n] : diseaseDisplayName(n);
+  const dName = (n: string) => (locale === "zh" && diseaseZh[n]) ? diseaseZh[n] : diseaseDisplayNameI18n(n, locale);
   const agName = (n: string) => locale === "zh" ? (AGE_GROUP_ZH[n] ?? n.replace(/_/g, " ")) : n.replace(/_/g, " ");
 
   useEffect(() => {

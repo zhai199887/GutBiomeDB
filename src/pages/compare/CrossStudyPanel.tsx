@@ -8,13 +8,13 @@ import * as d3 from "d3";
 import { useI18n } from "@/i18n";
 import { exportTable } from "@/util/export";
 import { exportSVG, exportPNG } from "@/util/chartExport";
-import { diseaseDisplayName } from "@/util/diseaseNames";
+import { diseaseDisplayNameI18n } from "@/util/diseaseNames";
 import type { CrossStudyResult, CrossStudyMarker, ProjectInfo } from "./types";
 import { API_BASE } from "./types";
 import classes from "./CrossStudyPanel.module.css";
 
 const CrossStudyPanel = () => {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const [projects, setProjects] = useState<ProjectInfo[]>([]);
   const [selectedProjects, setSelectedProjects] = useState<string[]>([]);
   const [disease, setDisease] = useState("");
@@ -263,7 +263,7 @@ const CrossStudyPanel = () => {
         >
           <option value="">{t("crossStudy.pickDisease")}</option>
           {diseases.filter(d => d.toUpperCase() !== "NC").map(d => (
-            <option key={d} value={d}>{diseaseDisplayName(d)}</option>
+            <option key={d} value={d}>{diseaseDisplayNameI18n(d, locale)}</option>
           ))}
         </select>
       </div>

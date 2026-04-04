@@ -9,7 +9,7 @@ import { Link } from "react-router-dom";
 import * as d3 from "d3";
 import { useI18n } from "@/i18n";
 import { exportSVG, exportPNG } from "@/util/chartExport";
-import { diseaseDisplayName } from "@/util/diseaseNames";
+import { diseaseDisplayNameI18n } from "@/util/diseaseNames";
 import classes from "./NetworkPage.module.css";
 
 const ChordPanel = lazy(() => import("./network/ChordPanel"));
@@ -77,7 +77,7 @@ const NetworkPage = () => {
   // 绘制力导向图（仅当 association tab 激活时）
   useEffect(() => {
     if (!svgRef.current || !data || activeTab !== "association") return;
-    const dName = (name: string) => (locale === "zh" && diseaseZh[name]) ? diseaseZh[name] : diseaseDisplayName(name);
+    const dName = (name: string) => (locale === "zh" && diseaseZh[name]) ? diseaseZh[name] : diseaseDisplayNameI18n(name, locale);
     drawNetwork(svgRef.current, data, dName);
   }, [data, locale, diseaseZh, activeTab]);
 

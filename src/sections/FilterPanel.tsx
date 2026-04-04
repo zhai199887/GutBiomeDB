@@ -1,7 +1,7 @@
 import { useI18n } from "@/i18n";
 import { useData, setFilters, resetFilters, DEFAULT_FILTERS } from "@/data";
 import { formatNumber } from "@/util/string";
-import { diseaseShortName } from "@/util/diseaseNames";
+import { diseaseShortNameI18n } from "@/util/diseaseNames";
 import classes from "./FilterPanel.module.css";
 
 const AGE_GROUPS = [
@@ -16,7 +16,7 @@ const AGE_GROUPS = [
 ];
 
 const FilterPanel = () => {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const summary = useData((s) => s.summary);
   const filters = useData((s) => s.filters);
 
@@ -134,7 +134,7 @@ const FilterPanel = () => {
                 onClick={() => toggleDisease(d)}
                 title={d}
               >
-                {diseaseShortName(d, 20)}
+                {diseaseShortNameI18n(d, locale, 20)}
               </button>
             ))}
           </div>

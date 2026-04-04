@@ -6,7 +6,7 @@ import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import * as d3 from "d3";
 import { useI18n } from "@/i18n";
-import { diseaseDisplayName } from "@/util/diseaseNames";
+import { diseaseDisplayNameI18n } from "@/util/diseaseNames";
 import classes from "./ChordPage.module.css";
 
 const API_BASE = import.meta.env.VITE_API_URL ?? "http://localhost:8000";
@@ -35,7 +35,7 @@ const ChordPage = () => {
   const [loading, setLoading] = useState(true);
   const svgRef = useRef<SVGSVGElement>(null);
 
-  const dName = (n: string) => (locale === "zh" && diseaseZh[n]) ? diseaseZh[n] : diseaseDisplayName(n);
+  const dName = (n: string) => (locale === "zh" && diseaseZh[n]) ? diseaseZh[n] : diseaseDisplayNameI18n(n, locale);
 
   useEffect(() => {
     fetch(`${API_BASE}/api/disease-names-zh`).then(r => r.json()).then(setDiseaseZh).catch(() => {});
