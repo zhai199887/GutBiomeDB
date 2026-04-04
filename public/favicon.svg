@@ -4,25 +4,42 @@
       <stop offset="0%" stop-color="#1a1a2e"/>
       <stop offset="100%" stop-color="#16213e"/>
     </linearGradient>
-    <linearGradient id="ring" x1="0%" y1="0%" x2="100%" y2="100%">
+    <linearGradient id="zw" x1="0%" y1="0%" x2="100%" y2="100%">
       <stop offset="0%" stop-color="#e040fb"/>
-      <stop offset="100%" stop-color="#7c4dff"/>
+      <stop offset="50%" stop-color="#7c4dff"/>
+      <stop offset="100%" stop-color="#556eff"/>
+    </linearGradient>
+    <linearGradient id="dot" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#4ecdc4"/>
+      <stop offset="100%" stop-color="#44b09e"/>
     </linearGradient>
   </defs>
+
   <!-- Background -->
-  <rect width="512" height="512" rx="96" fill="url(#bg)"/>
-  <!-- Outer ring (gut shape) -->
-  <circle cx="256" cy="256" r="180" fill="none" stroke="url(#ring)" stroke-width="16" opacity="0.3"/>
-  <!-- Stylized intestine path -->
-  <path d="M160 200 Q200 140 256 160 Q320 180 300 240 Q280 300 220 280 Q160 260 200 320 Q240 380 310 340"
-        fill="none" stroke="#e040fb" stroke-width="14" stroke-linecap="round" opacity="0.8"/>
-  <!-- Microbe dots -->
-  <circle cx="220" cy="180" r="12" fill="#4ecdc4" opacity="0.9"/>
-  <circle cx="300" cy="210" r="10" fill="#4ecdc4" opacity="0.7"/>
-  <circle cx="240" cy="260" r="8" fill="#4ecdc4" opacity="0.8"/>
-  <circle cx="190" cy="310" r="11" fill="#4ecdc4" opacity="0.6"/>
-  <circle cx="270" cy="340" r="9" fill="#4ecdc4" opacity="0.9"/>
-  <circle cx="320" cy="280" r="7" fill="#4ecdc4" opacity="0.5"/>
-  <!-- GMA text -->
-  <text x="256" y="440" text-anchor="middle" font-family="Arial,Helvetica,sans-serif" font-weight="700" font-size="72" fill="white" letter-spacing="8">GMA</text>
+  <rect width="512" height="512" rx="108" fill="url(#bg)"/>
+
+  <!-- Z letter - top half -->
+  <!-- Top bar of Z -->
+  <rect x="80" y="100" width="200" height="36" rx="4" fill="url(#zw)"/>
+  <!-- Diagonal of Z -->
+  <polygon points="248,136 112,280 148,280 284,136" fill="url(#zw)"/>
+  <!-- Bottom bar of Z (shared middle line) -->
+  <rect x="80" y="262" width="200" height="36" rx="4" fill="url(#zw)"/>
+
+  <!-- W letter - bottom half, starting from shared line -->
+  <!-- W shape: 4 diagonal strokes forming the W below the shared bar -->
+  <polygon points="100,298 148,420 180,420 220,330 260,420 292,420 340,298 304,298 276,388 240,298 200,298 172,388 140,298" fill="url(#zw)"/>
+
+  <!-- Microbe accent dots -->
+  <circle cx="370" cy="130" r="28" fill="url(#dot)" opacity="0.9"/>
+  <circle cx="410" cy="200" r="18" fill="url(#dot)" opacity="0.65"/>
+  <circle cx="360" cy="250" r="14" fill="url(#dot)" opacity="0.5"/>
+  <circle cx="400" cy="340" r="22" fill="url(#dot)" opacity="0.75"/>
+  <circle cx="370" cy="410" r="12" fill="url(#dot)" opacity="0.45"/>
+
+  <!-- Tiny connection lines between dots (network feel) -->
+  <line x1="370" y1="130" x2="410" y2="200" stroke="#4ecdc4" stroke-width="2" opacity="0.25"/>
+  <line x1="410" y1="200" x2="360" y2="250" stroke="#4ecdc4" stroke-width="2" opacity="0.2"/>
+  <line x1="360" y1="250" x2="400" y2="340" stroke="#4ecdc4" stroke-width="2" opacity="0.2"/>
+  <line x1="400" y1="340" x2="370" y2="410" stroke="#4ecdc4" stroke-width="2" opacity="0.15"/>
 </svg>
