@@ -6,6 +6,7 @@ import { useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { useI18n } from "@/i18n";
 import { exportTable } from "@/util/export";
+import HealthIndexPanel from "./similarity/HealthIndexPanel";
 import classes from "./SimilarityPage.module.css";
 
 const API_BASE = import.meta.env.VITE_API_URL ?? "http://localhost:8000";
@@ -56,6 +57,7 @@ function parseAbundanceText(text: string): Record<string, number> {
 
 const SimilarityPage = () => {
   const { t } = useI18n();
+  const [activeTab, setActiveTab] = useState<"similarity" | "health">("similarity");
 
   // ── 状态 ──
   const [file, setFile] = useState<File | null>(null);
@@ -163,6 +165,30 @@ const SimilarityPage = () => {
         <h1>{t("similarity.title")}</h1>
         <p>{t("similarity.subtitle")}</p>
       </div>
+
+      {/* ── Tab 切换 ── */}
+      <div className={classes.tabBar}>
+        <button
+          className={classes.tabBtn}
+          data-active={activeTab === "similarity"}
+          onClick={() => setActiveTab("similarity")}
+        >
+          {t("similarity.search")}
+        </button>
+        <button
+          className={classes.tabBtn}
+          data-active={activeTab === "health"}
+          onClick={() => setActiveTab("health")}
+        >
+          {t("healthIndex.tab")}
+        </button>
+      </div>
+
+      {/* ── 健康指数 Tab ── */}
+      {activeTab === "health" && <HealthIndexPanel />}
+
+      {/* ── 相似搜索 Tab ── */}
+      {activeTab === "similarity" && <>
 
       {/* ── 输入区域：上传 + 粘贴 ── */}
       <div className={classes.inputSection}>
@@ -308,6 +334,7 @@ const SimilarityPage = () => {
           </div>
         </>
       )}
+      </>}
     </div>
   );
 };

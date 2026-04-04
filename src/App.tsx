@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect, type ReactNode } from "react";
-import { BrowserRouter, Route, Routes, useLocation } from "react-router-dom";
+import { BrowserRouter, Route, Routes, useLocation, useNavigate } from "react-router-dom";
 import {
   loadAbundance,
   loadGeoData,
@@ -16,6 +16,7 @@ import PhenotypeCharts from "@/sections/PhenotypeCharts";
 import SankeyChart from "@/sections/SankeyChart";
 // Search 已移到独立页面 /search
 import "@/components/tooltip";
+import { trackEvent } from "@/util/tracking";
 import "./App.css";
 
 // Lazy-loaded pages for code splitting / 懒加载页面（代码分割）
@@ -54,10 +55,29 @@ const BASE_TITLE = "Gut Microbiome Atlas";
 
 const DocumentTitle = ({ children }: { children: ReactNode }) => {
   const { pathname } = useLocation();
+  const navigate = useNavigate();
   useEffect(() => {
     const sub = ROUTE_TITLES[pathname];
     document.title = sub ? `${sub} | ${BASE_TITLE}` : BASE_TITLE;
+    trackEvent("page_view", pathname);
   }, [pathname]);
+
+  // Ctrl+K / Cmd+K 全局搜索快捷键
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === "k") {
+        e.preventDefault();
+        navigate("/search");
+        setTimeout(() => {
+          const input = document.querySelector<HTMLInputElement>("input[type='text'], input[placeholder]");
+          input?.focus();
+        }, 150);
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [navigate]);
+
   return <>{children}</>;
 };
 

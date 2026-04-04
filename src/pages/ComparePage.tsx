@@ -17,6 +17,7 @@ import DiffBarChart from "./compare/DiffBarChart";
 import VolcanoChart from "./compare/VolcanoChart";
 import AlphaBoxChart from "./compare/AlphaBoxChart";
 import BetaPCoAChart from "./compare/BetaPCoAChart";
+import CrossStudyPanel from "./compare/CrossStudyPanel";
 
 // Types & constants / 类型与常量
 import type { GroupFilter, DiffResult, FilterOptions, Tab } from "./compare/types";
@@ -128,6 +129,7 @@ const ComparePage = () => {
   if (result?.permanova) {
     TABS.push(["permanova", t("compare.tab.permanova")]);
   }
+  // crossstudy tab is always available (independent of pair-wise results)
 
   return (
     <div className={classes.page}>
@@ -257,6 +259,11 @@ const ComparePage = () => {
           </div>
         </section>
       )}
+
+      {/* Cross-study meta-analysis / 跨研究元分析（独立区块） */}
+      <section className={classes.filterSection}>
+        <CrossStudyPanel />
+      </section>
     </div>
   );
 };

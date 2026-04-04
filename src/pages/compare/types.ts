@@ -65,7 +65,47 @@ export interface FilterOptions {
   sexes: string[];
 }
 
+export interface CrossStudyProjectSummary {
+  project_id: string;
+  n_disease: number;
+  n_control: number;
+  error: string | null;
+}
+
+export interface CrossStudyMarker {
+  taxon: string;
+  meta_log2fc: number;
+  meta_se: number;
+  meta_p: number;
+  ci_low: number;
+  ci_high: number;
+  n_studies: number;
+  n_significant: number;
+  I2: number;
+  Q_p: number;
+  direction: "disease" | "control" | "mixed";
+  per_project: Record<string, { log2fc: number; se: number; p_value: number }>;
+}
+
+export interface CrossStudyResult {
+  disease: string;
+  method: string;
+  taxonomy_level: string;
+  n_projects: number;
+  project_summaries: CrossStudyProjectSummary[];
+  consensus_markers: CrossStudyMarker[];
+  total_significant: number;
+  all_markers: CrossStudyMarker[];
+}
+
+export interface ProjectInfo {
+  project_id: string;
+  sample_count: number;
+  diseases: string[];
+  has_control: boolean;
+}
+
 export const API_BASE = import.meta.env.VITE_API_URL ?? "http://localhost:8000";
 export const TAXONOMY_LEVELS = ["genus", "phylum"] as const;
 export const METHODS = ["wilcoxon", "t-test", "lefse", "permanova"] as const;
-export type Tab = "bar" | "volcano" | "alpha" | "beta" | "lefse" | "permanova";
+export type Tab = "bar" | "volcano" | "alpha" | "beta" | "lefse" | "permanova" | "crossstudy";

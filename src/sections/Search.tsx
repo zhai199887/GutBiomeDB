@@ -34,11 +34,23 @@ interface SpeciesProfile {
   by_sex: ProfileEntry[];
 }
 
+const HISTORY_KEY = "search_history";
+function getHistory(): string[] {
+  try { return JSON.parse(localStorage.getItem(HISTORY_KEY) || "[]"); } catch { return []; }
+}
+function saveHistory(q: string) {
+  const prev = getHistory();
+  const updated = [q, ...prev.filter(x => x !== q)].slice(0, 10);
+  localStorage.setItem(HISTORY_KEY, JSON.stringify(updated));
+}
+
 const Search = () => {
   const { t } = useI18n();
   const [query, setQuery] = useState("");
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
+  const [history, setHistory] = useState<string[]>(getHistory);
   const [profile, setProfile] = useState<SpeciesProfile | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -77,7 +89,11 @@ const Search = () => {
         if (!r.ok) throw new Error(r.status === 404 ? "Genus not found" : "Server error");
         return r.json();
       })
-      .then((data: SpeciesProfile) => setProfile(data))
+      .then((data: SpeciesProfile) => {
+        setProfile(data);
+        saveHistory(genus.trim());
+        setHistory(getHistory());
+      })
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false));
   }, []);
@@ -88,6 +104,7 @@ const Search = () => {
       if (suggestionsRef.current && !suggestionsRef.current.contains(e.target as Node) &&
           inputRef.current && !inputRef.current.contains(e.target as Node)) {
         setShowSuggestions(false);
+        setShowHistory(false);
       }
     };
     document.addEventListener("mousedown", handler);
@@ -113,7 +130,10 @@ const Search = () => {
             onKeyDown={(e) => {
               if (e.key === "Enter") doSearch(query);
             }}
-            onFocus={() => suggestions.length > 0 && setShowSuggestions(true)}
+            onFocus={() => {
+              if (suggestions.length > 0) setShowSuggestions(true);
+              else if (!query.trim() && history.length > 0) setShowHistory(true);
+            }}
             className={classes.searchInput}
           />
           <button
@@ -135,6 +155,25 @@ const Search = () => {
                 onClick={() => doSearch(s)}
               >
                 <i>{s}</i>
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* 搜索历史 */}
+        {showHistory && !showSuggestions && history.length > 0 && (
+          <div ref={suggestionsRef} className={classes.suggestions}>
+            <div className={classes.historyHeader}>
+              <span>{t("search.recentSearches")}</span>
+              <button className={classes.clearBtn} onClick={() => {
+                localStorage.removeItem(HISTORY_KEY);
+                setHistory([]);
+                setShowHistory(false);
+              }}>{t("search.clearHistory")}</button>
+            </div>
+            {history.map((h) => (
+              <button key={h} className={classes.suggestionItem} onClick={() => { setShowHistory(false); doSearch(h); }}>
+                {h}
               </button>
             ))}
           </div>

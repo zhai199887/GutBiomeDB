@@ -268,6 +268,22 @@ class SimilarityRequest(BaseModel):
     top_k: int = 10               # 返回最相似样本数量
 
 
+class CrossStudyRequest(BaseModel):
+    """跨研究元分析请求模型"""
+    project_ids: list[str]        # 项目ID列表
+    disease: str                  # 目标疾病
+    method: str = "wilcoxon"      # wilcoxon / t-test
+    taxonomy_level: str = "genus" # genus / phylum
+    p_threshold: float = 0.05     # 显著性阈值
+    min_studies: int = 2          # 最少一致队列数
+
+
+class HealthIndexRequest(BaseModel):
+    """微生物组健康指数请求模型"""
+    abundances: dict[str, float]  # genus_name -> abundance_value
+    age_group: str = ""           # 可选年龄段, 用于参考范围
+
+
 # ── Helper functions / 辅助函数 ────────────────────────────────────────────────
 
 def apply_filter(df: pd.DataFrame, f: GroupFilter) -> pd.DataFrame:
@@ -2055,6 +2071,565 @@ async def similarity_search(request: Request, req: SimilarityRequest):
         "matched_genera": matched_genera,
         "total_genera": len(col_genus_map),
         "results": results,
+    }
+
+
+# ── Cross-study meta-analysis / 跨研究元分析 ────────────────────────────────
+
+@app.get("/api/project-list",
+         summary="List available projects",
+         description="Returns distinct project IDs with sample counts and disease coverage.",
+         tags=["Analysis"])
+@limiter.limit("60/minute")
+async def project_list(request: Request):
+    """返回可用项目列表及每个项目的样本数/疾病覆盖。"""
+    meta = get_metadata()
+    if "project" not in meta.columns:
+        raise HTTPException(500, "No 'project' column in metadata")
+
+    INFORM_COLS = [f"inform{i}" for i in range(12)]
+    projects = []
+    for proj, grp in meta.groupby("project"):
+        # Collect all diseases in this project
+        diseases_set: set[str] = set()
+        for col in INFORM_COLS:
+            if col in grp.columns:
+                vals = grp[col].dropna().astype(str).str.strip()
+                diseases_set.update(v for v in vals if v and v.lower() != "nan")
+        has_nc = any(d.upper() == "NC" for d in diseases_set)
+        diseases_set.discard("NC")
+        diseases_set.discard("nc")
+        projects.append({
+            "project_id": str(proj),
+            "sample_count": len(grp),
+            "diseases": sorted(diseases_set)[:20],
+            "has_control": has_nc,
+        })
+
+    # Sort by sample count descending
+    projects.sort(key=lambda x: x["sample_count"], reverse=True)
+    return {"projects": projects, "total": len(projects)}
+
+
+@app.post("/api/cross-study",
+          summary="Cross-study meta-analysis",
+          description="""
+Cross-cohort consensus biomarker discovery with inverse-variance weighted meta-analysis.
+跨队列一致性标志物发现（逆方差加权元分析）。
+
+Steps:
+1. For each selected project, split samples into disease vs. NC (normal control)
+2. Run differential analysis independently per project
+3. Combine effect sizes using inverse-variance weighted meta-analysis
+4. Apply DerSimonian-Laird random effects model for heterogeneity
+5. Report I² heterogeneity statistic and consensus markers
+""",
+          tags=["Analysis"])
+@limiter.limit("10/minute")
+async def cross_study_analysis(request: Request, req: CrossStudyRequest):
+    """跨研究元分析：多队列一致性标志物发现"""
+    if len(req.project_ids) < 2:
+        raise HTTPException(400, "At least 2 projects required")
+    if len(req.project_ids) > 10:
+        raise HTTPException(400, "Maximum 10 projects allowed")
+
+    meta = get_metadata()
+    abund = get_abundance()
+    abund_idx = set(abund.index)
+    col_names = abund.columns.tolist()
+
+    # Aggregate columns by taxonomy level
+    def _group_by_level(matrix: np.ndarray, cols: list[str], level: str):
+        if level == "genus":
+            labels = [extract_genus(c) for c in cols]
+        else:
+            labels = [extract_phylum(c) for c in cols]
+        unique_labels = list(dict.fromkeys(labels))
+        agg = np.zeros((matrix.shape[0], len(unique_labels)))
+        for i, lbl in enumerate(unique_labels):
+            idxs = [j for j, l in enumerate(labels) if l == lbl]
+            agg[:, i] = matrix[:, idxs].sum(axis=1)
+        return agg, unique_labels
+
+    INFORM_COLS = [f"inform{i}" for i in range(12)]
+    disease_lower = req.disease.strip().lower()
+
+    per_project_results = []
+    taxa_global = None
+
+    for proj_id in req.project_ids:
+        proj_meta = meta[meta["project"].astype(str) == proj_id]
+        if len(proj_meta) == 0:
+            per_project_results.append({
+                "project_id": proj_id,
+                "n_disease": 0, "n_control": 0,
+                "error": "Project not found",
+                "taxa_results": [],
+            })
+            continue
+
+        # Split disease vs NC within this project
+        disease_mask = pd.Series(False, index=proj_meta.index)
+        for col in INFORM_COLS:
+            if col in proj_meta.columns:
+                disease_mask |= proj_meta[col].fillna("").astype(str).str.strip().str.lower() == disease_lower
+        nc_mask = pd.Series(False, index=proj_meta.index)
+        for col in INFORM_COLS:
+            if col in proj_meta.columns:
+                nc_mask |= proj_meta[col].fillna("").astype(str).str.strip().str.lower() == "nc"
+
+        disease_keys = [k for k in proj_meta.loc[disease_mask, "sample_key"].values if k in abund_idx]
+        control_keys = [k for k in proj_meta.loc[nc_mask, "sample_key"].values if k in abund_idx]
+
+        if len(disease_keys) < 3 or len(control_keys) < 3:
+            per_project_results.append({
+                "project_id": proj_id,
+                "n_disease": len(disease_keys),
+                "n_control": len(control_keys),
+                "error": "Insufficient samples (need ≥3 per group)",
+                "taxa_results": [],
+            })
+            continue
+
+        # Extract and normalize abundance
+        raw_d = abund.loc[disease_keys].values.astype(float)
+        raw_c = abund.loc[control_keys].values.astype(float)
+        tot_d = raw_d.sum(axis=1, keepdims=True); tot_d[tot_d == 0] = 1
+        tot_c = raw_c.sum(axis=1, keepdims=True); tot_c[tot_c == 0] = 1
+        mat_d = raw_d / tot_d * 100
+        mat_c = raw_c / tot_c * 100
+
+        agg_d, taxa = _group_by_level(mat_d, col_names, req.taxonomy_level)
+        agg_c, _ = _group_by_level(mat_c, col_names, req.taxonomy_level)
+        if taxa_global is None:
+            taxa_global = taxa
+
+        # Per-taxon differential test
+        taxa_results = []
+        for i, taxon in enumerate(taxa):
+            vals_d = agg_d[:, i]
+            vals_c = agg_c[:, i]
+            mean_d = float(np.mean(vals_d))
+            mean_c = float(np.mean(vals_c))
+            pseudo = 1e-6
+            log2fc = math.log2((mean_d + pseudo) / (mean_c + pseudo))
+
+            try:
+                if req.method == "wilcoxon":
+                    _, p = stats.mannwhitneyu(vals_d, vals_c, alternative="two-sided")
+                else:
+                    _, p = stats.ttest_ind(vals_d, vals_c)
+            except Exception:
+                p = 1.0
+
+            # Standard error of mean difference
+            se = float(np.sqrt(np.var(vals_d) / len(vals_d) + np.var(vals_c) / len(vals_c)))
+            taxa_results.append({
+                "taxon": taxon,
+                "log2fc": round(log2fc, 4),
+                "mean_disease": round(mean_d, 6),
+                "mean_control": round(mean_c, 6),
+                "p_value": round(float(p), 8),
+                "se": round(se, 8),
+            })
+
+        per_project_results.append({
+            "project_id": proj_id,
+            "n_disease": len(disease_keys),
+            "n_control": len(control_keys),
+            "error": None,
+            "taxa_results": taxa_results,
+        })
+
+    # ── Meta-analysis: inverse-variance weighted + DerSimonian-Laird ──
+    if taxa_global is None:
+        raise HTTPException(400, "No valid projects with sufficient data found")
+
+    valid_projects = [p for p in per_project_results if p["error"] is None and len(p["taxa_results"]) > 0]
+    if len(valid_projects) < 2:
+        raise HTTPException(400, f"Need ≥2 valid projects, found {len(valid_projects)}")
+
+    consensus_markers = []
+    for tax_idx, taxon in enumerate(taxa_global):
+        effects = []  # (log2fc, se) per project
+        for proj in valid_projects:
+            tr = proj["taxa_results"]
+            if tax_idx < len(tr) and tr[tax_idx]["taxon"] == taxon:
+                se = tr[tax_idx]["se"]
+                if se > 0:
+                    effects.append((tr[tax_idx]["log2fc"], se, tr[tax_idx]["p_value"], proj["project_id"]))
+
+        if len(effects) < req.min_studies:
+            continue
+
+        # Fixed-effects: inverse-variance weighted
+        weights = [1 / (se ** 2) for _, se, _, _ in effects]
+        w_sum = sum(weights)
+        beta_fe = sum(w * e for w, (e, _, _, _) in zip(weights, effects)) / w_sum
+        se_fe = math.sqrt(1 / w_sum)
+
+        # Cochran's Q (heterogeneity test)
+        Q = sum(w * (e - beta_fe) ** 2 for w, (e, _, _, _) in zip(weights, effects))
+        df = len(effects) - 1
+        Q_p = float(1 - stats.chi2.cdf(Q, df)) if df > 0 else 1.0
+
+        # I² heterogeneity
+        I2 = max(0, (Q - df) / Q * 100) if Q > 0 else 0.0
+
+        # DerSimonian-Laird random effects tau²
+        c = w_sum - sum(w ** 2 for w in weights) / w_sum
+        tau2 = max(0, (Q - df) / c) if c > 0 else 0.0
+
+        # Random-effects estimate
+        re_weights = [1 / (se ** 2 + tau2) for _, se, _, _ in effects]
+        re_w_sum = sum(re_weights)
+        beta_re = sum(w * e for w, (e, _, _, _) in zip(re_weights, effects)) / re_w_sum
+        se_re = math.sqrt(1 / re_w_sum)
+
+        # Z-test for meta effect
+        z = beta_re / se_re if se_re > 0 else 0
+        meta_p = float(2 * (1 - stats.norm.cdf(abs(z))))
+
+        # Count how many projects show significance
+        n_sig = sum(1 for _, _, p, _ in effects if p < req.p_threshold)
+
+        # Direction consistency
+        directions = [1 if e > 0 else -1 for e, _, _, _ in effects]
+        direction = "disease" if sum(directions) > 0 else "control"
+        if len(set(directions)) > 1:
+            direction = "mixed"
+
+        per_project_detail = {}
+        for e, se, p, pid in effects:
+            per_project_detail[pid] = {
+                "log2fc": round(e, 4),
+                "se": round(se, 6),
+                "p_value": round(p, 8),
+            }
+
+        consensus_markers.append({
+            "taxon": taxon,
+            "meta_log2fc": round(beta_re, 4),
+            "meta_se": round(se_re, 6),
+            "meta_p": round(meta_p, 8),
+            "ci_low": round(beta_re - 1.96 * se_re, 4),
+            "ci_high": round(beta_re + 1.96 * se_re, 4),
+            "n_studies": len(effects),
+            "n_significant": n_sig,
+            "I2": round(I2, 1),
+            "Q_p": round(Q_p, 6),
+            "direction": direction,
+            "per_project": per_project_detail,
+        })
+
+    # Sort by meta p-value, filter significant
+    consensus_markers.sort(key=lambda x: x["meta_p"])
+    significant_markers = [m for m in consensus_markers if m["meta_p"] < req.p_threshold]
+
+    return {
+        "disease": req.disease,
+        "method": req.method,
+        "taxonomy_level": req.taxonomy_level,
+        "n_projects": len(valid_projects),
+        "project_summaries": [
+            {
+                "project_id": p["project_id"],
+                "n_disease": p["n_disease"],
+                "n_control": p["n_control"],
+                "error": p["error"],
+            }
+            for p in per_project_results
+        ],
+        "consensus_markers": significant_markers[:100],
+        "total_significant": len(significant_markers),
+        "all_markers": consensus_markers[:200],
+    }
+
+
+# ── Health Index / 微生物组健康指数 ──────────────────────────────────────────
+
+@lru_cache(maxsize=1)
+def _compute_health_disease_genera() -> dict:
+    """
+    预计算健康关联属和疾病关联属。
+    Precompute health-associated and disease-associated genera from NC vs all-disease.
+    """
+    meta = get_metadata()
+    abund = get_abundance()
+    abund_idx = set(abund.index)
+    col_names = abund.columns.tolist()
+
+    INFORM_COLS = [f"inform{i}" for i in range(12)]
+
+    # NC (normal control) samples
+    nc_mask = pd.Series(False, index=meta.index)
+    for col in INFORM_COLS:
+        if col in meta.columns:
+            nc_mask |= meta[col].fillna("").astype(str).str.strip().str.upper() == "NC"
+    nc_keys = [k for k in meta.loc[nc_mask, "sample_key"].values if k in abund_idx]
+
+    # Disease samples (any disease that is NOT NC)
+    disease_mask = ~nc_mask & meta["disease"].str.strip().str.lower().ne("unknown")
+    disease_keys = [k for k in meta.loc[disease_mask, "sample_key"].values if k in abund_idx]
+
+    # Subsample for performance
+    np.random.seed(42)
+    if len(nc_keys) > 5000:
+        nc_keys = list(np.random.choice(nc_keys, 5000, replace=False))
+    if len(disease_keys) > 5000:
+        disease_keys = list(np.random.choice(disease_keys, 5000, replace=False))
+
+    if len(nc_keys) < 10 or len(disease_keys) < 10:
+        return {"health_genera": [], "disease_genera": [], "nc_stats": {}}
+
+    raw_nc = abund.loc[nc_keys].values.astype(float)
+    raw_dis = abund.loc[disease_keys].values.astype(float)
+    tot_nc = raw_nc.sum(axis=1, keepdims=True); tot_nc[tot_nc == 0] = 1
+    tot_dis = raw_dis.sum(axis=1, keepdims=True); tot_dis[tot_dis == 0] = 1
+    mat_nc = raw_nc / tot_nc * 100
+    mat_dis = raw_dis / tot_dis * 100
+
+    # Aggregate to genus level
+    genus_labels = [extract_genus(c) for c in col_names]
+    unique_genera = list(dict.fromkeys(genus_labels))
+    agg_nc = np.zeros((len(nc_keys), len(unique_genera)))
+    agg_dis = np.zeros((len(disease_keys), len(unique_genera)))
+    for i, g in enumerate(unique_genera):
+        idxs = [j for j, l in enumerate(genus_labels) if l == g]
+        agg_nc[:, i] = mat_nc[:, idxs].sum(axis=1)
+        agg_dis[:, i] = mat_dis[:, idxs].sum(axis=1)
+
+    # Test each genus: enriched in NC (health) vs enriched in disease
+    health_genera = []
+    disease_genera = []
+    nc_stats = {}
+
+    for i, genus in enumerate(unique_genera):
+        if not is_valid_genus(genus):
+            continue
+        vals_nc = agg_nc[:, i]
+        vals_dis = agg_dis[:, i]
+        mean_nc = float(np.mean(vals_nc))
+        mean_dis = float(np.mean(vals_dis))
+
+        if np.std(vals_nc) == 0 and np.std(vals_dis) == 0:
+            continue
+        try:
+            _, p = stats.mannwhitneyu(vals_nc, vals_dis, alternative="two-sided")
+        except Exception:
+            continue
+
+        nc_stats[genus] = {
+            "mean": round(mean_nc, 6),
+            "median": round(float(np.median(vals_nc)), 6),
+            "std": round(float(np.std(vals_nc)), 6),
+            "p25": round(float(np.percentile(vals_nc, 25)), 6),
+            "p75": round(float(np.percentile(vals_nc, 75)), 6),
+        }
+
+        if p < 0.05:
+            pseudo = 1e-6
+            log2fc = math.log2((mean_nc + pseudo) / (mean_dis + pseudo))
+            entry = {"genus": genus, "log2fc": round(log2fc, 4), "p_value": round(float(p), 8),
+                     "mean_nc": round(mean_nc, 6), "mean_disease": round(mean_dis, 6)}
+            if mean_nc > mean_dis:
+                health_genera.append(entry)
+            else:
+                disease_genera.append(entry)
+
+    # Sort by absolute log2fc, take top 50
+    health_genera.sort(key=lambda x: abs(x["log2fc"]), reverse=True)
+    disease_genera.sort(key=lambda x: abs(x["log2fc"]), reverse=True)
+
+    return {
+        "health_genera": health_genera[:50],
+        "disease_genera": disease_genera[:50],
+        "nc_stats": nc_stats,
+        "n_nc_samples": len(nc_keys),
+        "n_disease_samples": len(disease_keys),
+    }
+
+
+@app.post("/api/health-index",
+          summary="Gut Microbiome Health Index (GMHI)",
+          description="""
+Calculate a gut microbiome health score (0-100) based on user-provided genus abundances.
+基于用户提供的属级丰度计算肠道微生物组健康评分。
+
+Algorithm:
+1. Compare user genera against precomputed health-associated and disease-associated genera
+2. H_score = log10(sum_health_abundances / sum_disease_abundances)
+3. Normalize to 0-100 scale based on NC population distribution
+4. Provide per-genus deviation from healthy reference
+""",
+          tags=["Similarity"])
+@limiter.limit("20/minute")
+async def health_index(request: Request, req: HealthIndexRequest):
+    """计算微生物组健康指数"""
+    if not req.abundances:
+        raise HTTPException(400, "abundances dict must not be empty")
+
+    ref = _compute_health_disease_genera()
+    if not ref["health_genera"] and not ref["disease_genera"]:
+        raise HTTPException(500, "Health index reference data not available")
+
+    health_set = {g["genus"].lower(): g for g in ref["health_genera"]}
+    disease_set = {g["genus"].lower(): g for g in ref["disease_genera"]}
+    nc_stats = ref["nc_stats"]
+
+    # Match user genera
+    h_sum = 0.0
+    d_sum = 0.0
+    health_matched = []
+    disease_matched = []
+    per_genus = []
+
+    for genus, value in req.abundances.items():
+        g_lower = genus.strip().lower()
+        g_title = genus.strip().title()
+
+        # Check if this is a health or disease genus
+        if g_lower in health_set:
+            h_sum += value
+            health_matched.append({"genus": g_title, "abundance": round(value, 6)})
+        if g_lower in disease_set:
+            d_sum += value
+            disease_matched.append({"genus": g_title, "abundance": round(value, 6)})
+
+        # Per-genus deviation from NC reference
+        if g_title in nc_stats:
+            ref_stat = nc_stats[g_title]
+            deviation = value - ref_stat["mean"]
+            status = "normal"
+            if value > ref_stat["p75"] * 1.5:
+                status = "high"
+            elif value < ref_stat["p25"] * 0.5:
+                status = "low"
+            per_genus.append({
+                "genus": g_title,
+                "user_abundance": round(value, 6),
+                "nc_mean": ref_stat["mean"],
+                "nc_median": ref_stat["median"],
+                "status": status,
+            })
+
+    # Calculate raw score
+    pseudo = 1e-6
+    raw_score = math.log10((h_sum + pseudo) / (d_sum + pseudo))
+
+    # Normalize to 0-100 (empirical range: roughly -2 to +2 for log10 ratio)
+    # Map: -2 → 0, 0 → 50, +2 → 100
+    normalized = max(0, min(100, (raw_score + 2) / 4 * 100))
+
+    # Determine category
+    if normalized >= 70:
+        category = "good"
+    elif normalized >= 40:
+        category = "moderate"
+    else:
+        category = "attention"
+
+    # Sort per_genus by absolute deviation
+    per_genus.sort(key=lambda x: abs(x["user_abundance"] - x["nc_mean"]), reverse=True)
+
+    return {
+        "score": round(normalized, 1),
+        "raw_score": round(raw_score, 4),
+        "category": category,
+        "health_genera_matched": len(health_matched),
+        "disease_genera_matched": len(disease_matched),
+        "health_genera_sum": round(h_sum, 4),
+        "disease_genera_sum": round(d_sum, 4),
+        "health_genera_detail": health_matched[:20],
+        "disease_genera_detail": disease_matched[:20],
+        "per_genus_deviation": per_genus[:50],
+        "reference": {
+            "n_nc_samples": ref.get("n_nc_samples", 0),
+            "n_disease_samples": ref.get("n_disease_samples", 0),
+            "health_genera_total": len(ref["health_genera"]),
+            "disease_genera_total": len(ref["disease_genera"]),
+        },
+    }
+
+
+@app.get("/api/health-index/reference",
+         summary="Health index reference data",
+         description="Returns precomputed health/disease genera lists and NC reference statistics.",
+         tags=["Similarity"])
+@limiter.limit("60/minute")
+async def health_index_reference(request: Request):
+    """返回健康指数参考数据（健康属/疾病属列表）"""
+    ref = _compute_health_disease_genera()
+    return {
+        "health_genera": ref["health_genera"],
+        "disease_genera": ref["disease_genera"],
+        "n_nc_samples": ref.get("n_nc_samples", 0),
+        "n_disease_samples": ref.get("n_disease_samples", 0),
+    }
+
+
+# ── Usage tracking / 使用统计追踪 ────────────────────────────────────────────
+
+class TrackEvent(BaseModel):
+    """使用统计事件"""
+    event: str       # page_view / analysis_run / export / search
+    page: str = ""
+    detail: str = ""
+
+_ANALYTICS_FILE = Path(__file__).parent / "analytics.jsonl"
+
+@app.post("/api/track", tags=["Admin"],
+          summary="Track usage event",
+          description="Log usage events for publication metrics.")
+@limiter.limit("120/minute")
+async def track_event(request: Request, evt: TrackEvent):
+    """记录使用统计事件（用于论文指标）"""
+    entry = {
+        "timestamp": datetime.now().isoformat(),
+        "event": evt.event,
+        "page": evt.page,
+        "detail": evt.detail,
+    }
+    try:
+        with open(_ANALYTICS_FILE, "a", encoding="utf-8") as f:
+            f.write(json.dumps(entry, ensure_ascii=False) + "\n")
+    except Exception:
+        pass
+    return {"status": "ok"}
+
+
+@app.get("/api/admin/analytics", tags=["Admin"],
+         summary="View analytics summary",
+         description="Returns aggregated usage statistics (admin only).")
+@limiter.limit("30/minute")
+async def analytics_summary(request: Request, token: str = ""):
+    """管理员查看使用统计汇总"""
+    if token != ADMIN_TOKEN:
+        raise HTTPException(403, "Invalid admin token")
+
+    if not _ANALYTICS_FILE.exists():
+        return {"events": [], "summary": {}}
+
+    events = []
+    try:
+        with open(_ANALYTICS_FILE, "r", encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if line:
+                    events.append(json.loads(line))
+    except Exception:
+        pass
+
+    # Aggregate
+    from collections import Counter
+    event_counts = Counter(e.get("event", "") for e in events)
+    page_counts = Counter(e.get("page", "") for e in events)
+
+    return {
+        "total_events": len(events),
+        "by_event_type": dict(event_counts.most_common(20)),
+        "by_page": dict(page_counts.most_common(20)),
+        "recent": events[-20:] if events else [],
     }
 
 
