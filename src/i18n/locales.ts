@@ -337,6 +337,21 @@ const en = {
   "cooccurrence.positive": "Positive correlation",
   "cooccurrence.negative": "Negative correlation",
   "cooccurrence.computing": "Computing correlations...",
+  "cooccurrence.healthy": "Healthy (NC)",
+  "cooccurrence.genera": "genera",
+  "cooccurrence.edges": "edges",
+  "cooccurrence.samples": "samples",
+
+  // Disease page chart
+  "disease.chart.genus": "Genus",
+  "disease.chart.diseaseMean": "Disease Mean",
+  "disease.chart.controlMean": "Control Mean",
+  "disease.chart.prevalence": "Prevalence",
+  "disease.chart.controlPrevalence": "Control Prevalence",
+  "disease.chart.disease": "Disease",
+  "disease.chart.control": "Control",
+  "disease.chart.name": "Name",
+  "disease.chart.count": "Count",
 
   // Lollipop page
   "lollipop.title": "Differential Abundance Lollipop Plot",
@@ -823,6 +838,21 @@ const zh: Record<keyof typeof en, string> = {
   "cooccurrence.positive": "正相关",
   "cooccurrence.negative": "负相关",
   "cooccurrence.computing": "正在计算相关性...",
+  "cooccurrence.healthy": "健康对照 (NC)",
+  "cooccurrence.genera": "个菌属",
+  "cooccurrence.edges": "条边",
+  "cooccurrence.samples": "个样本",
+
+  // Disease page chart
+  "disease.chart.genus": "菌属",
+  "disease.chart.diseaseMean": "疾病组均值",
+  "disease.chart.controlMean": "对照组均值",
+  "disease.chart.prevalence": "流行率",
+  "disease.chart.controlPrevalence": "对照组流行率",
+  "disease.chart.disease": "疾病组",
+  "disease.chart.control": "对照组",
+  "disease.chart.name": "名称",
+  "disease.chart.count": "数量",
 
   // Lollipop page
   "lollipop.title": "差异丰度棒棒糖图",

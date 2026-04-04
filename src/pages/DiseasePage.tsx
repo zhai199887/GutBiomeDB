@@ -200,8 +200,16 @@ const ProfileView = ({ profile, dName, locale }: { profile: DiseaseProfile; dNam
   // Draw comparison bar chart / 绘制对比柱状图
   useEffect(() => {
     if (!barRef.current || profile.top_genera.length === 0) return;
-    drawComparisonChart(barRef.current, profile.top_genera.slice(0, 20));
-  }, [profile]);
+    drawComparisonChart(barRef.current, profile.top_genera.slice(0, 20), {
+      genus: t("disease.chart.genus"),
+      diseaseMean: t("disease.chart.diseaseMean"),
+      controlMean: t("disease.chart.controlMean"),
+      prevalence: t("disease.chart.prevalence"),
+      controlPrevalence: t("disease.chart.controlPrevalence"),
+      disease: t("disease.chart.disease"),
+      control: t("disease.chart.control"),
+    });
+  }, [profile, t]);
 
   const exportProfileCsv = () => {
     if (!profile) return;
@@ -323,19 +331,19 @@ const ProfileView = ({ profile, dName, locale }: { profile: DiseaseProfile; dNam
         {profile.by_sex.length > 0 && (
           <div className={classes.chartCard}>
             <h3>{t("disease.bySex")}</h3>
-            <DemoTable data={profile.by_sex} />
+            <DemoTable data={profile.by_sex} nameLabel={t("disease.chart.name")} countLabel={t("disease.chart.count")} />
           </div>
         )}
         {profile.by_age_group.length > 0 && (
           <div className={classes.chartCard}>
             <h3>{t("disease.byAgeGroup")}</h3>
-            <DemoTable data={profile.by_age_group} />
+            <DemoTable data={profile.by_age_group} nameLabel={t("disease.chart.name")} countLabel={t("disease.chart.count")} />
           </div>
         )}
         {profile.by_country.length > 0 && (
           <div className={classes.chartCard}>
             <h3>{t("disease.byCountry")}</h3>
-            <DemoTable data={profile.by_country} />
+            <DemoTable data={profile.by_country} nameLabel={t("disease.chart.name")} countLabel={t("disease.chart.count")} />
           </div>
         )}
       </div>
@@ -343,10 +351,10 @@ const ProfileView = ({ profile, dName, locale }: { profile: DiseaseProfile; dNam
   );
 };
 
-const DemoTable = ({ data }: { data: DemoEntry[] }) => (
+const DemoTable = ({ data, nameLabel = "Name", countLabel = "Count" }: { data: DemoEntry[]; nameLabel?: string; countLabel?: string }) => (
   <table className={classes.miniTable}>
     <thead>
-      <tr><th>Name</th><th>Count</th></tr>
+      <tr><th>{nameLabel}</th><th>{countLabel}</th></tr>
     </thead>
     <tbody>
       {data.map((d) => (
@@ -361,7 +369,13 @@ const DemoTable = ({ data }: { data: DemoEntry[] }) => (
 
 // ── Grouped bar chart: disease vs control / 分组柱状图：疾病 vs 对照 ────────
 
-function drawComparisonChart(svgEl: SVGSVGElement, data: GenusEntry[]) {
+interface ChartLabels {
+  genus: string; diseaseMean: string; controlMean: string;
+  prevalence: string; controlPrevalence: string;
+  disease: string; control: string;
+}
+
+function drawComparisonChart(svgEl: SVGSVGElement, data: GenusEntry[], labels: ChartLabels) {
   const svg = d3.select(svgEl);
   svg.selectAll("*").remove();
 
@@ -400,9 +414,9 @@ function drawComparisonChart(svgEl: SVGSVGElement, data: GenusEntry[]) {
     .attr("data-tooltip", (d) =>
       renderToString(
         <div className="tooltip-table">
-          <span>Genus</span><span><i>{d.genus}</i></span>
-          <span>Disease Mean</span><span>{d.disease_mean.toFixed(4)}%</span>
-          <span>Prevalence</span><span>{(d.disease_prevalence * 100).toFixed(1)}%</span>
+          <span>{labels.genus}</span><span><i>{d.genus}</i></span>
+          <span>{labels.diseaseMean}</span><span>{d.disease_mean.toFixed(4)}%</span>
+          <span>{labels.prevalence}</span><span>{(d.disease_prevalence * 100).toFixed(1)}%</span>
           <span>Log₂FC</span><span>{d.log2fc.toFixed(2)}</span>
         </div>
       )
@@ -422,9 +436,9 @@ function drawComparisonChart(svgEl: SVGSVGElement, data: GenusEntry[]) {
     .attr("data-tooltip", (d) =>
       renderToString(
         <div className="tooltip-table">
-          <span>Genus</span><span><i>{d.genus}</i></span>
-          <span>Control Mean</span><span>{d.control_mean.toFixed(4)}%</span>
-          <span>Control Prevalence</span><span>{(d.control_prevalence * 100).toFixed(1)}%</span>
+          <span>{labels.genus}</span><span><i>{d.genus}</i></span>
+          <span>{labels.controlMean}</span><span>{d.control_mean.toFixed(4)}%</span>
+          <span>{labels.controlPrevalence}</span><span>{(d.control_prevalence * 100).toFixed(1)}%</span>
         </div>
       )
     );
@@ -445,7 +459,7 @@ function drawComparisonChart(svgEl: SVGSVGElement, data: GenusEntry[]) {
   // Legend / 图例
   const legend = svg.append("g").attr("transform", `translate(${margin.left + 10}, ${H - 8})`);
   legend.append("rect").attr("width", 12).attr("height", 8).attr("fill", "#ff6b6b").attr("opacity", 0.8);
-  legend.append("text").attr("x", 16).attr("y", 7).text("Disease").attr("fill", "currentColor").attr("font-size", 10);
-  legend.append("rect").attr("x", 80).attr("width", 12).attr("height", 8).attr("fill", "#4ecdc4").attr("opacity", 0.8);
-  legend.append("text").attr("x", 96).attr("y", 7).text("Control").attr("fill", "currentColor").attr("font-size", 10);
+  legend.append("text").attr("x", 16).attr("y", 7).text(labels.disease).attr("fill", "currentColor").attr("font-size", 10);
+  legend.append("rect").attr("x", 90).attr("width", 12).attr("height", 8).attr("fill", "#4ecdc4").attr("opacity", 0.8);
+  legend.append("text").attr("x", 106).attr("y", 7).text(labels.control).attr("fill", "currentColor").attr("font-size", 10);
 }

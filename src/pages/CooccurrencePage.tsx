@@ -61,7 +61,7 @@ const CooccurrencePage = () => {
         <div className={classes.field}>
           <label>{t("cooccurrence.disease")}</label>
           <select className={classes.select} value={disease} onChange={e => setDisease(e.target.value)}>
-            <option value="">Healthy (NC)</option>
+            <option value="">{t("cooccurrence.healthy")}</option>
             {diseases.slice(0, 100).map(d => (
               <option key={d.name} value={d.name}>{dName(d.name)}</option>
             ))}
@@ -96,9 +96,9 @@ const CooccurrencePage = () => {
             </div>
           </div>
           <div className={classes.stats}>
-            <span>{data.n_genera} genera</span>
-            <span>{data.n_edges} edges</span>
-            <span>{data.n_samples} samples</span>
+            <span>{data.n_genera} {t("cooccurrence.genera")}</span>
+            <span>{data.n_edges} {t("cooccurrence.edges")}</span>
+            <span>{data.n_samples} {t("cooccurrence.samples")}</span>
           </div>
         </>
       )}
