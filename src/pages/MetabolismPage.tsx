@@ -9,6 +9,7 @@ import { Link } from "react-router-dom";
 import * as d3 from "d3";
 import { useI18n } from "@/i18n";
 import { useData } from "@/data";
+import { diseaseShortNameI18n } from "@/util/diseaseNames";
 import "@/components/tooltip";
 import classes from "./MetabolismPage.module.css";
 
@@ -218,8 +219,8 @@ const CategoryDetail = ({
       return { genus, avg: d3.mean(allVals) ?? 0 };
     }).sort((a, b) => b.avg - a.avg);
 
-    const margin = { top: 10, right: 20, bottom: 40, left: 130 };
-    const W = 480, H = Math.max(150, avgAbundance.length * 24 + 50);
+    const margin = { top: 10, right: 20, bottom: 40, left: 180 };
+    const W = 640, H = Math.max(150, avgAbundance.length * 28 + 50);
     svg.attr("viewBox", `0 0 ${W} ${H}`);
     const g = svg.append("g").attr("transform", `translate(${margin.left},${margin.top})`);
 
@@ -248,18 +249,18 @@ const CategoryDetail = ({
       .attr("data-tooltip", (d) =>
         renderToString(
           <div className="tooltip-table">
-            <span>Genus</span><span>{d.genus}</span>
-            <span>Avg. Abundance</span><span>{(d.avg * 100).toFixed(4)}%</span>
+            <span>{locale === "zh" ? "属" : "Genus"}</span><span>{d.genus}</span>
+            <span>{locale === "zh" ? "平均丰度" : "Avg. Abundance"}</span><span>{(d.avg * 100).toFixed(4)}%</span>
           </div>
         )
       );
 
-    g.append("g").call(d3.axisLeft(yScale).tickFormat((d) => d.length > 14 ? d.slice(0, 13) + "…" : d))
+    g.append("g").call(d3.axisLeft(yScale))
       .attr("font-size", 11);
     g.append("g").attr("transform", `translate(0,${iH})`)
       .call(d3.axisBottom(xScale).ticks(4).tickFormat((d) => `${(Number(d) * 100).toFixed(2)}%`))
       .attr("font-size", 10);
-  }, [category, abundance]);
+  }, [category, abundance, locale]);
 
   // Draw disease heatmap / 绘制疾病分布热图
   useEffect(() => {
@@ -278,8 +279,8 @@ const CategoryDetail = ({
     const diseases = Object.keys(abundance.by_disease).slice(0, 12);
     if (availableGenera.length === 0 || diseases.length === 0) return;
 
-    const margin = { top: 60, right: 20, bottom: 20, left: 120 };
-    const cellW = 44, cellH = 20;
+    const margin = { top: 90, right: 20, bottom: 20, left: 140 };
+    const cellW = 60, cellH = 24;
     const W = cellW * diseases.length + margin.left + margin.right;
     const H = cellH * availableGenera.length + margin.top + margin.bottom;
     svg.attr("viewBox", `0 0 ${W} ${H}`);
@@ -322,19 +323,19 @@ const CategoryDetail = ({
       .attr("data-tooltip", (d) =>
         renderToString(
           <div className="tooltip-table">
-            <span>Genus</span><span>{d.genus}</span>
-            <span>Disease</span><span>{d.disease}</span>
-            <span>Abundance</span><span>{(d.val * 100).toFixed(4)}%</span>
+            <span>{locale === "zh" ? "属" : "Genus"}</span><span>{d.genus}</span>
+            <span>{locale === "zh" ? "疾病" : "Disease"}</span><span>{diseaseShortNameI18n(d.disease, locale, 30)}</span>
+            <span>{locale === "zh" ? "丰度" : "Abundance"}</span><span>{(d.val * 100).toFixed(4)}%</span>
           </div>
         )
       );
 
-    g.append("g").call(d3.axisLeft(yScale)).attr("font-size", 10);
+    g.append("g").call(d3.axisLeft(yScale)).attr("font-size", 11);
     g.append("g")
-      .call(d3.axisTop(xScale).tickFormat((d) => d.length > 8 ? d.slice(0, 7) + "…" : d))
-      .attr("font-size", 9)
+      .call(d3.axisTop(xScale).tickFormat((d) => diseaseShortNameI18n(d as string, locale, 14)))
+      .attr("font-size", 10)
       .selectAll("text")
-      .attr("transform", "rotate(-30)")
+      .attr("transform", "rotate(-40)")
       .attr("text-anchor", "start");
 
     // Color legend bar / 色阶图例
@@ -361,8 +362,8 @@ const CategoryDetail = ({
       .text(`${(maxVal * 100).toFixed(2)}%`);
     g.append("text").attr("x", legendW / 2).attr("y", legendY + legendH + 11)
       .attr("text-anchor", "middle").attr("font-size", 8).attr("fill", "var(--light-gray)")
-      .text("Mean Abundance");
-  }, [category, abundance]);
+      .text(locale === "zh" ? "平均丰度" : "Mean Abundance");
+  }, [category, abundance, locale]);
 
   return (
     <div className={classes.detailPanel}>

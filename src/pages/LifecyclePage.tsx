@@ -61,8 +61,8 @@ const LifecyclePage = () => {
     if (disease) params.set("disease", disease);
     if (country) params.set("country", country);
     cachedFetch<LifecycleData>(`${API_BASE}/api/lifecycle?${params}`)
-      .then((d) => setData(d))
-      .catch((e) => setError(locale === "zh" ? "后端未启动或连接失败" : `API error: ${(e as Error).message}`))
+      .then((d) => { setData(d); setError(""); })
+      .catch((e) => { setData(null); setError(locale === "zh" ? "后端未启动或连接失败" : `API error: ${(e as Error).message}`); })
       .finally(() => setLoading(false));
   }, [disease, country]);
 
@@ -107,7 +107,7 @@ const LifecyclePage = () => {
       {data && data.data.length > 0 && (
         <>
           <div className={classes.chartCard}>
-            <h3>{t("lifecycle.stackedArea")} ({data.total_samples.toLocaleString()} samples)</h3>
+            <h3>{t("lifecycle.stackedArea")} ({data.total_samples.toLocaleString()} {locale === "zh" ? "个样本" : "samples"})</h3>
             <div style={{ display: "flex", gap: "0.5rem", marginBottom: "0.5rem" }}>
               <button onClick={() => {
                 if (!data) return;
