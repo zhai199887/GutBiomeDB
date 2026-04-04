@@ -13,11 +13,12 @@ import classes from "./Map.module.css";
 const width = 770;
 const height = 400;
 
-/** Estimate filtered sample count for a country based on its stats */
+/** Estimate filtered sample count for a country based on its stats + global fallback */
 const estimateFilteredCount = (
   stat: CountryStat | undefined,
   total: number,
   filters: Filters,
+  summary?: MetadataSummary,
 ): number => {
   if (!stat) return 0;
   const isDefault =
@@ -28,36 +29,41 @@ const estimateFilteredCount = (
 
   let ratio = 1.0;
 
-  // Sex filter: apply percentage
+  // Sex filter
   if (filters.sex !== "all" && stat.sex.known > 0) {
     const pct = filters.sex === "female" ? stat.sex.female_pct : filters.sex === "male" ? stat.sex.male_pct : null;
     if (pct !== null) ratio *= pct / 100;
     else ratio *= 0;
   }
 
-  // Age filter: fraction of samples in selected age groups
-  if (filters.age_groups.length > 0) {
-    const ageTotal = Object.values(stat.top_ages).reduce((s, v) => s + v, 0);
-    if (ageTotal > 0) {
-      const selected = filters.age_groups.reduce((s, g) => s + (stat.top_ages[g] ?? 0), 0);
-      ratio *= selected / ageTotal;
+  // Age filter: use per-country stats if available, else global proportion
+  if (filters.age_groups.length > 0 && summary) {
+    const globalTotal = summary.total_samples || 1;
+    const globalSelected = filters.age_groups.reduce((s, g) => s + (summary.age_counts[g] ?? 0), 0);
+    // Check if country has data for any selected age group
+    const countrySelected = filters.age_groups.reduce((s, g) => s + (stat.top_ages[g] ?? 0), 0);
+    if (countrySelected > 0) {
+      // Country has data for these age groups — use country-level ratio
+      ratio *= countrySelected / total;
     } else {
-      ratio = 0;
+      // Fallback to global proportion
+      ratio *= globalSelected / globalTotal;
     }
   }
 
-  // Disease filter: fraction of samples with selected diseases
-  if (filters.diseases.length > 0) {
-    const diseaseTotal = Object.values(stat.top_diseases).reduce((s, v) => s + v, 0);
-    if (diseaseTotal > 0) {
-      const selected = filters.diseases.reduce((s, d) => s + (stat.top_diseases[d] ?? 0), 0);
-      ratio *= selected / diseaseTotal;
+  // Disease filter: same approach
+  if (filters.diseases.length > 0 && summary) {
+    const globalTotal = summary.total_samples || 1;
+    const globalSelected = filters.diseases.reduce((s, d) => s + (summary.disease_counts[d] ?? 0), 0);
+    const countrySelected = filters.diseases.reduce((s, d) => s + (stat.top_diseases[d] ?? 0), 0);
+    if (countrySelected > 0) {
+      ratio *= countrySelected / total;
     } else {
-      ratio = 0;
+      ratio *= globalSelected / globalTotal;
     }
   }
 
-  return Math.round(total * ratio);
+  return Math.max(0, Math.round(total * ratio));
 };
 
 const MapSection = () => {
@@ -217,7 +223,7 @@ const makeMap = () => {
       features: byCountry.features.map((f) => {
         const code = f.properties.code ?? "";
         const stat = countryStats[code];
-        const filteredSamples = estimateFilteredCount(stat, f.properties.samples, activeFilters);
+        const filteredSamples = estimateFilteredCount(stat, f.properties.samples, activeFilters, summary);
         return {
           ...f,
           properties: {
