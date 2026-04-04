@@ -1,6 +1,6 @@
 {
   "total_samples": 168464,
-  "total_unique_diseases": 217,
+  "total_unique_diseases": 218,
   "age_counts": {
     "Unknown": 85134,
     "Adult": 31501,
