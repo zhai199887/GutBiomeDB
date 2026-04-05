@@ -40,6 +40,8 @@ const en = {
   "overview.countries": "countries",
   "overview.regions": "regions",
   "overview.diseaseTypes": "disease types",
+  "overview.projects": "projects",
+  "overview.genera": "genera",
   "overview.from": "from",
   "overview.dataVersion": "Data version:",
   "overview.lastUpdated": "Last updated:",
@@ -52,6 +54,11 @@ const en = {
   "home.geographicDistribution": "Geographic Distribution",
   "home.fewerSamples": "Fewer Samples",
   "home.moreSamples": "More Samples",
+  "home.mapColorBy": "Map color by",
+  "home.mapMode.samples": "Samples",
+  "home.mapMode.projects": "Projects",
+  "home.topGeneraTitle": "Global Top 30 Genera",
+  "home.topGeneraDesc": "Ranked by mean relative abundance across aggregated disease profiles, with colors indicating phylum.",
 
   // Feature cards
   "feature.phenotype.title": "Phenotype Explorer",
@@ -60,6 +67,14 @@ const en = {
   "feature.compare.desc": "Statistical comparison between two user-defined sample groups (differential abundance, volcano plot, PCoA)",
   "feature.disease.title": "Disease Browser",
   "feature.disease.desc": "Explore disease-associated microbiome signatures and compare with healthy controls",
+  "feature.network.title": "Interaction Network",
+  "feature.network.desc": "Visualize genus co-occurrence patterns and disease-associated network structure",
+  "feature.lifecycle.title": "Lifecycle Atlas",
+  "feature.lifecycle.desc": "Track gut microbiome dynamics from infancy to centenarian stages",
+  "feature.similarity.title": "Sample Similarity",
+  "feature.similarity.desc": "Search for the most similar microbiome samples based on taxonomic composition",
+  "feature.studies.title": "Study Datasets",
+  "feature.studies.desc": "Browse all included public studies, projects, and cohort-level metadata",
   "feature.metabolism.title": "Metabolic Functions",
   "feature.metabolism.desc": "Browse microbiota by metabolic role: SCFAs, bile acids, tryptophan, TMAO, and more",
 
@@ -75,7 +90,10 @@ const en = {
   "filter.male": "Male",
   "filter.unknown": "Unknown",
   "filter.ageGroup": "Age Group",
-  "filter.disease": "Disease (Top 20)",
+  "filter.disease": "Disease",
+  "filter.searchDisease": "Search disease...",
+  "filter.showAll": "Show all {n} diseases",
+  "filter.showLess": "Show less",
 
   // Search — Species Search Engine
   "search.title": "Species Search",
@@ -577,6 +595,8 @@ const zh: Record<keyof typeof en, string> = {
   "overview.countries": "个国家",
   "overview.regions": "个区域",
   "overview.diseaseTypes": "种疾病",
+  "overview.projects": "个研究项目",
+  "overview.genera": "个菌属",
   "overview.from": "来自",
   "overview.dataVersion": "数据版本：",
   "overview.lastUpdated": "最后更新：",
@@ -589,6 +609,11 @@ const zh: Record<keyof typeof en, string> = {
   "home.geographicDistribution": "地理分布",
   "home.fewerSamples": "较少样本",
   "home.moreSamples": "较多样本",
+  "home.mapColorBy": "地图颜色",
+  "home.mapMode.samples": "样本数",
+  "home.mapMode.projects": "研究数",
+  "home.topGeneraTitle": "全球 Top 30 菌属",
+  "home.topGeneraDesc": "按聚合疾病画像中的平均相对丰度排序，颜色表示所属门。",
 
   // Feature cards
   "feature.phenotype.title": "表型探索",
@@ -598,6 +623,14 @@ const zh: Record<keyof typeof en, string> = {
   "feature.metabolism.title": "代谢功能",
   "feature.disease.title": "疾病浏览",
   "feature.disease.desc": "探索疾病相关微生物组特征，与健康对照比较",
+  "feature.network.title": "互作网络",
+  "feature.network.desc": "可视化菌属共现模式与疾病相关网络结构",
+  "feature.lifecycle.title": "全生命周期",
+  "feature.lifecycle.desc": "追踪从婴儿到百岁老人阶段的肠道菌群变化",
+  "feature.similarity.title": "样本相似度",
+  "feature.similarity.desc": "基于菌群组成搜索最相近的微生物组样本",
+  "feature.studies.title": "研究数据集",
+  "feature.studies.desc": "浏览所有纳入的公开研究、项目与队列元数据",
   "feature.metabolism.desc": "按代谢角色浏览微生物：短链脂肪酸、胆汁酸、色氨酸、TMAO等",
 
   // Filter panel
@@ -612,7 +645,10 @@ const zh: Record<keyof typeof en, string> = {
   "filter.male": "男",
   "filter.unknown": "未知",
   "filter.ageGroup": "年龄组",
-  "filter.disease": "疾病（前20）",
+  "filter.disease": "疾病",
+  "filter.searchDisease": "搜索疾病...",
+  "filter.showAll": "展示全部 {n} 种疾病",
+  "filter.showLess": "收起",
 
   // Search
   "search.title": "物种搜索",

@@ -252,6 +252,9 @@ def get_metadata() -> pd.DataFrame:
     else:
         df["sample_key"] = df.index.astype(str)
 
+    if "pubdate" in df.columns:
+        df["year"] = pd.to_datetime(df["pubdate"], errors="coerce").dt.year
+
     logging.info(f"Metadata loaded: {len(df)} rows")
     return df
 
@@ -325,6 +328,41 @@ def extract_phylum(col_name: str) -> str:
     """Extract phylum from full taxonomy. / 提取门名"""
     parts = col_name.split(".")
     return parts[1] if len(parts) > 1 else col_name
+
+
+def get_project_column(meta: pd.DataFrame) -> str | None:
+    """Return the project column name if available."""
+    for candidate in ("BioProject", "project"):
+        if candidate in meta.columns:
+            return candidate
+    return None
+
+
+def count_unique_projects(meta: pd.DataFrame) -> int:
+    """Count unique public projects from metadata."""
+    project_col = get_project_column(meta)
+    if project_col is None:
+        return 0
+    series = meta[project_col].dropna().astype(str).str.strip().replace("", pd.NA).dropna()
+    return int(series.nunique())
+
+
+def count_unique_genera_from_abundance() -> int:
+    """Count unique genera from abundance matrix columns."""
+    abund = get_abundance()
+    genera = {extract_genus(col).strip() for col in abund.columns if extract_genus(col).strip()}
+    return len(genera)
+
+
+def build_genus_phylum_map(columns: list[str]) -> dict[str, str]:
+    """Build a genus → phylum lookup from taxonomy columns."""
+    phylum_map: dict[str, str] = {}
+    for col in columns:
+        genus = extract_genus(col).strip()
+        phylum = extract_phylum(col).strip()
+        if genus and genus not in phylum_map:
+            phylum_map[genus] = phylum
+    return phylum_map
 
 
 # ── Pydantic models / 请求/响应模型 ────────────────────────────────────────────
@@ -725,14 +763,83 @@ def data_stats(request: Request):
     all_diseases.discard("unknown")
     all_diseases.discard("NC")
 
+    project_col = get_project_column(meta)
+    country_project_counts: dict[str, int] = {}
+    if project_col is not None and "country" in meta.columns:
+        project_meta = meta[[project_col, "country"]].copy()
+        project_meta[project_col] = project_meta[project_col].astype(str).str.strip()
+        project_meta["country"] = project_meta["country"].astype(str).str.strip()
+        project_meta = project_meta[
+            project_meta[project_col].ne("") & project_meta["country"].ne("") & project_meta["country"].ne("unknown")
+        ]
+        country_project_counts = {
+            str(country): int(count)
+            for country, count in project_meta.groupby("country")[project_col].nunique().items()
+        }
+
     result = {
         "total_samples": int(len(meta)),
         "total_countries": int(meta.loc[meta["country"] != "unknown", "country"].nunique()) if "country" in meta.columns else 0,
         "total_diseases": len(all_diseases),
+        "total_projects": count_unique_projects(meta),
+        "total_genera": count_unique_genera_from_abundance(),
+        "country_project_counts": country_project_counts,
         "last_updated": version_info.get("last_updated", datetime.now().strftime("%Y-%m-%d")),
         "version": version_info.get("version", f"v1.0_{datetime.now().strftime('%Y%m%d')}"),
     }
     set_cached("data_stats", result)
+    return result
+
+
+@app.get("/api/project-timeline",
+         summary="Project growth timeline",
+         description="Returns yearly sample and project counts for homepage trend views.")
+@limiter.limit("120/minute")
+def project_timeline(request: Request):
+    """Return yearly sample/project counts derived from metadata pubdate."""
+    cached = get_cached("project_timeline")
+    if cached:
+        return cached
+
+    meta = get_metadata().copy()
+    project_col = get_project_column(meta)
+
+    if "year" not in meta.columns and "pubdate" in meta.columns:
+        meta["year"] = pd.to_datetime(meta["pubdate"], errors="coerce").dt.year
+
+    if "year" not in meta.columns:
+        result = {"timeline": []}
+        set_cached("project_timeline", result)
+        return result
+
+    year_meta = meta.dropna(subset=["year"]).copy()
+    if year_meta.empty:
+        result = {"timeline": []}
+        set_cached("project_timeline", result)
+        return result
+
+    year_meta["year"] = year_meta["year"].astype(int)
+
+    if project_col is not None:
+        grouped = year_meta.groupby("year").agg(
+            n_samples=(project_col, "size"),
+            n_projects=(project_col, "nunique"),
+        ).reset_index()
+    else:
+        grouped = year_meta.groupby("year").size().reset_index(name="n_samples")
+        grouped["n_projects"] = 0
+
+    result = {
+        "timeline": [
+            {
+                "year": int(row.year),
+                "n_samples": int(row.n_samples),
+                "n_projects": int(row.n_projects),
+            }
+            for row in grouped.itertuples(index=False)
+        ]
+    }
+    set_cached("project_timeline", result)
     return result
 
 

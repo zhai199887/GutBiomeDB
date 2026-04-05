@@ -1,3 +1,4 @@
+import { useMemo, useState } from "react";
 import { useI18n } from "@/i18n";
 import { useData, setFilters, resetFilters, DEFAULT_FILTERS } from "@/data";
 import { formatNumber } from "@/util/string";
@@ -20,8 +21,28 @@ const FilterPanel = () => {
   const { t, locale } = useI18n();
   const summary = useData((s) => s.summary);
   const filters = useData((s) => s.filters);
+  const [diseaseSearch, setDiseaseSearch] = useState("");
+  const [showAllDiseases, setShowAllDiseases] = useState(false);
 
   if (!summary) return null;
+
+  const allDiseases = useMemo(
+    () =>
+      Object.keys(summary.disease_counts)
+        .filter((d) => d !== "unknown" && d !== "NC")
+        .sort((a, b) => (summary.disease_counts[b] ?? 0) - (summary.disease_counts[a] ?? 0)),
+    [summary],
+  );
+
+  const displayDiseases = useMemo(() => {
+    if (diseaseSearch.trim()) {
+      const query = diseaseSearch.trim().toLowerCase();
+      return allDiseases
+        .filter((d) => d.toLowerCase().includes(query))
+        .slice(0, 30);
+    }
+    return showAllDiseases ? allDiseases : summary.top20_diseases;
+  }, [allDiseases, diseaseSearch, showAllDiseases, summary.top20_diseases]);
 
   const countFiltered = () => {
     let total = summary.total_samples;
@@ -126,8 +147,15 @@ const FilterPanel = () => {
         {/* Disease filter */}
         <div className={classes.group}>
           <label className={classes.label}>{t("filter.disease")}</label>
+          <input
+            className={classes.diseaseSearch}
+            type="text"
+            placeholder={t("filter.searchDisease")}
+            value={diseaseSearch}
+            onChange={(event) => setDiseaseSearch(event.target.value)}
+          />
           <div className={classes.buttons}>
-            {summary.top20_diseases.map((d) => (
+            {displayDiseases.map((d) => (
               <button
                 key={d}
                 className={classes.btn}
@@ -139,6 +167,15 @@ const FilterPanel = () => {
               </button>
             ))}
           </div>
+          {!diseaseSearch.trim() && (
+            <button
+              type="button"
+              className={classes.toggleAll}
+              onClick={() => setShowAllDiseases((current) => !current)}
+            >
+              {showAllDiseases ? t("filter.showLess") : t("filter.showAll", { n: String(allDiseases.length) })}
+            </button>
+          )}
         </div>
       </div>
     </section>

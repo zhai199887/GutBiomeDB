@@ -46,9 +46,21 @@ export type SampleRecord = {
 
 export type AbundanceSummary = {
   genera: string[];
+  phylum_map?: Record<string, string>;
   by_age_group: Record<string, Record<string, number>>;
   by_sex: Record<string, Record<string, number>>;
   by_disease: Record<string, Record<string, number>>;
+};
+
+export type ApiStats = {
+  last_updated?: string;
+  version?: string;
+  total_samples?: number;
+  total_countries?: number;
+  total_diseases?: number;
+  total_projects?: number;
+  total_genera?: number;
+  country_project_counts?: Record<string, number>;
 };
 
 // ── Search types ──────────────────────────────────────────────────────────────

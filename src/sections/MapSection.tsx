@@ -1,10 +1,10 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { renderToString } from "react-dom/server";
 import * as d3 from "d3";
 import type { Feature } from "geojson";
 import { clamp } from "lodash";
 import Placeholder from "@/components/Placeholder";
-import type { Data, Filters, MetadataSummary, CountryStat } from "@/data";
+import type { ApiStats, Data, Filters, MetadataSummary, CountryStat } from "@/data";
 import { DEFAULT_FILTERS, setSelectedFeature, useData } from "@/data";
 import { useI18n } from "@/i18n";
 import { downloadSvg, getCssVariable } from "@/util/dom";
@@ -13,6 +13,7 @@ import classes from "./Map.module.css";
 
 const width = 770;
 const height = 400;
+const API_BASE = import.meta.env.VITE_API_URL ?? "http://localhost:8000";
 
 /** Estimate filtered sample count for a country based on its stats + global fallback */
 const estimateFilteredCount = (
@@ -79,25 +80,61 @@ const MapSection = () => {
   const summary = useData((s) => s.summary);
   const selectedFeature = useData((s) => s.selectedFeature);
   const filters = useData((s) => s.filters);
+  const [mapMode, setMapMode] = useState<"samples" | "projects">("samples");
+  const [apiStats, setApiStats] = useState<ApiStats | null>(null);
   const mapInstanceRef = useRef<ReturnType<typeof makeMap> | null>(null);
+  const mapModeLabels = {
+    samples: t("home.mapMode.samples"),
+    projects: t("home.mapMode.projects"),
+  } as const;
 
   useEffect(() => {
     mapInstanceRef.current = makeMap();
   }, []);
 
   useEffect(() => {
-    mapInstanceRef.current?.(byCountry, summary, selectedFeature, filters);
-  }, [byCountry, summary, selectedFeature, filters]);
+    fetch(`${API_BASE}/api/data-stats`)
+      .then((response) => response.json())
+      .then(setApiStats)
+      .catch(() => { /* backend not running, ignore */ });
+  }, []);
+
+  useEffect(() => {
+    mapInstanceRef.current?.(
+      byCountry,
+      summary,
+      selectedFeature,
+      filters,
+      mapMode,
+      apiStats?.country_project_counts ?? {},
+    );
+  }, [apiStats?.country_project_counts, byCountry, filters, mapMode, selectedFeature, summary]);
 
   if (!byCountry || !summary)
     return <Placeholder height={400}>Loading map...</Placeholder>;
 
   const gray = getCssVariable("--gray");
+  const legendStart = mapMode === "samples" ? t("home.fewerSamples") : `${t("home.mapMode.projects")} ↓`;
+  const legendEnd = mapMode === "samples" ? t("home.moreSamples") : `${t("home.mapMode.projects")} ↑`;
 
   return (
     <section>
       <h2>{t("home.geographicDistribution")}</h2>
       <div className="sub-section">
+        <div className={classes.mapControls}>
+          <span className={classes.mapModeLabel}>{t("home.mapColorBy")}</span>
+          {(["samples", "projects"] as const).map((mode) => (
+            <button
+              key={mode}
+              type="button"
+              className={classes.mapModeBtn}
+              data-active={mapMode === mode}
+              onClick={() => setMapMode(mode)}
+            >
+              {mapModeLabels[mode]}
+            </button>
+          ))}
+        </div>
         <svg
           viewBox={[0, 0, width, height].join(" ")}
           id="map"
@@ -119,12 +156,12 @@ const MapSection = () => {
         </svg>
 
         <div className={classes.legend}>
-          <span>{t("home.fewerSamples")}</span>
+          <span>{legendStart}</span>
           <span
             className={classes.gradient}
             data-inactive={!!selectedFeature}
           />
-          <span>{t("home.moreSamples")}</span>
+          <span>{legendEnd}</span>
         </div>
       </div>
     </section>
@@ -197,6 +234,8 @@ const makeMap = () => {
     summary: MetadataSummary | undefined,
     selectedFeature: Data["selectedFeature"],
     filters?: Filters,
+    mapMode: "samples" | "projects" = "samples",
+    countryProjectCounts: Record<string, number> = {},
   ) => {
     if (!byCountry) return;
 
@@ -207,6 +246,12 @@ const makeMap = () => {
     const black = getCssVariable("--black");
 
     type Datum = (typeof byCountry)["features"][number];
+    type EnrichedDatum = Datum & {
+      properties: Datum["properties"] & {
+        samples: number;
+        projects: number;
+      };
+    };
     const svg = d3.select<SVGSVGElement, unknown>("#map");
     if (!svg.node()) return;
 
@@ -232,22 +277,27 @@ const makeMap = () => {
         const code = f.properties.code ?? "";
         const stat = countryStats[code];
         const filteredSamples = estimateFilteredCount(stat, f.properties.samples, activeFilters, summary);
+        const projectCount = countryProjectCounts[code] ?? 0;
         return {
           ...f,
           properties: {
             ...f.properties,
             samples: filteredSamples,
+            projects: projectCount,
           },
         };
       }),
     };
 
-    const [, max = 1000] = d3.extent(
+    const getValue = (feature: EnrichedDatum) =>
+      mapMode === "samples" ? feature.properties.samples : (feature.properties.projects ?? 0);
+    const [, maxValue = 1000] = d3.extent(
       enriched.features,
-      (d) => d.properties.samples,
+      (d) => getValue(d),
     );
+    const max = Math.max(1, maxValue);
 
-    const isSelected = (d: Datum) =>
+    const isSelected = (d: EnrichedDatum) =>
       selectedFeature?.country === ""
         ? selectedFeature?.region === d.properties.region
         : selectedFeature?.country === d.properties.country;
@@ -260,8 +310,8 @@ const makeMap = () => {
 
     svg
       .select(".features")
-      .selectAll(".feature")
-      .data(enriched.features, (d) => {
+      .selectAll<Element, EnrichedDatum>(".feature")
+      .data(enriched.features as EnrichedDatum[], (d) => {
         const { region, country } = d.properties;
         return region + "|" + country;
       })
@@ -269,14 +319,14 @@ const makeMap = () => {
       .attr("class", "feature")
       .attr("d", path)
       .attr("fill", (d) =>
-        isSelected(d) ? secondary : scale(d.properties.samples || 1),
+        isSelected(d) ? secondary : scale(Math.max(1, getValue(d))),
       )
       .attr("stroke", black)
       .attr("stroke-width", 0.5)
       .style("cursor", "pointer")
       .attr("role", "graphics-symbol")
       .attr("data-tooltip", ({ properties }) => {
-        const { country, region, code, samples } = properties;
+        const { country, region, code, samples, projects } = properties;
         const stat = countryStats[code ?? ""];
 
         let sexInfo: string | undefined;
@@ -316,6 +366,8 @@ const makeMap = () => {
             <span>{region}</span>
             <span>Samples</span>
             <span>{formatNumber(samples, false)}</span>
+            <span>Projects</span>
+            <span>{formatNumber(projects, false)}</span>
             {sexInfo && (
               <>
                 <span>Sex ratio</span>

@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { renderToString } from "react-dom/server";
 import * as d3 from "d3";
 import Placeholder from "@/components/Placeholder";
+import type { AbundanceSummary } from "@/data";
 import { useI18n } from "@/i18n";
 import { useData } from "@/data";
 import { diseaseShortNameI18n } from "@/util/diseaseNames";
@@ -21,19 +22,62 @@ const AGE_ORDER = [
   "Unknown",
 ];
 
+const PHYLUM_MAP: Record<string, string> = {
+  Bacteroides: "Bacteroidota",
+  Parabacteroides: "Bacteroidota",
+  Alistipes: "Bacteroidota",
+  Segatella: "Bacteroidota",
+  Bifidobacterium: "Actinomycetota",
+  Collinsella: "Actinomycetota",
+  Faecalibacterium: "Bacillota",
+  Blautia: "Bacillota",
+  Roseburia: "Bacillota",
+  Ruminococcus: "Bacillota",
+  Agathobacter: "Bacillota",
+  Gemmiger: "Bacillota",
+  Anaerostipes: "Bacillota",
+  Dialister: "Bacillota",
+  Clostridium: "Bacillota",
+  Enterococcus: "Bacillota",
+  Streptococcus: "Bacillota",
+  Staphylococcus: "Bacillota",
+  Veillonella: "Bacillota",
+  Mediterraneibacter: "Bacillota",
+  Fusicatenibacter: "Bacillota",
+  Dorea: "Bacillota",
+  Thomasclavelia: "Bacillota",
+  Anaerobutyricum: "Bacillota",
+  Enterocloster: "Bacillota",
+  Phascolarctobacterium: "Bacillota",
+  Shigella: "Pseudomonadota",
+  Klebsiella: "Pseudomonadota",
+  Haemophilus: "Pseudomonadota",
+  Akkermansia: "Verrucomicrobiota",
+};
+
+const PHYLUM_COLORS: Record<string, string> = {
+  Bacillota: "#e23fff",
+  Bacteroidota: "#6ec1e4",
+  Pseudomonadota: "#ff6b6b",
+  Actinomycetota: "#ffd93d",
+  Verrucomicrobiota: "#6bcb77",
+};
+
 const PhenotypeCharts = () => {
   const summary = useData((s) => s.summary);
+  const abundance = useData((s) => s.abundance);
   const filters = useData((s) => s.filters);
   const { t, locale } = useI18n();
 
   useEffect(() => {
-    if (!summary) return;
+    if (!summary || !abundance) return;
     drawAgeChart(summary.age_counts, summary.age_sex_cross, filters.age_groups, locale);
     drawDiseaseChart(summary.disease_counts, filters.diseases, locale);
     drawHeatmap(summary.age_disease_cross, summary.top20_diseases.slice(0, 15), locale);
-  }, [summary, filters, locale]);
+    drawGenusRankChart(abundance, locale);
+  }, [summary, abundance, filters, locale]);
 
-  if (!summary)
+  if (!summary || !abundance)
     return <Placeholder height={300}>Loading charts...</Placeholder>;
 
   return (
@@ -53,6 +97,13 @@ const PhenotypeCharts = () => {
         <h3>{t("home.heatmapTitle")}</h3>
         {/* viewBox: left=-160(y轴标签), top=-80(列头), width=1100(图+图例), height=580(含旋转标签) */}
         <svg id="heatmap" className="chart" viewBox="-160 -80 1100 580" />
+      </div>
+      <div className="sub-section" style={{ marginTop: "1.5rem" }}>
+        <h3>{t("home.topGeneraTitle")}</h3>
+        <p style={{ color: "var(--light-gray)", fontSize: "0.85rem" }}>
+          {t("home.topGeneraDesc")}
+        </p>
+        <svg id="genus-rank-chart" className="chart" viewBox="-180 -20 860 600" />
       </div>
     </section>
   );
@@ -295,4 +346,66 @@ const drawHeatmap = (
     .attr("dominant-baseline", "auto")
     .attr("font-size", 11).attr("fill", "var(--light-gray)")
     .text("0");
+};
+
+const drawGenusRankChart = (
+  abundance: AbundanceSummary,
+  locale: string = "en",
+) => {
+  const svg = d3.select<SVGSVGElement, unknown>("#genus-rank-chart");
+  if (!svg.node()) return;
+  svg.selectAll("*").remove();
+
+  const W = 520;
+  const H = 540;
+  const genusAbundance: Record<string, number> = {};
+  const phylumMap = abundance.phylum_map ?? PHYLUM_MAP;
+
+  for (const genus of abundance.genera) {
+    const values = Object.values(abundance.by_disease).map((entry) => entry[genus] ?? 0);
+    genusAbundance[genus] = d3.mean(values) ?? 0;
+  }
+
+  const top30 = [...abundance.genera]
+    .sort((a, b) => (genusAbundance[b] ?? 0) - (genusAbundance[a] ?? 0))
+    .slice(0, 30);
+
+  const xScale = d3.scaleLinear()
+    .domain([0, d3.max(top30, (genus) => genusAbundance[genus]) ?? 0.1])
+    .range([0, W]);
+  const yScale = d3.scaleBand().domain(top30).range([0, H]).padding(0.15);
+
+  svg.selectAll(".bar")
+    .data(top30)
+    .join("rect")
+    .attr("class", "bar")
+    .attr("x", 0)
+    .attr("y", (genus) => yScale(genus) ?? 0)
+    .attr("width", (genus) => xScale(genusAbundance[genus] ?? 0))
+    .attr("height", yScale.bandwidth())
+    .attr("fill", (genus) => PHYLUM_COLORS[phylumMap[genus] ?? ""] ?? getCssVariable("--primary"))
+    .attr("opacity", 0.85)
+    .attr("rx", 2)
+    .attr("role", "graphics-symbol")
+    .attr("data-tooltip", (genus) => renderToString(
+      <div className="tooltip-table">
+        <span>{locale === "zh" ? "菌属" : "Genus"}</span>
+        <span><i>{genus}</i></span>
+        <span>{locale === "zh" ? "所属门" : "Phylum"}</span>
+        <span>{phylumMap[genus] ?? "Unknown"}</span>
+        <span>{locale === "zh" ? "平均丰度" : "Mean Abundance"}</span>
+        <span>{((genusAbundance[genus] ?? 0) * 100).toFixed(3)}%</span>
+      </div>,
+    ));
+
+  svg.append("g")
+    .call(d3.axisLeft(yScale))
+    .attr("font-size", "12px")
+    .selectAll("text")
+    .attr("font-style", "italic");
+
+  svg.append("g")
+    .attr("transform", `translate(0,${H})`)
+    .call(d3.axisBottom(xScale).tickFormat((value) => `${(Number(value) * 100).toFixed(2)}%`))
+    .attr("font-size", "11px");
 };

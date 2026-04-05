@@ -1,38 +1,43 @@
 .tiles {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 40px;
-}
-
-@media (max-width: 800px) {
-  .tiles {
-    grid-template-columns: repeat(2, 1fr);
-  }
-}
-
-@media (max-width: 400px) {
-  .tiles {
-    grid-template-columns: repeat(1, 1fr);
-  }
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  justify-content: center;
+  margin: 1.5rem 0;
 }
 
 .tile {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  align-items: center;
+  gap: 0.5rem;
   text-align: center;
+  min-width: 120px;
+  flex: 1 1 120px;
 }
 
 .tile svg {
   height: 1.5em;
 }
 
+.tileValue {
+  font-size: 1.55rem;
+  font-weight: 700;
+}
+
+.tileLabel {
+  font-size: 0.85rem;
+  color: var(--light-gray);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
 /* Version badge / 版本徽章 */
 .versionBadge {
+  text-align: center;
   font-size: 0.78rem;
   color: var(--light-gray);
-  margin: 0;
-  text-align: center;
+  margin-top: 0.5rem;
 }
 
 /* Methodology note / 方法说明 */
@@ -52,13 +57,22 @@
 /* Feature cards / 功能卡片 */
 .featureGrid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 16px;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1rem;
+  margin: 1.5rem 0;
   width: 100%;
 }
 
-@media (max-width: 700px) {
-  .featureGrid { grid-template-columns: 1fr; }
+@media (max-width: 900px) {
+  .featureGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 500px) {
+  .featureGrid {
+    grid-template-columns: 1fr;
+  }
 }
 
 .featureCard {

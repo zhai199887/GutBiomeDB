@@ -6,6 +6,7 @@
 import { useEffect, useRef, useState } from "react";
 import { renderToString } from "react-dom/server";
 import * as d3 from "d3";
+import { useNavigate } from "react-router-dom";
 import { useI18n } from "@/i18n";
 import { useData } from "@/data";
 import { getCssVariable } from "@/util/dom";
@@ -80,13 +81,20 @@ const PHYLUM_COLORS: Record<string, string> = {
 const SankeyChart = () => {
   const { t } = useI18n();
   const svgRef = useRef<SVGSVGElement>(null);
+  const navigate = useNavigate();
+  const navigateRef = useRef(navigate);
   const abundance = useData((s) => s.abundance);
   const [highlight, setHighlight] = useState<string | null>(null);
+
+  useEffect(() => {
+    navigateRef.current = navigate;
+  }, [navigate]);
 
   useEffect(() => {
     if (!svgRef.current || !abundance) return;
     const svg = d3.select(svgRef.current);
     svg.selectAll("*").remove();
+    const phylumMap = abundance.phylum_map ?? PHYLUM_MAP;
 
     // ── Build Sankey data / 构建桑基数据 ──────────────────────────────────
     const genera = abundance.genera;
@@ -100,14 +108,14 @@ const SankeyChart = () => {
 
     // Get top 20 genera by abundance / 取丰度前20的属
     const topGenera = genera
-      .filter((g) => PHYLUM_MAP[g])
+      .filter((g) => phylumMap[g])
       .sort((a, b) => (genusAbundance[b] ?? 0) - (genusAbundance[a] ?? 0))
       .slice(0, 20);
 
     // Aggregate by phylum / 按门聚合
     const phylumTotals: Record<string, number> = {};
     for (const g of topGenera) {
-      const p = PHYLUM_MAP[g] ?? "Other";
+      const p = phylumMap[g] ?? "Other";
       phylumTotals[p] = (phylumTotals[p] ?? 0) + (genusAbundance[g] ?? 0);
     }
 
@@ -149,8 +157,8 @@ const SankeyChart = () => {
     let gy = 0;
     // Sort genera by phylum then abundance / 按门再按丰度排序
     const sortedGenera = [...topGenera].sort((a, b) => {
-      const pi = phyla.indexOf(PHYLUM_MAP[a]);
-      const pj = phyla.indexOf(PHYLUM_MAP[b]);
+      const pi = phyla.indexOf(phylumMap[a]);
+      const pj = phyla.indexOf(phylumMap[b]);
       if (pi !== pj) return pi - pj;
       return (genusAbundance[b] ?? 0) - (genusAbundance[a] ?? 0);
     });
@@ -174,7 +182,7 @@ const SankeyChart = () => {
 
     const links: SankeyLink[] = [];
     for (const gen of sortedGenera) {
-      const p = PHYLUM_MAP[gen];
+      const p = phylumMap[gen];
       const pNode = phylumNodes.find((n) => n.label === p)!;
       const gNode = genusNodes.find((n) => n.label === gen)!;
       const val = genusAbundance[gen] ?? 0;
@@ -272,8 +280,8 @@ const SankeyChart = () => {
       .attr("y", (d) => d.y)
       .attr("width", nodeW)
       .attr("height", (d) => d.dy)
-      .attr("fill", (d) => PHYLUM_COLORS[PHYLUM_MAP[d.label] ?? ""] ?? "#666")
-      .attr("opacity", (d) => (!highlight || highlight === d.label || highlight === PHYLUM_MAP[d.label] ? 0.9 : 0.3))
+      .attr("fill", (d) => PHYLUM_COLORS[phylumMap[d.label] ?? ""] ?? "#666")
+      .attr("opacity", (d) => (!highlight || highlight === d.label || highlight === phylumMap[d.label] ? 0.9 : 0.3))
       .attr("rx", 3)
       .style("cursor", "pointer")
       .on("mouseenter", (_, d) => setHighlight(d.label))
@@ -290,7 +298,13 @@ const SankeyChart = () => {
       .attr("fill", "currentColor")
       .attr("font-size", 10)
       .attr("font-style", "italic")
-      .attr("opacity", (d) => (!highlight || highlight === d.label || highlight === PHYLUM_MAP[d.label] ? 1 : 0.3))
+      .attr("opacity", (d) => (!highlight || highlight === d.label || highlight === phylumMap[d.label] ? 1 : 0.3))
+      .style("cursor", "pointer")
+      .style("text-decoration", "underline")
+      .style("text-decoration-color", getCssVariable("--accent"))
+      .on("mouseenter", (_, d) => setHighlight(d.label))
+      .on("mouseleave", () => setHighlight(null))
+      .on("click", (_, d) => navigateRef.current(`/species/${d.label}`))
       .text((d) => `${d.label} (${(d.value * 100).toFixed(2)}%)`);
 
     // ── Column headers / 列标题 ─────────────────────────────────────────
