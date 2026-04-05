@@ -1,117 +1,141 @@
-/**
- * LollipopPanel.tsx — Lollipop 差异丰度面板（嵌入 DiseasePage Tab）
- * log2FC + 显著性 + 门级着色
- */
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { renderToString } from "react-dom/server";
 import * as d3 from "d3";
 import { useI18n } from "@/i18n";
-import { exportTable } from "@/util/export";
-import { exportSVG, exportPNG } from "@/util/chartExport";
 import { cachedFetch } from "@/util/apiCache";
+import { exportTable } from "@/util/export";
+import { exportPNG, exportSVG } from "@/util/chartExport";
+import { phylumColor } from "@/util/phylumColors";
+import type { LollipopItem } from "./types";
 import classes from "../DiseasePage.module.css";
 
 const API_BASE = import.meta.env.VITE_API_URL ?? "http://localhost:8000";
-
-const PHYLUM_COLORS: Record<string, string> = {
-  Bacillota: "#e74c3c",
-  Bacteroidota: "#3498db",
-  Actinomycetota: "#2ecc71",
-  Pseudomonadota: "#f39c12",
-  Verrucomicrobiota: "#9b59b6",
-  Fusobacteriota: "#1abc9c",
-  Euryarchaeota: "#e67e22",
-  Synergistota: "#34495e",
-};
-const DEFAULT_COLOR = "#95a5a6";
-
-interface LollipopItem {
-  genus: string;
-  phylum: string;
-  log2fc: number;
-  neg_log10p: number;
-  p_value: number;
-  mean_disease: number;
-  mean_control: number;
-}
 
 interface Props {
   disease: string;
 }
 
+const formatP = (value: number) => {
+  if (value < 0.001) return value.toExponential(2);
+  return value.toFixed(4);
+};
+
 const LollipopPanel = ({ disease }: Props) => {
   const { t, locale } = useI18n();
+  const svgRef = useRef<SVGSVGElement>(null);
+
   const [data, setData] = useState<LollipopItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const svgRef = useRef<SVGSVGElement>(null);
+  const [pCutoff, setPCutoff] = useState("0.05");
+  const [fcCutoff, setFcCutoff] = useState("0");
+  const [showOnlySig, setShowOnlySig] = useState(false);
 
-  // 选病后自动请求数据
   useEffect(() => {
     if (!disease) return;
     setLoading(true);
-    setData([]);
     setError(null);
-    cachedFetch<{ data: LollipopItem[] }>(`${API_BASE}/api/lollipop-data?disease=${encodeURIComponent(disease)}`)
-      .then(d => setData(d.data ?? []))
+    setData([]);
+    cachedFetch<{ data: LollipopItem[] }>(`${API_BASE}/api/lollipop-data?disease=${encodeURIComponent(disease)}&top_n=120`)
+      .then((response) => setData(response.data ?? []))
       .catch(() => {
         setError(locale === "zh" ? "后端未启动或连接失败" : "Backend not available or connection failed");
       })
       .finally(() => setLoading(false));
   }, [disease, locale]);
 
-  // 绘制 Lollipop 图
-  useEffect(() => {
-    if (!svgRef.current || data.length === 0) return;
-    drawLollipop(svgRef.current, data);
-  }, [data]);
+  const filteredData = useMemo(() => {
+    const cutoff = pCutoff === "all" ? Number.POSITIVE_INFINITY : Number(pCutoff);
+    const fc = Number(fcCutoff);
+    return data.filter((item) => (
+      item.adjusted_p <= cutoff
+      && Math.abs(item.log2fc) >= fc
+      && (!showOnlySig || item.adjusted_p < 0.05)
+    ));
+  }, [data, fcCutoff, pCutoff, showOnlySig]);
 
-  const exportLollipopCsv = () => {
-    if (!data.length) return;
+  useEffect(() => {
+    if (!svgRef.current) return;
+    if (filteredData.length === 0) {
+      d3.select(svgRef.current).selectAll("*").remove();
+      return;
+    }
+    drawLollipop(svgRef.current, filteredData, locale, Number(fcCutoff));
+  }, [fcCutoff, filteredData, locale]);
+
+  const exportCsv = () => {
+    if (filteredData.length === 0) return;
     exportTable(
-      data.map((d) => ({
-        Genus: d.genus,
-        Phylum: d.phylum,
-        Log2FC: d.log2fc,
-        P_value: d.p_value,
-        Mean_Disease: d.mean_disease,
-        Mean_Control: d.mean_control,
+      filteredData.map((item) => ({
+        Genus: item.genus,
+        Phylum: item.phylum,
+        Log2FC: item.log2fc,
+        Adjusted_P: item.adjusted_p,
+        P_value: item.p_value,
+        NegLog10P: item.neg_log10p,
+        Disease_Prevalence: item.prevalence_disease,
+        Control_Prevalence: item.prevalence_control,
       })),
       `lollipop_${disease}_${Date.now()}`,
     );
   };
 
-  const exportLollipopChart = (type: "svg" | "png") => {
-    const svg = svgRef.current;
-    if (!svg) return;
-    type === "svg"
-      ? exportSVG(svg, `lollipop_${disease}_${Date.now()}`)
-      : exportPNG(svg, `lollipop_${disease}_${Date.now()}`);
-  };
-
-  const phyla = [...new Set(data.map(d => d.phylum))];
+  const phyla = [...new Set(filteredData.map((item) => item.phylum))].filter(Boolean);
 
   return (
     <div>
-      {/* 加载状态 */}
-      {loading && <div className={classes.loading}>{t("biomarker.running")}</div>}
+      <div className={classes.biomarkerControls}>
+        <div className={classes.field}>
+          <label>{t("disease.lollipop.pCutoff")}</label>
+          <select className={classes.inlineSelect} value={pCutoff} onChange={(event) => setPCutoff(event.target.value)}>
+            <option value="all">{locale === "zh" ? "全部" : "All"}</option>
+            <option value="0.05">0.05</option>
+            <option value="0.01">0.01</option>
+            <option value="0.001">0.001</option>
+          </select>
+        </div>
 
-      {/* 错误信息 */}
+        <div className={classes.field}>
+          <label>{t("disease.lollipop.fcCutoff")}</label>
+          <select className={classes.inlineSelect} value={fcCutoff} onChange={(event) => setFcCutoff(event.target.value)}>
+            <option value="0">{locale === "zh" ? "全部" : "All"}</option>
+            <option value="0.5">0.5</option>
+            <option value="1">1.0</option>
+            <option value="2">2.0</option>
+          </select>
+        </div>
+
+        <label className={classes.toggleLabel}>
+          <input type="checkbox" checked={showOnlySig} onChange={(event) => setShowOnlySig(event.target.checked)} />
+          <span>{t("disease.lollipop.sigOnly")}</span>
+        </label>
+      </div>
+
+      {loading && <div className={classes.loading}>{t("biomarker.running")}</div>}
       {error && <div className={classes.errorMsg}>{error}</div>}
 
-      {/* Lollipop 图 */}
-      {data.length > 0 && (
+      {!loading && !error && filteredData.length === 0 && (
+        <div className={classes.emptyPlot}>{locale === "zh" ? "当前过滤条件下没有结果" : "No taxa under current filters"}</div>
+      )}
+
+      {filteredData.length > 0 && (
         <div className={classes.chartCard}>
-          <div style={{ display: "flex", gap: "0.5rem", marginBottom: "0.5rem" }}>
-            <button onClick={exportLollipopCsv} style={{ fontSize: "0.8rem", padding: "0.3rem 0.8rem", cursor: "pointer", border: "1px solid #dee2e6", borderRadius: "4px", background: "white" }}>{t("export.csv")}</button>
-            <button onClick={() => exportLollipopChart("svg")} style={{ fontSize: "0.8rem", padding: "0.3rem 0.8rem", cursor: "pointer", border: "1px solid #dee2e6", borderRadius: "4px", background: "white" }}>{t("export.svg")}</button>
-            <button onClick={() => exportLollipopChart("png")} style={{ fontSize: "0.8rem", padding: "0.3rem 0.8rem", cursor: "pointer", border: "1px solid #dee2e6", borderRadius: "4px", background: "white" }}>{t("export.png")}</button>
+          <div className={classes.cardHeader}>
+            <h3>{t("lollipop.title")}</h3>
+            <div className={classes.exportActions}>
+              <button onClick={exportCsv}>{t("export.csv")}</button>
+              <button onClick={() => svgRef.current && exportSVG(svgRef.current, `lollipop_${disease}_${Date.now()}`)}>{t("export.svg")}</button>
+              <button onClick={() => svgRef.current && exportPNG(svgRef.current, `lollipop_${disease}_${Date.now()}`)}>{t("export.png")}</button>
+            </div>
           </div>
+
           <svg ref={svgRef} className={classes.chart} />
+
           <div className={classes.legend}>
-            {phyla.map(p => (
-              <div key={p} className={classes.legendItem}>
-                <span className={classes.legendDot} style={{ background: PHYLUM_COLORS[p] ?? DEFAULT_COLOR }} />
-                <span>{p}</span>
+            {phyla.map((phylum) => (
+              <div key={phylum} className={classes.legendItem}>
+                <span className={classes.legendDot} style={{ background: phylumColor(phylum) }} />
+                <span>{phylum}</span>
               </div>
             ))}
           </div>
@@ -121,77 +145,104 @@ const LollipopPanel = ({ disease }: Props) => {
   );
 };
 
-export default LollipopPanel;
+function tooltipForItem(item: LollipopItem, locale: string) {
+  return renderToString(
+    <div className="tooltip-table">
+      <span>{locale === "zh" ? "菌属" : "Genus"}</span><span><i>{item.genus}</i></span>
+      <span>{locale === "zh" ? "门" : "Phylum"}</span><span>{item.phylum}</span>
+      <span>log₂FC</span><span>{item.log2fc.toFixed(3)}</span>
+      <span>p value</span><span>{item.p_value.toExponential(2)}</span>
+      <span>adj.p (BH)</span><span>{formatP(item.adjusted_p)}</span>
+      <span>{locale === "zh" ? "疾病流行率" : "Prev. Disease"}</span><span>{(item.prevalence_disease * 100).toFixed(1)}%</span>
+      <span>{locale === "zh" ? "对照流行率" : "Prev. Control"}</span><span>{(item.prevalence_control * 100).toFixed(1)}%</span>
+      <span>{locale === "zh" ? "疾病均值" : "Mean Disease"}</span><span>{item.mean_disease.toFixed(3)}%</span>
+      <span>{locale === "zh" ? "对照均值" : "Mean Control"}</span><span>{item.mean_control.toFixed(3)}%</span>
+    </div>,
+  );
+}
 
-// ── Lollipop 绘图函数 ────────────────────────────────────────────────────────
-
-function drawLollipop(svgEl: SVGSVGElement, data: LollipopItem[]) {
+function drawLollipop(svgEl: SVGSVGElement, data: LollipopItem[], locale: string, fcCutoff: number) {
   const svg = d3.select(svgEl);
   svg.selectAll("*").remove();
 
   const sorted = [...data].sort((a, b) => a.log2fc - b.log2fc);
+  const margin = { top: 18, right: 28, bottom: 36, left: 176 };
+  const width = 780;
+  const height = Math.max(360, sorted.length * 20 + margin.top + margin.bottom);
+  const innerWidth = width - margin.left - margin.right;
+  const innerHeight = height - margin.top - margin.bottom;
+  const maxAbs = Math.max(d3.max(sorted, (item) => Math.abs(item.log2fc)) ?? 2, 2);
+  const x = d3.scaleLinear().domain([-maxAbs * 1.15, maxAbs * 1.15]).range([0, innerWidth]);
+  const y = d3.scaleBand().domain(sorted.map((item) => item.genus)).range([0, innerHeight]).padding(0.3);
+  const r = d3.scaleLinear().domain([0, d3.max(sorted, (item) => item.neg_log10p) ?? 1]).range([3.5, 10]);
 
-  const margin = { top: 10, right: 40, bottom: 30, left: 130 };
-  const W = 700, H = Math.max(400, sorted.length * 18 + margin.top + margin.bottom);
-  svg.attr("viewBox", `0 0 ${W} ${H}`);
+  svg.attr("viewBox", `0 0 ${width} ${height}`);
+  const root = svg.append("g").attr("transform", `translate(${margin.left},${margin.top})`);
 
-  const g = svg.append("g").attr("transform", `translate(${margin.left},${margin.top})`);
-  const iW = W - margin.left - margin.right;
-  const iH = H - margin.top - margin.bottom;
+  root.append("line")
+    .attr("x1", x(0))
+    .attr("x2", x(0))
+    .attr("y1", 0)
+    .attr("y2", innerHeight)
+    .attr("stroke", "rgba(255,255,255,0.25)");
 
-  const maxAbs = d3.max(sorted, d => Math.abs(d.log2fc)) ?? 3;
-  const xScale = d3.scaleLinear().domain([-maxAbs * 1.1, maxAbs * 1.1]).range([0, iW]);
+  if (fcCutoff > 0) {
+    [-fcCutoff, fcCutoff].forEach((value) => {
+      root.append("line")
+        .attr("x1", x(value))
+        .attr("x2", x(value))
+        .attr("y1", 0)
+        .attr("y2", innerHeight)
+        .attr("stroke", "rgba(255,255,255,0.18)")
+        .attr("stroke-dasharray", "4,3");
+    });
+  }
 
-  const yScale = d3.scaleBand()
-    .domain(sorted.map(d => d.genus))
-    .range([0, iH])
-    .padding(0.3);
+  root.append("g")
+    .call(d3.axisLeft(y).tickFormat((value) => value.length > 18 ? `${value.slice(0, 16)}…` : value))
+    .attr("font-size", 10)
+    .selectAll("text")
+    .attr("font-style", "italic");
 
-  const maxSig = d3.max(sorted, d => d.neg_log10p) ?? 10;
-  const rScale = d3.scaleLinear().domain([0, maxSig]).range([3, 10]);
+  root.append("g")
+    .attr("transform", `translate(0,${innerHeight})`)
+    .call(d3.axisBottom(x).ticks(6))
+    .attr("font-size", 10);
 
-  // 零线
-  g.append("line")
-    .attr("x1", xScale(0)).attr("x2", xScale(0))
-    .attr("y1", 0).attr("y2", iH)
-    .attr("stroke", "rgba(255,255,255,0.3)");
+  root.append("text")
+    .attr("x", innerWidth / 2)
+    .attr("y", innerHeight + 30)
+    .attr("text-anchor", "middle")
+    .attr("fill", "currentColor")
+    .attr("font-size", 10)
+    .text("log₂ Fold Change");
 
-  // 棒棒糖棍
-  g.selectAll(".stick")
+  root.selectAll("line.stick")
     .data(sorted)
     .join("line")
-    .attr("x1", xScale(0))
-    .attr("x2", d => xScale(d.log2fc))
-    .attr("y1", d => (yScale(d.genus) ?? 0) + yScale.bandwidth() / 2)
-    .attr("y2", d => (yScale(d.genus) ?? 0) + yScale.bandwidth() / 2)
-    .attr("stroke", d => PHYLUM_COLORS[d.phylum] ?? DEFAULT_COLOR)
+    .attr("class", "stick")
+    .attr("x1", x(0))
+    .attr("x2", (item) => x(item.log2fc))
+    .attr("y1", (item) => (y(item.genus) ?? 0) + y.bandwidth() / 2)
+    .attr("y2", (item) => (y(item.genus) ?? 0) + y.bandwidth() / 2)
+    .attr("stroke", (item) => phylumColor(item.phylum))
     .attr("stroke-width", 1.5)
     .attr("opacity", 0.6);
 
-  // 棒棒糖头
-  g.selectAll(".dot")
+  root.selectAll("circle.dot")
     .data(sorted)
     .join("circle")
-    .attr("cx", d => xScale(d.log2fc))
-    .attr("cy", d => (yScale(d.genus) ?? 0) + yScale.bandwidth() / 2)
-    .attr("r", d => rScale(d.neg_log10p))
-    .attr("fill", d => PHYLUM_COLORS[d.phylum] ?? DEFAULT_COLOR)
-    .attr("opacity", 0.85);
-
-  // Y轴
-  g.append("g")
-    .call(d3.axisLeft(yScale).tickFormat(d => d.length > 18 ? d.slice(0, 16) + "\u2026" : d))
-    .attr("font-size", 9)
-    .selectAll("text").attr("font-style", "italic");
-
-  // X轴
-  g.append("g")
-    .attr("transform", `translate(0,${iH})`)
-    .call(d3.axisBottom(xScale).ticks(5))
-    .attr("font-size", 9);
-
-  g.append("text")
-    .attr("x", iW / 2).attr("y", iH + 25)
-    .attr("text-anchor", "middle").attr("fill", "currentColor").attr("font-size", 10)
-    .text("Log\u2082 Fold Change");
+    .attr("class", "dot")
+    .attr("cx", (item) => x(item.log2fc))
+    .attr("cy", (item) => (y(item.genus) ?? 0) + y.bandwidth() / 2)
+    .attr("r", (item) => r(item.neg_log10p))
+    .attr("fill", (item) => phylumColor(item.phylum))
+    .attr("opacity", 0.88)
+    .attr("data-tooltip", (item) => tooltipForItem(item, locale))
+    .style("cursor", "pointer")
+    .on("click", (_, item) => {
+      window.location.href = `/species/${encodeURIComponent(item.genus)}`;
+    });
 }
+
+export default LollipopPanel;

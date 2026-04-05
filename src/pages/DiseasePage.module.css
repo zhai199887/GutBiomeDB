@@ -1,204 +1,396 @@
-/* DiseasePage.module.css — Disease Browser styles */
+/* DiseasePage.module.css — upgraded Disease Browser workspace */
 
 .page {
   min-height: 100vh;
-  background: var(--black);
+  background:
+    radial-gradient(circle at top left, rgba(249, 115, 22, 0.1), transparent 26%),
+    radial-gradient(circle at top right, rgba(20, 184, 166, 0.08), transparent 22%),
+    var(--black);
   color: var(--white);
 }
 
 .topBar {
-  padding: 20px 40px;
-  background: color-mix(in hsl, var(--black), var(--white) 6%);
-  border-bottom: 1px solid var(--dark-gray);
+  padding: 22px 40px 18px;
+  background: color-mix(in hsl, var(--black), var(--white) 5%);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .back {
   color: var(--primary);
   text-decoration: none;
   font-size: 0.85rem;
-  opacity: 0.8;
+  opacity: 0.85;
   transition: opacity var(--fast);
 }
-.back:hover { opacity: 1; }
+
+.back:hover {
+  opacity: 1;
+}
 
 .topBar h1 {
   margin: 8px 0 4px;
-  font-size: 1.6rem;
+  font-size: 1.7rem;
   font-weight: 700;
 }
 
 .topBar p {
-  color: var(--light-gray);
-  font-size: 0.9rem;
   margin: 0;
+  color: var(--light-gray);
+  font-size: 0.92rem;
 }
 
-/* Two-column layout */
 .layout {
   display: grid;
-  grid-template-columns: 320px 1fr;
-  min-height: calc(100vh - 130px);
+  grid-template-columns: 320px minmax(0, 1fr);
+  min-height: calc(100vh - 118px);
 }
 
-/* Left panel — disease list */
 .sidebar {
-  border-right: 1px solid var(--dark-gray);
-  background: color-mix(in hsl, var(--black), var(--white) 3%);
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  border-right: 1px solid rgba(255, 255, 255, 0.08);
+  background: color-mix(in hsl, var(--black), var(--white) 3%);
 }
 
 .searchBox {
-  padding: 12px 16px;
-  border-bottom: 1px solid var(--dark-gray);
+  padding: 14px 16px 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .searchInput {
   width: 100%;
-  padding: 8px 12px;
-  border: 1px solid var(--gray);
-  border-radius: 6px;
-  background: var(--dark-gray);
+  padding: 9px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.03);
   color: var(--white);
   font-size: 0.9rem;
   font-family: inherit;
   outline: none;
 }
-.searchInput::placeholder { color: var(--light-gray); }
-.searchInput:focus { border-color: var(--primary); }
+
+.searchInput::placeholder {
+  color: rgba(255, 255, 255, 0.45);
+}
+
+.searchInput:focus {
+  border-color: var(--primary);
+}
+
+.sidebarControls {
+  display: grid;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.field label {
+  color: var(--light-gray);
+  font-size: 0.76rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.inlineSelect {
+  padding: 8px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--white);
+  font-size: 0.85rem;
+  font-family: inherit;
+  outline: none;
+}
+
+.inlineSelect:focus {
+  border-color: var(--primary);
+}
+
+.sortTabs {
+  display: flex;
+  gap: 8px;
+}
+
+.sortTab,
+.sortTabActive {
+  flex: 1;
+  padding: 7px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--light-gray);
+  font-size: 0.82rem;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.sortTab:hover {
+  color: var(--white);
+}
+
+.sortTabActive {
+  color: var(--black);
+  background: var(--primary);
+  border-color: transparent;
+}
 
 .diseaseList {
   flex: 1;
   overflow-y: auto;
-  padding: 4px 0;
+  padding: 6px 0 12px;
 }
 
-.diseaseItem {
+.diseaseItem,
+.diseaseItemActive {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 10px;
   width: 100%;
-  padding: 10px 16px;
+  padding: 12px 16px;
   border: none;
-  background: none;
-  color: var(--white);
-  cursor: pointer;
-  text-align: left;
-  font-size: 0.85rem;
-  transition: background 0.1s;
   border-left: 3px solid transparent;
+  background: transparent;
+  color: var(--white);
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
 }
-.diseaseItem:hover { background: rgba(255,255,255,0.04); }
+
+.diseaseItem:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+
 .diseaseItemActive {
-  composes: diseaseItem;
-  background: rgba(255,255,255,0.06);
+  background: rgba(255, 255, 255, 0.06);
   border-left-color: var(--primary);
+}
+
+.diseaseMeta {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.diseaseMeta > span:first-child {
+  font-size: 0.88rem;
+}
+
+.diseaseCategory {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--light-gray);
+  font-size: 0.72rem;
 }
 
 .diseaseCount {
   color: var(--light-gray);
-  font-size: 0.75rem;
+  font-size: 0.76rem;
   white-space: nowrap;
-  margin-left: 8px;
 }
 
-/* Right panel — profile */
 .mainPanel {
-  padding: 28px 36px;
+  padding: 28px 34px;
   overflow-y: auto;
 }
 
-.selectHint {
+.selectHint,
+.loading,
+.emptyPlot {
   display: flex;
   align-items: center;
   justify-content: center;
-  height: 60vh;
+  min-height: 220px;
   color: var(--light-gray);
-  font-size: 1rem;
+  text-align: center;
 }
 
-.loading {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  height: 40vh;
-  color: var(--light-gray);
-}
-
-/* Profile header */
 .profileHeader {
-  display: flex;
-  gap: 2rem;
-  margin-bottom: 2rem;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 14px;
+  margin-bottom: 18px;
 }
 
 .statCard {
   display: flex;
   flex-direction: column;
-  padding: 16px 24px;
-  border: 1px solid var(--gray);
-  border-radius: 8px;
-  background: rgba(255,255,255,0.02);
-  min-width: 140px;
+  gap: 4px;
+  min-width: 0;
+  padding: 16px 18px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.03);
 }
 
 .statValue {
-  font-size: 1.5rem;
+  font-size: 1.45rem;
   font-weight: 700;
 }
 
 .statLabel {
-  font-size: 0.75rem;
   color: var(--light-gray);
+  font-size: 0.75rem;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  margin-top: 4px;
 }
 
-/* Bar chart card */
+.profileMeta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 18px;
+}
+
+.metaChip,
+.metaChipLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--light-gray);
+  font-size: 0.82rem;
+  text-decoration: none;
+}
+
+.metaChipLink:hover {
+  color: var(--white);
+}
+
+.tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 18px;
+}
+
+.tab,
+.tabActive {
+  padding: 9px 16px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--light-gray);
+  font-size: 0.88rem;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.tab:hover {
+  color: var(--white);
+}
+
+.tabActive {
+  background: var(--primary);
+  color: var(--black);
+  border-color: transparent;
+}
+
 .chartCard {
+  margin-bottom: 18px;
+  padding: 20px 22px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 18px;
   background: color-mix(in hsl, var(--black), var(--white) 4%);
-  border: 1px solid var(--dark-gray);
-  border-radius: var(--rounded);
-  padding: 20px 24px;
-  margin-bottom: 1.5rem;
 }
 
 .chartCard h3 {
-  margin: 0 0 12px;
+  margin: 0;
   font-size: 1rem;
   font-weight: 600;
 }
 
-.chart { width: 100%; height: auto; }
+.cardHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
 
-/* Genera table */
+.exportActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.exportActions button,
+.runBtn {
+  padding: 7px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--white);
+  font-size: 0.8rem;
+  font-family: inherit;
+  cursor: pointer;
+  transition: opacity 0.2s ease, transform 0.2s ease, border-color 0.2s ease;
+}
+
+.exportActions button:hover,
+.runBtn:hover {
+  opacity: 0.95;
+  transform: translateY(-1px);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.runBtn {
+  align-self: flex-end;
+  background: var(--primary);
+  color: var(--black);
+  border-color: transparent;
+  font-weight: 700;
+}
+
+.runBtn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.chart {
+  width: 100%;
+  height: auto;
+}
+
 .generaTable {
   width: 100%;
   border-collapse: collapse;
-  font-size: 0.85rem;
+  font-size: 0.84rem;
 }
 
 .generaTable thead th {
-  text-align: left;
-  padding: 8px 10px;
+  padding: 10px 10px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   color: var(--light-gray);
-  border-bottom: 1px solid var(--gray);
-  font-weight: 500;
-  font-size: 0.78rem;
+  text-align: left;
+  font-size: 0.76rem;
   text-transform: uppercase;
-  letter-spacing: 0.03em;
+  letter-spacing: 0.04em;
 }
 
 .generaTable tbody td {
-  padding: 8px 10px;
-  border-bottom: 1px solid rgba(255,255,255,0.04);
+  padding: 10px 10px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  vertical-align: middle;
 }
 
 .generaTable tbody tr:hover {
-  background: rgba(255,255,255,0.03);
+  background: rgba(255, 255, 255, 0.025);
 }
 
 .genusLink {
@@ -206,149 +398,252 @@
   text-decoration: none;
   font-style: italic;
 }
-.genusLink:hover { text-decoration: underline; }
 
-.enriched { color: #ff6b6b; }
-.depleted { color: #4ecdc4; }
+.genusLink:hover {
+  text-decoration: underline;
+}
 
-/* Demographics grid */
+.phylumBadge,
+.sigBadge {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--light-gray);
+  font-size: 0.74rem;
+}
+
+.sigBadge {
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.enriched {
+  color: #fb7185;
+}
+
+.depleted {
+  color: #2dd4bf;
+}
+
 .demoGrid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(300px, 100%), 1fr));
-  gap: 1.5rem;
-  margin-top: 1.5rem;
+  grid-template-columns: repeat(auto-fit, minmax(min(320px, 100%), 1fr));
+  gap: 18px;
 }
 
-.miniTable {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 0.85rem;
+.demoBars {
+  display: grid;
+  gap: 12px;
 }
 
-.miniTable th {
-  text-align: left;
-  padding: 6px 8px;
+.demoBarRow {
+  display: grid;
+  grid-template-columns: minmax(96px, 140px) minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+}
+
+.demoBarLabel,
+.demoBarValue,
+.verticalBarLabel,
+.verticalBarValue,
+.axisLabel,
+.dotPlotLegend,
+.mutedText {
   color: var(--light-gray);
-  border-bottom: 1px solid var(--gray);
-  font-size: 0.78rem;
+  font-size: 0.8rem;
 }
 
-.miniTable td {
-  padding: 6px 8px;
-  border-bottom: 1px solid rgba(255,255,255,0.04);
+.demoBarTrack {
+  height: 12px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
 }
 
-/* Tabs — 疾病页面内 Tab 切换 */
-.tabs {
+.demoBarFill,
+.verticalBarFill {
+  border-radius: 999px;
+  background: linear-gradient(90deg, #f97316, #facc15);
+}
+
+.demoBarFill {
+  height: 100%;
+}
+
+.verticalBars {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(44px, 1fr));
+  gap: 12px;
+  min-height: 220px;
+  align-items: end;
+}
+
+.verticalBarItem {
   display: flex;
-  gap: 4px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-  margin-bottom: 1.5rem;
-}
-.tab {
-  background: transparent;
-  border: none;
-  border-bottom: 2px solid transparent;
-  color: var(--light-gray);
-  padding: 8px 16px;
-  font-size: 0.9rem;
-  font-family: inherit;
-  cursor: pointer;
-  transition: all 0.25s ease;
-}
-.tab:hover { color: var(--white); }
-.tabActive {
-  composes: tab;
-  color: var(--primary);
-  border-bottom-color: var(--primary);
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
 }
 
-/* Biomarker 面板控制栏 */
+.verticalBarFill {
+  width: 26px;
+  min-height: 12px;
+}
+
+.verticalBarLabel {
+  width: 100%;
+  text-align: center;
+  word-break: break-word;
+}
+
+.dotPlotWrap {
+  display: grid;
+  gap: 12px;
+}
+
+.gridLine {
+  stroke: rgba(255, 255, 255, 0.08);
+  stroke-width: 1;
+}
+
+.axisLabel {
+  fill: currentColor;
+}
+
+.axisTitle {
+  fill: currentColor;
+  font-size: 0.82rem;
+}
+
+.plotPoint {
+  transition: transform 0.15s ease, opacity 0.15s ease;
+}
+
+.plotPoint:hover {
+  opacity: 1;
+}
+
+.dotPlotLabel {
+  fill: currentColor;
+  font-size: 10px;
+}
+
+.dotPlotLegend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+}
+
 .biomarkerControls {
   display: flex;
   align-items: flex-end;
-  gap: 1rem;
-  margin-bottom: 1.5rem;
   flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 16px;
 }
-.field {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-.field label {
-  font-size: 0.78rem;
+
+.toggleLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.03);
   color: var(--light-gray);
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
+  font-size: 0.82rem;
 }
-.inlineSelect {
-  padding: 6px 12px;
-  border: 1px solid var(--gray);
-  border-radius: 6px;
-  background: var(--dark-gray);
-  color: var(--white);
-  font-size: 0.85rem;
-  font-family: inherit;
-  outline: none;
-}
-.inlineSelect:focus { border-color: var(--primary); }
-.runBtn {
-  padding: 8px 20px;
-  border: none;
-  border-radius: 6px;
-  background: var(--primary);
-  color: var(--black);
-  font-size: 0.85rem;
-  font-weight: 600;
-  font-family: inherit;
-  cursor: pointer;
-  transition: opacity 0.2s;
-}
-.runBtn:hover { opacity: 0.9; }
-.runBtn:disabled { opacity: 0.5; cursor: not-allowed; }
 
-/* 错误提示 */
+.toggleLabel input {
+  accent-color: var(--primary);
+}
+
 .errorMsg {
-  background: rgba(255, 107, 107, 0.12);
-  border: 1px solid rgba(255, 107, 107, 0.3);
-  border-radius: 8px;
-  color: #ff6b6b;
-  padding: 12px 16px;
-  margin-bottom: 1.5rem;
-  font-size: 0.9rem;
+  margin-bottom: 16px;
+  padding: 12px 14px;
+  border: 1px solid rgba(251, 113, 133, 0.35);
+  border-radius: 12px;
+  background: rgba(251, 113, 133, 0.1);
+  color: #fb7185;
 }
 
-/* Lollipop 图例 */
 .legend {
   display: flex;
   flex-wrap: wrap;
-  gap: 12px;
-  margin-top: 12px;
+  gap: 10px 14px;
+  margin-top: 14px;
 }
+
 .legendItem {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: 6px;
-  font-size: 0.8rem;
   color: var(--light-gray);
+  font-size: 0.8rem;
 }
+
 .legendDot {
-  width: 10px;
-  height: 10px;
+  width: 11px;
+  height: 11px;
   border-radius: 50%;
   flex-shrink: 0;
 }
 
-/* Responsive */
-@media (max-width: 768px) {
+.cscsCell {
+  display: grid;
+  grid-template-columns: minmax(72px, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+}
+
+.cscsTrack {
+  height: 10px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.cscsFill {
+  height: 100%;
+  border-radius: 999px;
+}
+
+.mutedText {
+  opacity: 0.7;
+}
+
+.totalRow {
+  font-weight: 700;
+}
+
+@media (max-width: 960px) {
   .layout {
     grid-template-columns: 1fr;
   }
+
   .sidebar {
-    max-height: 300px;
+    max-height: 360px;
     border-right: none;
-    border-bottom: 1px solid var(--dark-gray);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   }
-  .mainPanel { padding: 20px 16px; }
+}
+
+@media (max-width: 720px) {
+  .topBar,
+  .mainPanel {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+
+  .cardHeader {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .demoBarRow {
+    grid-template-columns: 92px minmax(0, 1fr) auto;
+  }
 }

@@ -1,200 +1,220 @@
-/**
- * BiomarkerPanel.tsx — 标志物发现面板（嵌入 DiseasePage Tab）
- * Wilcoxon + BH FDR + LDA + 森林图
- */
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { renderToString } from "react-dom/server";
+import { Link } from "react-router-dom";
 import * as d3 from "d3";
 import { useI18n } from "@/i18n";
-import { exportTable } from "@/util/export";
-import { exportSVG, exportPNG } from "@/util/chartExport";
 import { cachedFetch } from "@/util/apiCache";
+import { exportTable } from "@/util/export";
+import { exportPNG, exportSVG } from "@/util/chartExport";
+import { phylumColor } from "@/util/phylumColors";
+import type { BiomarkerResult, Marker } from "./types";
 import classes from "../DiseasePage.module.css";
 
 const API_BASE = import.meta.env.VITE_API_URL ?? "http://localhost:8000";
-
-interface Marker {
-  taxon: string;
-  mean_disease: number;
-  mean_control: number;
-  log2fc: number;
-  lda_score: number;
-  p_value: number;
-  adjusted_p: number;
-  prevalence_disease: number;
-  prevalence_control: number;
-  enriched_in: string;
-  ci_low: number;
-  ci_high: number;
-}
-
-interface BiomarkerResult {
-  disease: string;
-  n_disease: number;
-  n_control: number;
-  n_markers: number;
-  markers: Marker[];
-}
 
 interface Props {
   disease: string;
 }
 
+const formatP = (value: number) => {
+  if (value < 0.001) return value.toExponential(2);
+  return value.toFixed(4);
+};
+
 const BiomarkerPanel = ({ disease }: Props) => {
   const { t, locale } = useI18n();
-  const [ldaThreshold, setLdaThreshold] = useState(2.0);
-  const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState<BiomarkerResult | null>(null);
-  const [error, setError] = useState<string | null>(null);
   const forestRef = useRef<SVGSVGElement>(null);
   const ldaRef = useRef<SVGSVGElement>(null);
 
-  // 切换疾病时重置结果
+  const [ldaThreshold, setLdaThreshold] = useState(2.0);
+  const [enrichedFilter, setEnrichedFilter] = useState<"all" | "disease" | "control">("all");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [result, setResult] = useState<BiomarkerResult | null>(null);
+
   useEffect(() => {
     setResult(null);
     setError(null);
   }, [disease]);
 
+  const filteredMarkers = useMemo(() => {
+    if (!result) return [];
+    return result.markers.filter((marker) => (
+      enrichedFilter === "all" ? true : marker.enriched_in === enrichedFilter
+    ));
+  }, [enrichedFilter, result]);
+
+  useEffect(() => {
+    if (!forestRef.current) return;
+    if (filteredMarkers.length === 0) {
+      d3.select(forestRef.current).selectAll("*").remove();
+      return;
+    }
+    drawForestPlot(forestRef.current, filteredMarkers.slice(0, 30), locale);
+  }, [filteredMarkers, locale]);
+
+  useEffect(() => {
+    if (!ldaRef.current) return;
+    if (filteredMarkers.length === 0) {
+      d3.select(ldaRef.current).selectAll("*").remove();
+      return;
+    }
+    drawLdaChart(ldaRef.current, filteredMarkers.slice(0, 30), locale);
+  }, [filteredMarkers, locale]);
+
   const runAnalysis = () => {
     if (!disease) return;
     setLoading(true);
-    setResult(null);
     setError(null);
-    cachedFetch<BiomarkerResult>(`${API_BASE}/api/biomarker-discovery?disease=${encodeURIComponent(disease)}&lda_threshold=${ldaThreshold}`)
-      .then((data) => setResult(data))
+    setResult(null);
+    cachedFetch<BiomarkerResult>(
+      `${API_BASE}/api/biomarker-discovery?disease=${encodeURIComponent(disease)}&lda_threshold=${ldaThreshold}`,
+    )
+      .then(setResult)
       .catch(() => {
         setError(locale === "zh" ? "后端未启动或连接失败" : "Backend not available or connection failed");
       })
       .finally(() => setLoading(false));
   };
 
-  // 绘制森林图
-  useEffect(() => {
-    if (!forestRef.current || !result || result.markers.length === 0) return;
-    drawForestPlot(forestRef.current, result.markers.slice(0, 30), locale);
-  }, [result, locale]);
-
-  // 绘制 LDA 柱状图
-  useEffect(() => {
-    if (!ldaRef.current || !result || result.markers.length === 0) return;
-    drawLDAChart(ldaRef.current, result.markers.slice(0, 30), locale);
-  }, [result, locale]);
-
-  const exportBiomarkerCsv = () => {
-    if (!result) return;
+  const exportCsv = () => {
+    if (filteredMarkers.length === 0) return;
     exportTable(
-      result.markers.map((m) => ({
-        Taxon: m.taxon,
-        Log2FC: m.log2fc,
-        LDA_Score: m.lda_score,
-        P_value: m.p_value,
-        Adjusted_P: m.adjusted_p,
-        Enriched_In: m.enriched_in,
-        Prevalence_Disease: m.prevalence_disease,
-        Prevalence_Control: m.prevalence_control,
+      filteredMarkers.map((marker) => ({
+        Taxon: marker.taxon,
+        Phylum: marker.phylum,
+        Log2FC: marker.log2fc,
+        LDA: marker.lda_score,
+        Adjusted_P: marker.adjusted_p,
+        Enriched_In: marker.enriched_in,
+        Disease_Prevalence: marker.prevalence_disease,
+        Control_Prevalence: marker.prevalence_control,
       })),
       `biomarker_${disease}_${Date.now()}`,
     );
   };
 
-  const exportBiomarkerChart = (ref: React.RefObject<SVGSVGElement | null>, name: string, type: "svg" | "png") => {
-    const svg = ref.current;
-    if (!svg) return;
-    type === "svg"
-      ? exportSVG(svg, `${name}_${disease}_${Date.now()}`)
-      : exportPNG(svg, `${name}_${disease}_${Date.now()}`);
-  };
-
   return (
     <div>
-      {/* 控制栏：LDA 阈值 + 运行按钮 */}
       <div className={classes.biomarkerControls}>
         <div className={classes.field}>
           <label>{t("biomarker.ldaThreshold")}</label>
-          <select className={classes.inlineSelect} value={ldaThreshold} onChange={e => setLdaThreshold(Number(e.target.value))}>
+          <select
+            className={classes.inlineSelect}
+            value={ldaThreshold}
+            onChange={(event) => setLdaThreshold(Number(event.target.value))}
+          >
             <option value={1.5}>1.5</option>
             <option value={2.0}>2.0</option>
             <option value={2.5}>2.5</option>
             <option value={3.0}>3.0</option>
           </select>
         </div>
+
+        <div className={classes.field}>
+          <label>{t("disease.biomarker.enrichFilter")}</label>
+          <select
+            className={classes.inlineSelect}
+            value={enrichedFilter}
+            onChange={(event) => setEnrichedFilter(event.target.value as "all" | "disease" | "control")}
+          >
+            <option value="all">{t("disease.biomarker.enrichAll")}</option>
+            <option value="disease">{t("disease.biomarker.enrichDisease")}</option>
+            <option value="control">{t("disease.biomarker.enrichControl")}</option>
+          </select>
+        </div>
+
         <button className={classes.runBtn} onClick={runAnalysis} disabled={loading}>
           {loading ? t("biomarker.running") : t("biomarker.runAnalysis")}
         </button>
       </div>
 
-      {/* 加载状态 */}
       {loading && <div className={classes.loading}>{t("biomarker.running")}</div>}
-
-      {/* 错误信息 */}
       {error && <div className={classes.errorMsg}>{error}</div>}
 
-      {/* 结果展示 */}
       {result && (
         <>
-          {/* 统计卡片 */}
           <div className={classes.profileHeader}>
             <div className={classes.statCard}>
               <span className={classes.statValue}>{result.n_markers}</span>
               <span className={classes.statLabel}>{t("biomarker.markerCount")}</span>
             </div>
             <div className={classes.statCard}>
-              <span className={classes.statValue}>{result.n_disease.toLocaleString()}</span>
+              <span className={classes.statValue}>{result.n_disease.toLocaleString("en")}</span>
               <span className={classes.statLabel}>{t("biomarker.diseaseSamples")}</span>
             </div>
             <div className={classes.statCard}>
-              <span className={classes.statValue}>{result.n_control.toLocaleString()}</span>
+              <span className={classes.statValue}>{result.n_control.toLocaleString("en")}</span>
               <span className={classes.statLabel}>{t("biomarker.controlSamples")}</span>
+            </div>
+            <div className={classes.statCard}>
+              <span className={classes.statValue}>{filteredMarkers.length}</span>
+              <span className={classes.statLabel}>{t("disease.biomarker.enrichFilter")}</span>
             </div>
           </div>
 
-          {result.markers.length === 0 ? (
-            <div className={classes.selectHint}>{t("biomarker.noResults")}</div>
+          {filteredMarkers.length === 0 ? (
+            <div className={classes.emptyPlot}>{t("biomarker.noResults")}</div>
           ) : (
             <>
-              {/* 导出按钮 */}
-              <div style={{ display: "flex", gap: "0.5rem", marginBottom: "0.5rem", padding: "0 1rem" }}>
-                <button onClick={exportBiomarkerCsv} style={{ fontSize: "0.8rem", padding: "0.3rem 0.8rem", cursor: "pointer", border: "1px solid #dee2e6", borderRadius: "4px", background: "white" }}>{t("export.csv")}</button>
-                <button onClick={() => exportBiomarkerChart(ldaRef, "lda", "svg")} style={{ fontSize: "0.8rem", padding: "0.3rem 0.8rem", cursor: "pointer", border: "1px solid #dee2e6", borderRadius: "4px", background: "white" }}>{t("export.svg")}</button>
-                <button onClick={() => exportBiomarkerChart(ldaRef, "lda", "png")} style={{ fontSize: "0.8rem", padding: "0.3rem 0.8rem", cursor: "pointer", border: "1px solid #dee2e6", borderRadius: "4px", background: "white" }}>{t("export.png")}</button>
-              </div>
-
-              {/* 森林图 */}
               <div className={classes.chartCard}>
-                <h3>{t("biomarker.forestPlot")}</h3>
+                <div className={classes.cardHeader}>
+                  <h3>{t("biomarker.forestPlot")}</h3>
+                  <div className={classes.exportActions}>
+                    <button onClick={exportCsv}>{t("export.csv")}</button>
+                    <button onClick={() => forestRef.current && exportSVG(forestRef.current, `forest_${disease}_${Date.now()}`)}>{t("export.svg")}</button>
+                    <button onClick={() => forestRef.current && exportPNG(forestRef.current, `forest_${disease}_${Date.now()}`)}>{t("export.png")}</button>
+                  </div>
+                </div>
                 <svg ref={forestRef} className={classes.chart} />
               </div>
 
-              {/* LDA 柱状图 */}
               <div className={classes.chartCard}>
-                <h3>{t("biomarker.ldaPlot")}</h3>
+                <div className={classes.cardHeader}>
+                  <h3>{t("biomarker.ldaPlot")}</h3>
+                  <div className={classes.exportActions}>
+                    <button onClick={() => ldaRef.current && exportSVG(ldaRef.current, `lda_${disease}_${Date.now()}`)}>{t("export.svg")}</button>
+                    <button onClick={() => ldaRef.current && exportPNG(ldaRef.current, `lda_${disease}_${Date.now()}`)}>{t("export.png")}</button>
+                  </div>
+                </div>
                 <svg ref={ldaRef} className={classes.chart} />
               </div>
 
-              {/* 标志物表格 */}
               <div className={classes.chartCard}>
                 <h3>{t("biomarker.table")}</h3>
                 <table className={classes.generaTable}>
                   <thead>
                     <tr>
                       <th>{t("biomarker.taxon")}</th>
+                      <th>{t("disease.genera.phylum")}</th>
                       <th>{t("biomarker.log2fc")}</th>
                       <th>{t("biomarker.lda")}</th>
                       <th>{t("biomarker.pValue")}</th>
                       <th>{t("biomarker.enrichedIn")}</th>
-                      <th>{t("biomarker.prevalence")}</th>
+                      <th>{t("disease.genera.prevD")}</th>
+                      <th>{t("disease.genera.prevC")}</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {result.markers.slice(0, 50).map(m => (
-                      <tr key={m.taxon}>
-                        <td><i>{m.taxon}</i></td>
-                        <td className={m.log2fc > 0 ? classes.enriched : classes.depleted}>
-                          {m.log2fc > 0 ? "+" : ""}{m.log2fc.toFixed(2)}
+                    {filteredMarkers.slice(0, 50).map((marker) => (
+                      <tr key={marker.taxon}>
+                        <td>
+                          <Link to={`/species/${encodeURIComponent(marker.taxon)}`} className={classes.genusLink}>
+                            {marker.taxon}
+                          </Link>
                         </td>
-                        <td>{m.lda_score.toFixed(2)}</td>
-                        <td>{m.adjusted_p < 0.001 ? m.adjusted_p.toExponential(2) : m.adjusted_p.toFixed(4)}</td>
-                        <td>{locale === "zh" ? (m.enriched_in === "disease" ? "疾病组" : "对照组") : m.enriched_in}</td>
-                        <td>{(m.prevalence_disease * 100).toFixed(1)}%</td>
+                        <td>
+                          <span className={classes.phylumBadge}>{marker.phylum}</span>
+                        </td>
+                        <td className={marker.log2fc > 0 ? classes.enriched : classes.depleted}>
+                          {marker.log2fc > 0 ? "+" : ""}
+                          {marker.log2fc.toFixed(3)}
+                        </td>
+                        <td>{marker.lda_score.toFixed(2)}</td>
+                        <td>{formatP(marker.adjusted_p)}</td>
+                        <td>{marker.enriched_in === "disease" ? t("disease.biomarker.enrichDisease") : t("disease.biomarker.enrichControl")}</td>
+                        <td>{(marker.prevalence_disease * 100).toFixed(1)}%</td>
+                        <td>{(marker.prevalence_control * 100).toFixed(1)}%</td>
                       </tr>
                     ))}
                   </tbody>
@@ -208,148 +228,160 @@ const BiomarkerPanel = ({ disease }: Props) => {
   );
 };
 
-export default BiomarkerPanel;
+function tooltipForMarker(marker: Marker, locale: string) {
+  return renderToString(
+    <div className="tooltip-table">
+      <span>{locale === "zh" ? "菌属" : "Genus"}</span><span><i>{marker.taxon}</i></span>
+      <span>{locale === "zh" ? "门" : "Phylum"}</span><span>{marker.phylum}</span>
+      <span>log2FC</span><span>{marker.log2fc.toFixed(3)}</span>
+      <span>LDA</span><span>{marker.lda_score.toFixed(2)}</span>
+      <span>adj.p</span><span>{formatP(marker.adjusted_p)}</span>
+      <span>{locale === "zh" ? "疾病流行率" : "Disease prevalence"}</span><span>{(marker.prevalence_disease * 100).toFixed(1)}%</span>
+      <span>{locale === "zh" ? "对照流行率" : "Control prevalence"}</span><span>{(marker.prevalence_control * 100).toFixed(1)}%</span>
+    </div>,
+  );
+}
 
-// ── Forest Plot / 森林图 ──────────────────────────────────────────────────────
+function navigateToSpecies(taxon: string) {
+  window.location.href = `/species/${encodeURIComponent(taxon)}`;
+}
 
-function drawForestPlot(svgEl: SVGSVGElement, markers: Marker[], locale = "en") {
+function drawForestPlot(svgEl: SVGSVGElement, markers: Marker[], locale: string) {
   const svg = d3.select(svgEl);
   svg.selectAll("*").remove();
 
-  const margin = { top: 20, right: 40, bottom: 30, left: 140 };
-  const W = 700, H = Math.max(300, markers.length * 22 + margin.top + margin.bottom);
-  svg.attr("viewBox", `0 0 ${W} ${H}`);
+  const sorted = [...markers].sort((a, b) => Math.abs(b.log2fc) - Math.abs(a.log2fc));
+  const margin = { top: 18, right: 28, bottom: 36, left: 176 };
+  const width = 760;
+  const height = Math.max(320, sorted.length * 24 + margin.top + margin.bottom);
+  const innerWidth = width - margin.left - margin.right;
+  const innerHeight = height - margin.top - margin.bottom;
 
-  const g = svg.append("g").attr("transform", `translate(${margin.left},${margin.top})`);
-  const iW = W - margin.left - margin.right;
-  const iH = H - margin.top - margin.bottom;
+  const minX = Math.min(-2, d3.min(sorted, (marker) => marker.ci_low) ?? -2) * 1.1;
+  const maxX = Math.max(2, d3.max(sorted, (marker) => marker.ci_high) ?? 2) * 1.1;
+  const x = d3.scaleLinear().domain([minX, maxX]).range([0, innerWidth]);
+  const y = d3.scaleBand().domain(sorted.map((marker) => marker.taxon)).range([0, innerHeight]).padding(0.28);
 
-  const diffs = markers.map(m => m.mean_disease - m.mean_control);
-  const cis = markers.map(m => [m.ci_low, m.ci_high]);
-  const allVals = [...diffs, ...cis.flat()];
-  const xMin = Math.min(0, d3.min(allVals) ?? 0) * 1.1;
-  const xMax = Math.max(0, d3.max(allVals) ?? 0) * 1.1;
-  const xScale = d3.scaleLinear().domain([xMin, xMax]).range([0, iW]);
+  svg.attr("viewBox", `0 0 ${width} ${height}`);
+  const root = svg.append("g").attr("transform", `translate(${margin.left},${margin.top})`);
 
-  const yScale = d3.scaleBand()
-    .domain(markers.map(m => m.taxon))
-    .range([0, iH])
-    .padding(0.3);
-
-  // 零线
-  g.append("line")
-    .attr("x1", xScale(0)).attr("x2", xScale(0))
-    .attr("y1", 0).attr("y2", iH)
-    .attr("stroke", "rgba(255,255,255,0.3)")
+  root.append("line")
+    .attr("x1", x(0))
+    .attr("x2", x(0))
+    .attr("y1", 0)
+    .attr("y2", innerHeight)
+    .attr("stroke", "rgba(255,255,255,0.25)")
     .attr("stroke-dasharray", "4,4");
 
-  // 置信区间线
-  g.selectAll(".ci-line")
-    .data(markers)
+  root.append("g")
+    .call(d3.axisLeft(y).tickFormat((value) => value.length > 18 ? `${value.slice(0, 16)}…` : value))
+    .attr("font-size", 10)
+    .selectAll("text")
+    .attr("font-style", "italic");
+
+  root.append("g")
+    .attr("transform", `translate(0,${innerHeight})`)
+    .call(d3.axisBottom(x).ticks(6))
+    .attr("font-size", 10);
+
+  root.append("text")
+    .attr("x", innerWidth / 2)
+    .attr("y", innerHeight + 30)
+    .attr("text-anchor", "middle")
+    .attr("fill", "currentColor")
+    .attr("font-size", 10)
+    .text(locale === "zh" ? "log₂ Fold Change（95% CI）" : "log₂ Fold Change (95% CI)");
+
+  root.selectAll("line.ci")
+    .data(sorted)
     .join("line")
-    .attr("x1", (_, i) => xScale(cis[i][0]))
-    .attr("x2", (_, i) => xScale(cis[i][1]))
-    .attr("y1", m => (yScale(m.taxon) ?? 0) + yScale.bandwidth() / 2)
-    .attr("y2", m => (yScale(m.taxon) ?? 0) + yScale.bandwidth() / 2)
-    .attr("stroke", m => m.enriched_in === "disease" ? "#ff6b6b" : "#4ecdc4")
-    .attr("stroke-width", 1.5);
+    .attr("class", "ci")
+    .attr("x1", (marker) => x(marker.ci_low))
+    .attr("x2", (marker) => x(marker.ci_high))
+    .attr("y1", (marker) => (y(marker.taxon) ?? 0) + y.bandwidth() / 2)
+    .attr("y2", (marker) => (y(marker.taxon) ?? 0) + y.bandwidth() / 2)
+    .attr("stroke", (marker) => phylumColor(marker.phylum))
+    .attr("stroke-width", 1.6)
+    .attr("opacity", 0.85);
 
-  // 效应值菱形点
-  g.selectAll(".point")
-    .data(markers)
-    .join("rect")
-    .attr("x", (_, i) => xScale(diffs[i]) - 4)
-    .attr("y", m => (yScale(m.taxon) ?? 0) + yScale.bandwidth() / 2 - 4)
-    .attr("width", 8).attr("height", 8)
-    .attr("transform", m => {
-      const cx = xScale(m.mean_disease - m.mean_control);
-      const cy = (yScale(m.taxon) ?? 0) + yScale.bandwidth() / 2;
-      return `rotate(45, ${cx}, ${cy})`;
-    })
-    .attr("fill", m => m.enriched_in === "disease" ? "#ff6b6b" : "#4ecdc4");
-
-  // Y轴
-  g.append("g")
-    .call(d3.axisLeft(yScale).tickFormat(d => d.length > 18 ? d.slice(0, 16) + "\u2026" : d))
-    .attr("font-size", 9)
-    .selectAll("text").attr("font-style", "italic");
-
-  // X轴
-  g.append("g")
-    .attr("transform", `translate(0,${iH})`)
-    .call(d3.axisBottom(xScale).ticks(5))
-    .attr("font-size", 9);
-
-  g.append("text")
-    .attr("x", iW / 2).attr("y", iH + 25)
-    .attr("text-anchor", "middle").attr("fill", "currentColor").attr("font-size", 10)
-    .text(locale === "zh" ? "均值差异（疾病组 − 对照组）" : "Mean Difference (Disease − Control)");
+  root.selectAll("circle.point")
+    .data(sorted)
+    .join("circle")
+    .attr("class", "point")
+    .attr("cx", (marker) => x(marker.log2fc))
+    .attr("cy", (marker) => (y(marker.taxon) ?? 0) + y.bandwidth() / 2)
+    .attr("r", 5.5)
+    .attr("fill", (marker) => marker.enriched_in === "control" ? "transparent" : phylumColor(marker.phylum))
+    .attr("stroke", (marker) => phylumColor(marker.phylum))
+    .attr("stroke-width", (marker) => marker.enriched_in === "control" ? 1.8 : 0.8)
+    .attr("data-tooltip", (marker) => tooltipForMarker(marker, locale))
+    .style("cursor", "pointer")
+    .on("click", (_, marker) => navigateToSpecies(marker.taxon));
 }
 
-// ── LDA Effect Size Bar Chart / LDA 效应值柱状图 ──────────────────────────────
-
-function drawLDAChart(svgEl: SVGSVGElement, markers: Marker[], locale = "en") {
+function drawLdaChart(svgEl: SVGSVGElement, markers: Marker[], locale: string) {
   const svg = d3.select(svgEl);
   svg.selectAll("*").remove();
 
   const sorted = [...markers].sort((a, b) => {
-    const scoreA = a.enriched_in === "disease" ? a.lda_score : -a.lda_score;
-    const scoreB = b.enriched_in === "disease" ? b.lda_score : -b.lda_score;
+    const scoreA = a.enriched_in === "control" ? -a.lda_score : a.lda_score;
+    const scoreB = b.enriched_in === "control" ? -b.lda_score : b.lda_score;
     return scoreB - scoreA;
   });
 
-  const margin = { top: 10, right: 20, bottom: 30, left: 130 };
-  const W = 700, H = Math.max(300, sorted.length * 22 + margin.top + margin.bottom);
-  svg.attr("viewBox", `0 0 ${W} ${H}`);
+  const signedScores = sorted.map((marker) => (marker.enriched_in === "control" ? -marker.lda_score : marker.lda_score));
+  const maxAbs = Math.max(d3.max(signedScores, (value) => Math.abs(value)) ?? 2, 2);
+  const margin = { top: 18, right: 28, bottom: 36, left: 176 };
+  const width = 760;
+  const height = Math.max(320, sorted.length * 24 + margin.top + margin.bottom);
+  const innerWidth = width - margin.left - margin.right;
+  const innerHeight = height - margin.top - margin.bottom;
+  const x = d3.scaleLinear().domain([-maxAbs * 1.1, maxAbs * 1.1]).range([0, innerWidth]);
+  const y = d3.scaleBand().domain(sorted.map((marker) => marker.taxon)).range([0, innerHeight]).padding(0.2);
 
-  const g = svg.append("g").attr("transform", `translate(${margin.left},${margin.top})`);
-  const iW = W - margin.left - margin.right;
-  const iH = H - margin.top - margin.bottom;
+  svg.attr("viewBox", `0 0 ${width} ${height}`);
+  const root = svg.append("g").attr("transform", `translate(${margin.left},${margin.top})`);
 
-  const maxLDA = d3.max(sorted, m => m.lda_score) ?? 5;
-  const xScale = d3.scaleLinear().domain([-maxLDA, maxLDA]).range([0, iW]);
+  root.append("line")
+    .attr("x1", x(0))
+    .attr("x2", x(0))
+    .attr("y1", 0)
+    .attr("y2", innerHeight)
+    .attr("stroke", "rgba(255,255,255,0.25)");
 
-  const yScale = d3.scaleBand()
-    .domain(sorted.map(m => m.taxon))
-    .range([0, iH])
-    .padding(0.2);
+  root.append("g")
+    .call(d3.axisLeft(y).tickFormat((value) => value.length > 18 ? `${value.slice(0, 16)}…` : value))
+    .attr("font-size", 10)
+    .selectAll("text")
+    .attr("font-style", "italic");
 
-  // 零线
-  g.append("line")
-    .attr("x1", xScale(0)).attr("x2", xScale(0))
-    .attr("y1", 0).attr("y2", iH)
-    .attr("stroke", "rgba(255,255,255,0.3)");
+  root.append("g")
+    .attr("transform", `translate(0,${innerHeight})`)
+    .call(d3.axisBottom(x).ticks(6))
+    .attr("font-size", 10);
 
-  // LDA 柱
-  g.selectAll("rect")
+  root.append("text")
+    .attr("x", innerWidth / 2)
+    .attr("y", innerHeight + 30)
+    .attr("text-anchor", "middle")
+    .attr("fill", "currentColor")
+    .attr("font-size", 10)
+    .text(locale === "zh" ? "LDA 效应值（方向签名）" : "LDA Effect Size (signed)");
+
+  root.selectAll("rect.bar")
     .data(sorted)
     .join("rect")
-    .attr("x", m => m.enriched_in === "disease" ? xScale(0) : xScale(-m.lda_score))
-    .attr("y", m => yScale(m.taxon) ?? 0)
-    .attr("width", m => Math.abs(xScale(m.lda_score) - xScale(0)))
-    .attr("height", yScale.bandwidth())
-    .attr("fill", m => m.enriched_in === "disease" ? "#ff6b6b" : "#4ecdc4")
-    .attr("opacity", 0.8)
-    .attr("rx", 2);
-
-  // Y轴
-  g.append("g")
-    .call(d3.axisLeft(yScale).tickFormat(d => d.length > 16 ? d.slice(0, 14) + "\u2026" : d))
-    .attr("font-size", 9)
-    .selectAll("text").attr("font-style", "italic");
-
-  // X轴
-  g.append("g")
-    .attr("transform", `translate(0,${iH})`)
-    .call(d3.axisBottom(xScale).ticks(5))
-    .attr("font-size", 9);
-
-  // 图例
-  const legend = svg.append("g").attr("transform", `translate(${margin.left + 10}, ${H - 8})`);
-  legend.append("rect").attr("width", 12).attr("height", 8).attr("fill", "#ff6b6b").attr("opacity", 0.8);
-  const zh = locale === "zh";
-  legend.append("text").attr("x", 16).attr("y", 7).text(zh ? "疾病组富集" : "Enriched in Disease").attr("fill", "currentColor").attr("font-size", 10);
-  const legendOffset = zh ? 100 : 160;
-  legend.append("rect").attr("x", legendOffset).attr("width", 12).attr("height", 8).attr("fill", "#4ecdc4").attr("opacity", 0.8);
-  legend.append("text").attr("x", legendOffset + 16).attr("y", 7).text(zh ? "对照组富集" : "Enriched in Control").attr("fill", "currentColor").attr("font-size", 10);
+    .attr("class", "bar")
+    .attr("x", (marker) => marker.enriched_in === "control" ? x(-marker.lda_score) : x(0))
+    .attr("y", (marker) => y(marker.taxon) ?? 0)
+    .attr("width", (marker) => Math.abs(x(marker.lda_score) - x(0)))
+    .attr("height", y.bandwidth())
+    .attr("rx", 3)
+    .attr("fill", (marker) => phylumColor(marker.phylum))
+    .attr("opacity", 0.9)
+    .attr("data-tooltip", (marker) => tooltipForMarker(marker, locale))
+    .style("cursor", "pointer")
+    .on("click", (_, marker) => navigateToSpecies(marker.taxon));
 }
+
+export default BiomarkerPanel;

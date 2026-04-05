@@ -30,6 +30,7 @@ from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 from analysis import wilcoxon_marker_test, spearman_cooccurrence, sample_similarity_search
 from compare_utils import aggregate_by_level, relative_abundance_matrix, run_compare_analysis, run_spearman_analysis
+from disease_utils import build_disease_profile, build_disease_studies, build_lollipop_result, log2fc_interval
 
 # Configure logging / 配置日志
 logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
@@ -1827,7 +1828,7 @@ def disease_list(request: Request, q: str = ""):
          summary="Disease microbiome profile",
          description="Top genera for a disease vs healthy controls with fold-change and prevalence.")
 @limiter.limit("60/minute")
-def disease_profile(request: Request, disease: str, top_n: int = 20):
+def disease_profile(request: Request, disease: str, top_n: int = 40):
     """
     Return a profile for a given disease:
     为给定疾病返回画像：
@@ -1848,103 +1849,17 @@ def disease_profile(request: Request, disease: str, top_n: int = 20):
 
     meta = get_metadata()
     abund = get_abundance()
-
-    # Find samples belonging to this disease / 查找该疾病的样本
-    INFORM_COLS = [f"inform{i}" for i in range(12)]
-    disease_mask = pd.Series(False, index=meta.index)
-    for col in INFORM_COLS:
-        if col not in meta.columns:
-            continue
-        disease_mask |= (meta[col].fillna("").astype(str).str.strip() == disease)
-
-    disease_samples = meta.loc[disease_mask]
-    if len(disease_samples) == 0:
-        raise HTTPException(404, f"Disease '{disease}' not found")
-
-    # Find healthy control samples: NC (Normal Control) in any inform column
-    # 查找健康对照样本：inform0-11 中任一列为 "NC" 的样本
-    control_mask = pd.Series(False, index=meta.index)
-    for col in INFORM_COLS:
-        if col not in meta.columns:
-            continue
-        control_mask |= (meta[col].fillna("").astype(str).str.strip() == "NC")
-    control_samples = meta.loc[control_mask]
-
-    # Get abundance for disease and control samples / 获取疾病组和对照组丰度
-    disease_keys = disease_samples["sample_key"].dropna().unique()
-    control_keys = control_samples["sample_key"].dropna().unique()
-
-    common_disease = abund.index.intersection(disease_keys)
-    common_control = abund.index.intersection(control_keys)
-
-    if len(common_disease) == 0:
-        raise HTTPException(404, "No abundance data for disease samples")
-
-    disease_abund = abund.loc[common_disease]
-    control_abund = abund.loc[common_control] if len(common_control) > 0 else None
-
-    # Normalize to relative abundance (%) per sample
-    # 每个样本转换为相对丰度（%），使所有属的丰度之和 = 100%
-    disease_totals = disease_abund.sum(axis=1).replace(0, 1)  # avoid div by 0
-    disease_rel = disease_abund.div(disease_totals, axis=0) * 100
-
-    control_rel = None
-    if control_abund is not None and len(common_control) > 0:
-        control_totals = control_abund.sum(axis=1).replace(0, 1)
-        control_rel = control_abund.div(control_totals, axis=0) * 100
-
-    # Compute genus-level mean relative abundance for disease group
-    # 计算疾病组的属级平均相对丰度
-    genus_map: dict[str, list[str]] = {}
-    for col in abund.columns:
-        g = extract_genus(col)
-        genus_map.setdefault(g, []).append(col)
-
-    genus_stats = []
-    for genus, cols in genus_map.items():
-        if not is_valid_genus(genus):
-            continue
-        d_vals = disease_rel[cols].sum(axis=1)
-        d_mean = float(d_vals.mean())
-        d_prev = float((d_vals > 0).sum() / len(d_vals)) if len(d_vals) > 0 else 0
-
-        c_mean = 0.0
-        c_prev = 0.0
-        if control_rel is not None:
-            c_vals = control_rel[cols].sum(axis=1)
-            c_mean = float(c_vals.mean())
-            c_prev = float((c_vals > 0).sum() / len(c_vals)) if len(c_vals) > 0 else 0
-
-        if d_mean > 0:
-            log2fc = float(np.log2((d_mean + 1e-10) / (c_mean + 1e-10))) if c_mean >= 0 else 0.0
-            genus_stats.append({
-                "genus": genus,
-                "disease_mean": round(d_mean, 4),
-                "disease_prevalence": round(d_prev, 4),
-                "control_mean": round(c_mean, 4),
-                "control_prevalence": round(c_prev, 4),
-                "log2fc": round(log2fc, 4),
-            })
-
-    genus_stats.sort(key=lambda x: x["disease_mean"], reverse=True)
-
-    # Demographics / 人口统计
-    def count_by(col_name: str) -> list[dict]:
-        if col_name not in disease_samples.columns:
-            return []
-        counts = disease_samples[col_name].fillna("unknown").astype(str).str.strip().value_counts()
-        return [
-            {"name": iso_to_name(k) if col_name == "country" else k, "count": int(v)}
-            for k, v in counts.items() if k and k != "nan"
-        ][:20]
-
-    # Ontology info / 本体信息
     onto = DISEASE_ONTOLOGY.get(disease, {})
 
-    result = {
-        "disease": disease,
-        "sample_count": len(disease_samples),
-        "control_count": len(control_samples),
+    try:
+        result = build_disease_profile(meta, abund, disease, top_n=top_n)
+    except ValueError as exc:
+        message = str(exc)
+        if "not found" in message.lower():
+            raise HTTPException(404, message)
+        raise HTTPException(400, message)
+
+    result.update({
         "standard_name": onto.get("standard_name", ""),
         "standard_name_zh": onto.get("standard_name_zh", ""),
         "abbreviation": onto.get("abbreviation", ""),
@@ -1952,16 +1867,38 @@ def disease_profile(request: Request, disease: str, top_n: int = 20):
         "icd10": onto.get("icd10", ""),
         "category": onto.get("category", ""),
         "category_zh": onto.get("category_zh", ""),
-        "top_genera": genus_stats[:top_n],
-        "by_country": count_by("country"),
-        "by_age_group": count_by("age_group" if "age_group" in disease_samples.columns else "age"),
-        "by_sex": count_by("sex"),
-    }
+    })
     set_cached(cache_key, result)
     return result
 
 
 # ── Microbe-disease network endpoint / 菌群-疾病网络端点 ─────────────────────
+
+@app.get("/api/disease-studies",
+         summary="Disease study breakdown",
+         description="Returns per-project disease/control counts, dominant country, top marker, and consistency score.")
+@limiter.limit("60/minute")
+def disease_studies(request: Request, disease: str):
+    if not disease or not disease.strip():
+        raise HTTPException(400, "disease parameter is required")
+    disease = disease.strip()
+
+    cache_key = f"disease_studies:{disease}"
+    cached = get_cached(cache_key)
+    if cached:
+        return cached
+
+    try:
+        result = build_disease_studies(get_metadata(), get_abundance(), disease)
+    except ValueError as exc:
+        message = str(exc)
+        if "not found" in message.lower():
+            raise HTTPException(404, message)
+        raise HTTPException(400, message)
+
+    set_cached(cache_key, result)
+    return result
+
 
 @app.get("/api/network",
          summary="Disease-genus network",
@@ -2345,9 +2282,24 @@ def biomarker_discovery(request: Request, disease: str, lda_threshold: float = 2
     valid_genera = [unique_genera[i] for i in valid_indices]
     d_filtered = d_agg[:, valid_indices]
     c_filtered = c_agg[:, valid_indices]
+    phylum_lookup: dict[str, str] = {}
+    for column in col_names:
+        genus = extract_genus(column)
+        if genus not in phylum_lookup:
+            phylum_lookup[genus] = extract_phylum(column)
 
     markers = wilcoxon_marker_test(d_filtered, c_filtered, valid_genera, p_threshold)
     markers = [m for m in markers if m["lda_score"] >= lda_threshold]
+    genus_to_idx = {genus: idx for idx, genus in enumerate(valid_genera)}
+    for marker in markers:
+        genus = marker["taxon"]
+        marker["phylum"] = phylum_lookup.get(genus, "")
+        idx = genus_to_idx.get(genus)
+        if idx is None:
+            continue
+        ci_low, ci_high = log2fc_interval(d_filtered[:, idx], c_filtered[:, idx])
+        marker["ci_low"] = ci_low
+        marker["ci_high"] = ci_high
 
     result = {
         "disease": disease,
@@ -2380,81 +2332,15 @@ def lollipop_data(request: Request, disease: str, top_n: int = 40):
     if cached:
         return cached
 
-    meta = get_metadata()
-    abund = get_abundance()
+    try:
+        result = build_lollipop_result(get_metadata(), get_abundance(), disease, top_n=max(top_n, 120))
+    except ValueError as exc:
+        message = str(exc)
+        if "not found" in message.lower() or "insufficient" in message.lower():
+            raise HTTPException(404, message)
+        raise HTTPException(400, message)
 
-    INFORM_COLS = [f"inform{i}" for i in range(12)]
-    disease_mask = pd.Series(False, index=meta.index)
-    for col in INFORM_COLS:
-        if col in meta.columns:
-            disease_mask |= (meta[col].fillna("").astype(str).str.strip() == disease)
-    disease_samples = meta.loc[disease_mask]
-
-    control_mask = pd.Series(False, index=meta.index)
-    for col in INFORM_COLS:
-        if col in meta.columns:
-            control_mask |= (meta[col].fillna("").astype(str).str.strip() == "NC")
-    control_samples = meta.loc[control_mask]
-
-    d_keys = abund.index.intersection(disease_samples["sample_key"].dropna().unique())
-    c_keys = abund.index.intersection(control_samples["sample_key"].dropna().unique())
-
-    if len(d_keys) == 0 or len(c_keys) == 0:
-        raise HTTPException(404, "Insufficient samples")
-
-    d_raw = abund.loc[d_keys].values.astype(float)
-    c_raw = abund.loc[c_keys].values.astype(float)
-    d_t = d_raw.sum(axis=1, keepdims=True); d_t[d_t == 0] = 1
-    c_t = c_raw.sum(axis=1, keepdims=True); c_t[c_t == 0] = 1
-    d_rel = d_raw / d_t * 100
-    c_rel = c_raw / c_t * 100
-
-    col_names = abund.columns.tolist()
-    results = []
-
-    genus_map: dict[str, list[int]] = {}
-    genus_phylum: dict[str, str] = {}
-    for j, col in enumerate(col_names):
-        g = extract_genus(col)
-        if not is_valid_genus(g):
-            continue
-        genus_map.setdefault(g, []).append(j)
-        if g not in genus_phylum:
-            genus_phylum[g] = extract_phylum(col)
-
-    for genus, idxs in genus_map.items():
-        d_vals = d_rel[:, idxs].sum(axis=1)
-        c_vals = c_rel[:, idxs].sum(axis=1)
-        mean_d = float(np.mean(d_vals))
-        mean_c = float(np.mean(c_vals))
-
-        pseudo = 1e-6
-        log2fc = float(np.log2((mean_d + pseudo) / (mean_c + pseudo)))
-
-        try:
-            _, p = stats.mannwhitneyu(d_vals, c_vals, alternative="two-sided")
-        except Exception:
-            p = 1.0
-
-        neg_log10p = -math.log10(max(float(p), 1e-300))
-
-        results.append({
-            "genus": genus,
-            "phylum": genus_phylum.get(genus, "Unknown"),
-            "log2fc": round(log2fc, 4),
-            "neg_log10p": round(neg_log10p, 2),
-            "p_value": round(float(p), 8),
-            "mean_disease": round(mean_d, 6),
-            "mean_control": round(mean_c, 6),
-        })
-
-    results.sort(key=lambda x: abs(x["log2fc"]), reverse=True)
-    result = {
-        "disease": disease,
-        "n_disease": len(d_keys),
-        "n_control": len(c_keys),
-        "data": results[:top_n],
-    }
+    result["data"] = result["data"][:top_n]
     set_cached(cache_key, result)
     return result
 
