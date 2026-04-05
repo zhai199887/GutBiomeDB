@@ -7,6 +7,7 @@ import { loadAbundance, loadSummary, useData } from "@/data";
 import { getCssVariable } from "@/util/dom";
 import { formatNumber } from "@/util/string";
 import { diseaseDisplayNameI18n } from "@/util/diseaseNames";
+import { AGE_GROUP_ZH, SEX_ZH } from "@/util/countries";
 import "@/components/tooltip";
 
 const AGE_GROUPS = [
@@ -35,12 +36,18 @@ const PhenotypePage = () => {
     if (!summary) loadSummary();
   }, [abundance, summary]);
 
-  const dLabel = (g: string) =>
-    dimType === "disease" ? diseaseDisplayNameI18n(g, locale) : g.replace(/_/g, " ");
+  const dLabel = (g: string) => {
+    if (dimType === "disease") return diseaseDisplayNameI18n(g, locale);
+    if (locale === "zh") {
+      if (dimType === "age") return AGE_GROUP_ZH[g] ?? g.replace(/_/g, " ");
+      if (dimType === "sex") return SEX_ZH[g] ?? g;
+    }
+    return g.replace(/_/g, " ");
+  };
 
   useEffect(() => {
     if (!abundance) return;
-    drawChart(abundance, dimType, groupA, groupB, dLabel);
+    drawChart(abundance, dimType, groupA, groupB, dLabel, locale);
   }, [abundance, dimType, groupA, groupB, locale]);
 
   const groupOptions = (): string[] => {
@@ -114,7 +121,9 @@ const PhenotypePage = () => {
                   cursor: "pointer",
                 }}
               >
-                {d.charAt(0).toUpperCase() + d.slice(1)}
+                {locale === "zh"
+                  ? (d === "age" ? "年龄" : d === "sex" ? "性别" : "疾病")
+                  : d.charAt(0).toUpperCase() + d.slice(1)}
               </button>
             ))}
           </div>
@@ -130,7 +139,7 @@ const PhenotypePage = () => {
               marginBottom: "0.4rem",
             }}
           >
-            Group A
+            {locale === "zh" ? "组 A" : "GROUP A"}
           </div>
           <select
             value={groupA}
@@ -152,7 +161,7 @@ const PhenotypePage = () => {
         </div>
 
         <span style={{ color: "var(--light-gray)", paddingBottom: "0.3rem" }}>
-          vs
+          VS
         </span>
 
         {/* Group B */}
@@ -165,7 +174,7 @@ const PhenotypePage = () => {
               marginBottom: "0.4rem",
             }}
           >
-            Group B
+            {locale === "zh" ? "组 B" : "GROUP B"}
           </div>
           <select
             value={groupB}
@@ -208,6 +217,7 @@ const drawChart = (
   groupA: string,
   groupB: string,
   labelFn: (g: string) => string = (g) => g.replace(/_/g, " "),
+  locale = "en",
 ) => {
   const svg = d3.select<SVGSVGElement, unknown>("#phenotype-chart");
   if (!svg.node()) return;
@@ -226,7 +236,7 @@ const drawChart = (
   if (!dataA || !dataB) {
     svg
       .append("text")
-      .text("No data for selected groups")
+      .text(locale === "zh" ? "所选分组无数据" : "No data for selected groups")
       .attr("fill", "currentColor")
       .attr("font-size", 18);
     return;
@@ -277,7 +287,7 @@ const drawChart = (
     .attr("data-tooltip", (d) =>
       renderToString(
         <div className="tooltip-table">
-          <span>Genus</span>
+          <span>{locale === "zh" ? "属" : "Genus"}</span>
           <span>{d.genus}</span>
           <span>{labelFn(groupA)}</span>
           <span>{(d.a * 100).toFixed(3)}%</span>
@@ -301,7 +311,7 @@ const drawChart = (
     .attr("data-tooltip", (d) =>
       renderToString(
         <div className="tooltip-table">
-          <span>Genus</span>
+          <span>{locale === "zh" ? "属" : "Genus"}</span>
           <span>{d.genus}</span>
           <span>{labelFn(groupB)}</span>
           <span>{(d.b * 100).toFixed(3)}%</span>
