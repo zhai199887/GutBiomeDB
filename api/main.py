@@ -982,6 +982,307 @@ def diff_analysis(request: Request, req: DiffAnalysisRequest):
     return response
 
 
+# ── Phenotype Association Analysis / 表型关联分析端点 ─────────────────────────
+
+def _get_samples_by_pheno(meta: pd.DataFrame, dim_type: str, group: str) -> pd.Series:
+    """
+    Return boolean mask of samples belonging to a phenotype group.
+    返回属于某表型分组的样本布尔掩码
+    """
+    if dim_type == "disease":
+        INFORM_COLS = [f"inform{i}" for i in range(12)]
+        mask = pd.Series(False, index=meta.index)
+        g_lower = group.strip().lower()
+        for col in INFORM_COLS:
+            if col in meta.columns:
+                mask |= meta[col].fillna("").astype(str).str.strip().str.lower() == g_lower
+        return mask
+    elif dim_type == "age":
+        if "age_group" in meta.columns:
+            return meta["age_group"].str.lower() == group.lower()
+        return pd.Series(False, index=meta.index)
+    elif dim_type == "sex":
+        if "sex" in meta.columns:
+            return meta["sex"].str.lower() == group.lower()
+        return pd.Series(False, index=meta.index)
+    return pd.Series(False, index=meta.index)
+
+
+@app.get("/api/phenotype-groups",
+         summary="List phenotype groups",
+         description="Return all available groups for a dimension type with sample counts.")
+@limiter.limit("60/minute")
+def phenotype_groups(request: Request, dim_type: str = "disease"):
+    """
+    Return groups and sample counts for a given dimension type.
+    返回某维度下所有分组及其样本量
+    """
+    meta = get_metadata()
+    if dim_type == "disease":
+        INFORM_COLS = [f"inform{i}" for i in range(12)]
+        all_diseases: dict[str, int] = {}
+        for col in INFORM_COLS:
+            if col not in meta.columns:
+                continue
+            vals = meta[col].dropna().astype(str).str.strip()
+            vals = vals[(vals != "") & (vals != "nan") & (vals != "NC")]
+            for disease in vals:
+                all_diseases[disease] = all_diseases.get(disease, 0) + 1
+        # Unique sample count per disease (may count sample once per inform col)
+        # Build proper counts using mask
+        groups = []
+        for disease in sorted(all_diseases.keys()):
+            mask = _get_samples_by_pheno(meta, "disease", disease)
+            groups.append({"group": disease, "sample_count": int(mask.sum())})
+        groups.sort(key=lambda x: -x["sample_count"])
+        return {"dim_type": dim_type, "groups": groups}
+    elif dim_type == "age":
+        if "age_group" not in meta.columns:
+            return {"dim_type": dim_type, "groups": []}
+        vc = meta["age_group"].dropna().astype(str).value_counts()
+        groups = [{"group": k, "sample_count": int(v)} for k, v in vc.items() if k.strip()]
+        return {"dim_type": dim_type, "groups": groups}
+    elif dim_type == "sex":
+        if "sex" not in meta.columns:
+            return {"dim_type": dim_type, "groups": []}
+        vc = meta["sex"].dropna().astype(str).value_counts()
+        groups = [{"group": k, "sample_count": int(v)} for k, v in vc.items() if k.strip()]
+        return {"dim_type": dim_type, "groups": groups}
+    return {"dim_type": dim_type, "groups": []}
+
+
+@app.get("/api/phenotype-association",
+         summary="Phenotype association analysis",
+         description="Mann-Whitney U + BH-FDR per taxon between two phenotype groups.")
+@limiter.limit("10/minute")
+def phenotype_association(
+    request: Request,
+    dim_type: str = "sex",
+    group_a: str = "female",
+    group_b: str = "male",
+    tax_level: str = "genus",      # genus | phylum
+    min_prevalence: float = 0.10,  # minimum prevalence filter (10%)
+    top_n: int = 100,              # max results to return
+):
+    """
+    Core phenotype association analysis.
+    核心表型关联分析：Mann-Whitney U + BH-FDR + 效应量 + 流行率 + 门注释
+    """
+    meta = get_metadata()
+    abund = get_abundance()
+    abund_idx = set(abund.index)
+
+    # Get sample masks
+    mask_a = _get_samples_by_pheno(meta, dim_type, group_a)
+    mask_b = _get_samples_by_pheno(meta, dim_type, group_b)
+
+    if not mask_a.any():
+        raise HTTPException(400, f"Group A '{group_a}' has no samples for dim_type='{dim_type}'")
+    if not mask_b.any():
+        raise HTTPException(400, f"Group B '{group_b}' has no samples for dim_type='{dim_type}'")
+
+    # Match to abundance matrix
+    keys_a = meta.loc[mask_a, "sample_key"].values
+    keys_b = meta.loc[mask_b, "sample_key"].values
+    valid_a = [k for k in keys_a if k in abund_idx]
+    valid_b = [k for k in keys_b if k in abund_idx]
+
+    if len(valid_a) == 0:
+        raise HTTPException(400, f"Group A: no matched samples in abundance data")
+    if len(valid_b) == 0:
+        raise HTTPException(400, f"Group B: no matched samples in abundance data")
+
+    # Normalize to relative abundance
+    raw_a = abund.loc[valid_a].values.astype(float)
+    raw_b = abund.loc[valid_b].values.astype(float)
+    totals_a = raw_a.sum(axis=1, keepdims=True); totals_a[totals_a == 0] = 1
+    totals_b = raw_b.sum(axis=1, keepdims=True); totals_b[totals_b == 0] = 1
+    mat_a = raw_a / totals_a * 100
+    mat_b = raw_b / totals_b * 100
+    col_names = abund.columns.tolist()
+
+    # Aggregate by taxonomy level
+    if tax_level == "phylum":
+        labels = [extract_phylum(c) for c in col_names]
+    else:
+        labels = [extract_genus(c) for c in col_names]
+
+    unique_labels = list(dict.fromkeys(labels))
+    n_taxa = len(unique_labels)
+    agg_a = np.zeros((mat_a.shape[0], n_taxa))
+    agg_b = np.zeros((mat_b.shape[0], n_taxa))
+    for i, lbl in enumerate(unique_labels):
+        idxs = [j for j, l in enumerate(labels) if l == lbl]
+        agg_a[:, i] = mat_a[:, idxs].sum(axis=1)
+        agg_b[:, i] = mat_b[:, idxs].sum(axis=1)
+
+    # Build phylum lookup for genus-level (for coloring)
+    phylum_map: dict[str, str] = {}
+    for col in col_names:
+        parts = col.split(".")
+        g = parts[-1] if parts else col
+        p = parts[1] if len(parts) > 1 else ""
+        phylum_map[g] = p
+
+    n_a, n_b = mat_a.shape[0], mat_b.shape[0]
+    pseudo = 1e-6
+    results = []
+    p_values = []
+
+    for i, taxon in enumerate(unique_labels):
+        vals_a = agg_a[:, i]
+        vals_b = agg_b[:, i]
+
+        # Prevalence filter — skip rare taxa
+        prev_a = float((vals_a > 0).mean())
+        prev_b = float((vals_b > 0).mean())
+        if max(prev_a, prev_b) < min_prevalence:
+            continue
+
+        mean_a = float(np.mean(vals_a))
+        mean_b = float(np.mean(vals_b))
+        median_a = float(np.median(vals_a))
+        median_b = float(np.median(vals_b))
+        log2fc = float(math.log2((mean_a + pseudo) / (mean_b + pseudo)))
+
+        # Mann-Whitney U
+        try:
+            mwu = stats.mannwhitneyu(vals_a, vals_b, alternative="two-sided")
+            u_stat, p = float(mwu.statistic), float(mwu.pvalue)
+        except Exception:
+            u_stat, p = 0.0, 1.0
+
+        # Rank-biserial correlation as effect size
+        effect_size = float(1 - 2 * u_stat / (n_a * n_b)) if n_a * n_b > 0 else 0.0
+
+        # 95% CI for mean difference (bootstrap approximation via SE)
+        pooled_n = n_a + n_b
+        se = float(np.std(np.concatenate([vals_a, vals_b])) / math.sqrt(pooled_n)) if pooled_n > 1 else 0.0
+        ci_low = float((mean_a - mean_b) - 1.96 * se)
+        ci_high = float((mean_a - mean_b) + 1.96 * se)
+
+        phylum = phylum_map.get(taxon, "") if tax_level == "genus" else ""
+
+        p_values.append(p)
+        results.append({
+            "taxon": taxon,
+            "rank": tax_level,
+            "phylum": phylum,
+            "mean_a": round(mean_a, 6),
+            "mean_b": round(mean_b, 6),
+            "median_a": round(median_a, 6),
+            "median_b": round(median_b, 6),
+            "prevalence_a": round(prev_a, 4),
+            "prevalence_b": round(prev_b, 4),
+            "n_a": n_a,
+            "n_b": n_b,
+            "log2fc": round(log2fc, 4),
+            "lda_score": None,
+            "effect_size": round(effect_size, 4),
+            "p_value": p,
+            "adjusted_p": 0.0,  # filled below
+            "enriched_in": "a" if log2fc > 0 else ("b" if log2fc < 0 else "none"),
+            "ci_low": round(ci_low, 6),
+            "ci_high": round(ci_high, 6),
+        })
+
+    # BH correction
+    adj_p = bh_correction(p_values)
+    for i, row in enumerate(results):
+        row["adjusted_p"] = adj_p[i]
+
+    # Sort by adjusted p, then |log2fc|
+    results.sort(key=lambda x: (x["adjusted_p"], -abs(x["log2fc"])))
+
+    sig_count = sum(1 for r in results if r["adjusted_p"] < 0.05)
+    top_results = results[:top_n]
+
+    return {
+        "group_a": group_a,
+        "group_b": group_b,
+        "dim_type": dim_type,
+        "tax_level": tax_level,
+        "method": "mannwhitneyu_bh",
+        "n_a": n_a,
+        "n_b": n_b,
+        "total_taxa": len(results),
+        "significant_count": sig_count,
+        "results": top_results,
+    }
+
+
+@app.get("/api/phenotype-taxa-profile",
+         summary="Taxa abundance distribution per group",
+         description="Return per-group quantile distributions for a specific taxon (for boxplot).")
+@limiter.limit("30/minute")
+def phenotype_taxa_profile(
+    request: Request,
+    taxon: str,
+    dim_type: str = "sex",
+):
+    """
+    Return abundance distribution (Q1/Q3/median/whiskers) per phenotype group.
+    返回某分类在各表型分组的丰度分布（用于箱线图）
+    """
+    meta = get_metadata()
+    abund = get_abundance()
+    abund_idx = set(abund.index)
+    col_names = abund.columns.tolist()
+
+    # Find taxon column indices
+    taxon_lower = taxon.strip().lower()
+    taxon_idxs = [j for j, c in enumerate(col_names) if extract_genus(c).lower() == taxon_lower
+                  or extract_phylum(c).lower() == taxon_lower]
+    if not taxon_idxs:
+        raise HTTPException(404, f"Taxon '{taxon}' not found in abundance data")
+
+    # Get all phenotype groups
+    if dim_type == "disease":
+        INFORM_COLS = [f"inform{i}" for i in range(12)]
+        all_groups: set[str] = set()
+        for col in INFORM_COLS:
+            if col in meta.columns:
+                vals = meta[col].dropna().astype(str).str.strip()
+                all_groups.update(v for v in vals if v and v != "nan" and v != "NC")
+        groups = sorted(all_groups)[:50]  # limit to top 50 disease groups
+    elif dim_type == "age":
+        groups = meta["age_group"].dropna().unique().tolist() if "age_group" in meta.columns else []
+    elif dim_type == "sex":
+        groups = meta["sex"].dropna().unique().tolist() if "sex" in meta.columns else []
+    else:
+        groups = []
+
+    profile_data = []
+    for group in groups:
+        mask = _get_samples_by_pheno(meta, dim_type, group)
+        keys = meta.loc[mask, "sample_key"].values
+        valid_keys = [k for k in keys if k in abund_idx]
+        if len(valid_keys) < 5:
+            continue
+
+        vals = abund.loc[valid_keys].values[:, taxon_idxs].sum(axis=1).astype(float)
+        totals = abund.loc[valid_keys].values.sum(axis=1).astype(float)
+        totals[totals == 0] = 1
+        rel = vals / totals * 100
+
+        q1, q3 = float(np.percentile(rel, 25)), float(np.percentile(rel, 75))
+        iqr = q3 - q1
+        profile_data.append({
+            "group": group,
+            "n": len(valid_keys),
+            "median": round(float(np.median(rel)), 6),
+            "mean": round(float(np.mean(rel)), 6),
+            "q1": round(q1, 6),
+            "q3": round(q3, 6),
+            "whisker_low": round(max(float(rel.min()), q1 - 1.5 * iqr), 6),
+            "whisker_high": round(min(float(rel.max()), q3 + 1.5 * iqr), 6),
+            "outliers": [round(float(v), 6) for v in rel if v < q1 - 1.5 * iqr or v > q3 + 1.5 * iqr][:20],
+        })
+
+    profile_data.sort(key=lambda x: -x["median"])
+    return {"taxon": taxon, "dim_type": dim_type, "groups": profile_data}
+
+
 # ── Species search & profile endpoints / 物种搜索与画像端点 ──────────────────
 
 # Invalid genus names to filter out (taxonomy parsing artifacts)
