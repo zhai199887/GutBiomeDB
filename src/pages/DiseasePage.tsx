@@ -11,6 +11,7 @@ import { useI18n } from "@/i18n";
 import { exportTable } from "@/util/export";
 import { exportSVG, exportPNG } from "@/util/chartExport";
 import { diseaseDisplayName, diseaseDisplayNameI18n } from "@/util/diseaseNames";
+import { countryName, AGE_GROUP_ZH, SEX_ZH } from "@/util/countries";
 import { cachedFetch } from "@/util/apiCache";
 import "@/components/tooltip";
 import BiomarkerPanel from "./disease/BiomarkerPanel";
@@ -331,19 +332,22 @@ const ProfileView = ({ profile, dName, locale }: { profile: DiseaseProfile; dNam
         {profile.by_sex.length > 0 && (
           <div className={classes.chartCard}>
             <h3>{t("disease.bySex")}</h3>
-            <DemoTable data={profile.by_sex} nameLabel={t("disease.chart.name")} countLabel={t("disease.chart.count")} />
+            <DemoTable data={profile.by_sex} nameLabel={t("disease.chart.name")} countLabel={t("disease.chart.count")}
+              nameRenderer={(n) => locale === "zh" ? (SEX_ZH[n] ?? n) : n} />
           </div>
         )}
         {profile.by_age_group.length > 0 && (
           <div className={classes.chartCard}>
             <h3>{t("disease.byAgeGroup")}</h3>
-            <DemoTable data={profile.by_age_group} nameLabel={t("disease.chart.name")} countLabel={t("disease.chart.count")} />
+            <DemoTable data={profile.by_age_group} nameLabel={t("disease.chart.name")} countLabel={t("disease.chart.count")}
+              nameRenderer={(n) => locale === "zh" ? (AGE_GROUP_ZH[n] ?? n.replace(/_/g, " ")) : n.replace(/_/g, " ")} />
           </div>
         )}
         {profile.by_country.length > 0 && (
           <div className={classes.chartCard}>
             <h3>{t("disease.byCountry")}</h3>
-            <DemoTable data={profile.by_country} nameLabel={t("disease.chart.name")} countLabel={t("disease.chart.count")} />
+            <DemoTable data={profile.by_country} nameLabel={t("disease.chart.name")} countLabel={t("disease.chart.count")}
+              nameRenderer={(n) => countryName(n, locale)} />
           </div>
         )}
       </div>
@@ -351,7 +355,10 @@ const ProfileView = ({ profile, dName, locale }: { profile: DiseaseProfile; dNam
   );
 };
 
-const DemoTable = ({ data, nameLabel = "Name", countLabel = "Count" }: { data: DemoEntry[]; nameLabel?: string; countLabel?: string }) => (
+const DemoTable = ({ data, nameLabel = "Name", countLabel = "Count", nameRenderer }: {
+  data: DemoEntry[]; nameLabel?: string; countLabel?: string;
+  nameRenderer?: (name: string) => string;
+}) => (
   <table className={classes.miniTable}>
     <thead>
       <tr><th>{nameLabel}</th><th>{countLabel}</th></tr>
@@ -359,7 +366,7 @@ const DemoTable = ({ data, nameLabel = "Name", countLabel = "Count" }: { data: D
     <tbody>
       {data.map((d) => (
         <tr key={d.name}>
-          <td>{d.name}</td>
+          <td>{nameRenderer ? nameRenderer(d.name) : d.name}</td>
           <td>{d.count.toLocaleString("en")}</td>
         </tr>
       ))}
