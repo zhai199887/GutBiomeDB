@@ -3073,6 +3073,265 @@ def network_compare(
 AGE_GROUP_ORDER = ["Infant", "Child", "Adolescent", "Adult", "Older_Adult", "Oldest_Old", "Centenarian", "Unknown"]
 
 
+def _lifecycle_filter_meta(meta: pd.DataFrame, disease: str = "", country: str = "") -> pd.DataFrame:
+    """Filter metadata for lifecycle views using disease/country selectors."""
+    filtered = meta.copy()
+    inform_cols = [f"inform{i}" for i in range(12)]
+
+    if disease and disease.strip():
+        disease_key = disease.strip().lower()
+        mask = pd.Series(False, index=filtered.index)
+        for col in inform_cols:
+            if col not in filtered.columns:
+                continue
+            values = filtered[col].fillna("").astype(str).str.strip().str.lower()
+            mask |= values == disease_key
+        filtered = filtered[mask]
+    else:
+        mask = pd.Series(False, index=filtered.index)
+        for col in inform_cols:
+            if col not in filtered.columns:
+                continue
+            values = filtered[col].fillna("").astype(str).str.strip().str.lower()
+            mask |= values == "nc"
+        filtered = filtered[mask]
+
+    if country and country.strip():
+        filtered = filtered[filtered["country"].fillna("").astype(str).str.upper() == country.strip().upper()]
+
+    filtered = filtered.dropna(subset=["sample_key"]).drop_duplicates(subset="sample_key")
+    return filtered.reset_index(drop=True)
+
+
+def _lifecycle_top_transitions(
+    rel: np.ndarray,
+    sample_ages: list[str],
+    stacked_data: list[dict],
+    top_genus_names: list[str],
+    genus_indices: dict[str, list[int]],
+) -> list[dict]:
+    """Return top age-to-age transitions with MWU p-values and BH-FDR."""
+    transitions: list[dict] = []
+
+    for i in range(1, len(stacked_data)):
+        prev = stacked_data[i - 1]
+        curr = stacked_data[i]
+        prev_age = str(prev["age_group"])
+        curr_age = str(curr["age_group"])
+        prev_idx = [j for j, age in enumerate(sample_ages) if age == prev_age]
+        curr_idx = [j for j, age in enumerate(sample_ages) if age == curr_age]
+        changes: list[dict] = []
+
+        for genus in top_genus_names:
+            idxs = genus_indices.get(genus, [])
+            if not idxs:
+                continue
+
+            delta = float(curr.get(genus, 0.0)) - float(prev.get(genus, 0.0))
+            if abs(delta) <= 0.3:
+                continue
+
+            entry = {
+                "genus": genus,
+                "change": round(abs(delta), 4),
+                "direction": "increase" if delta > 0 else "decrease",
+                "pvalue": None,
+                "adjusted_p": None,
+            }
+
+            if len(prev_idx) >= 3 and len(curr_idx) >= 3:
+                prev_vals = rel[prev_idx][:, idxs].sum(axis=1)
+                curr_vals = rel[curr_idx][:, idxs].sum(axis=1)
+                try:
+                    test = stats.mannwhitneyu(prev_vals, curr_vals, alternative="two-sided")
+                    entry["pvalue"] = round(float(test.pvalue), 6)
+                except Exception:
+                    entry["pvalue"] = None
+
+            changes.append(entry)
+
+        raw_pvals = [float(item["pvalue"]) for item in changes if item["pvalue"] is not None]
+        if raw_pvals:
+            adjusted = bh_correction(raw_pvals)
+            p_idx = 0
+            for item in changes:
+                if item["pvalue"] is None:
+                    continue
+                item["adjusted_p"] = round(float(adjusted[p_idx]), 6)
+                p_idx += 1
+
+        changes.sort(key=lambda item: item["change"], reverse=True)
+        top_changes = changes[:3]
+        if top_changes:
+            transitions.append({
+                "from": prev_age,
+                "to": curr_age,
+                "top_changes": top_changes,
+            })
+
+    return transitions
+
+
+def _lifecycle_kruskal_results(
+    rel: np.ndarray,
+    sample_ages: list[str],
+    age_groups_present: list[str],
+    top_genus_names: list[str],
+    genus_indices: dict[str, list[int]],
+) -> list[dict]:
+    """Run genus-wise Kruskal-Wallis across age groups and BH-FDR."""
+    raw_rows: list[dict] = []
+    raw_pvals: list[float] = []
+
+    for genus in top_genus_names:
+        idxs = genus_indices.get(genus, [])
+        if not idxs:
+            continue
+
+        groups = []
+        for age_group in age_groups_present:
+            age_idx = [j for j, age in enumerate(sample_ages) if age == age_group]
+            if len(age_idx) < 3:
+                continue
+            groups.append(rel[age_idx][:, idxs].sum(axis=1))
+
+        if len(groups) < 3:
+            continue
+
+        try:
+            h_stat, p_value = stats.kruskal(*groups)
+        except Exception:
+            continue
+
+        raw_rows.append({
+            "genus": genus,
+            "kruskal_h": round(float(h_stat), 4),
+            "kruskal_p": round(float(p_value), 6),
+            "adjusted_p": None,
+            "significant": False,
+        })
+        raw_pvals.append(float(p_value))
+
+    if raw_pvals:
+        adjusted = bh_correction(raw_pvals)
+        for idx, row in enumerate(raw_rows):
+            row["adjusted_p"] = round(float(adjusted[idx]), 6)
+            row["significant"] = bool(adjusted[idx] < 0.05)
+
+    return raw_rows
+
+
+def _lifecycle_internal(
+    disease: str = "",
+    country: str = "",
+    top_genera: int = 15,
+    fixed_genera: Optional[list[str]] = None,
+    use_cache: bool = True,
+) -> dict:
+    """Compute lifecycle atlas data with optional fixed genera for compare mode."""
+    fixed_part = ",".join(fixed_genera or [])
+    cache_key = f"lifecycle:v2:{disease}:{country}:{top_genera}:{fixed_part}"
+    if use_cache:
+        cached = get_cached(cache_key)
+        if cached:
+            return cached
+
+    meta = get_metadata()
+    abund = get_abundance()
+
+    if "age_group" not in meta.columns:
+        raise HTTPException(400, "age_group column not found in metadata")
+
+    filtered = _lifecycle_filter_meta(meta, disease=disease, country=country)
+    if len(filtered) < 10:
+        raise HTTPException(400, "Too few samples after filtering")
+
+    valid_key_index = abund.index.intersection(filtered["sample_key"].unique())
+    valid_keys = valid_key_index.tolist()
+    if len(valid_keys) < 10:
+        raise HTTPException(400, "Too few samples with abundance data")
+
+    raw = abund.loc[valid_keys].to_numpy(dtype=float)
+    totals = raw.sum(axis=1, keepdims=True)
+    totals[totals == 0] = 1.0
+    rel = raw / totals * 100.0
+
+    col_names = abund.columns.tolist()
+    genus_labels = [extract_genus(col).strip() for col in col_names]
+    genus_means_list: list[tuple[str, float]] = []
+    genus_indices: dict[str, list[int]] = {}
+    for genus in dict.fromkeys(genus_labels):
+        if not is_valid_genus(genus):
+            continue
+        idxs = [j for j, label in enumerate(genus_labels) if label == genus]
+        genus_indices[genus] = idxs
+        genus_means_list.append((genus, float(rel[:, idxs].sum(axis=1).mean())))
+    genus_means_list.sort(key=lambda item: item[1], reverse=True)
+
+    if fixed_genera:
+        top_genus_names = [genus for genus in fixed_genera if genus in genus_indices]
+    else:
+        top_genus_names = [genus for genus, _ in genus_means_list[:top_genera]]
+
+    filtered_age_lookup = (
+        filtered[["sample_key", "age_group"]]
+        .assign(age_group=lambda frame: frame["age_group"].fillna("Unknown").astype(str).str.strip())
+        .drop_duplicates(subset="sample_key")
+        .set_index("sample_key")["age_group"]
+        .to_dict()
+    )
+    sample_ages = [filtered_age_lookup.get(key, "Unknown") or "Unknown" for key in valid_keys]
+    age_groups_present = [age_group for age_group in AGE_GROUP_ORDER if age_group in set(sample_ages)]
+
+    stacked_data: list[dict] = []
+    phylum_lookup = build_genus_phylum_map(col_names)
+
+    for age_group in age_groups_present:
+        age_idx = [i for i, age in enumerate(sample_ages) if age == age_group]
+        if not age_idx:
+            continue
+
+        age_rel = rel[age_idx]
+        alpha_rel = age_rel / 100.0
+        shannon_vals = np.array([shannon_diversity(alpha_rel[j]) for j in range(len(age_idx))], dtype=float)
+        simpson_vals = np.array([simpson_diversity(alpha_rel[j]) for j in range(len(age_idx))], dtype=float)
+
+        row: dict = {
+            "age_group": age_group,
+            "sample_count": len(age_idx),
+            "shannon_mean": round(float(shannon_vals.mean()), 4),
+            "shannon_sd": round(float(shannon_vals.std()), 4),
+            "simpson_mean": round(float(simpson_vals.mean()), 4),
+            "simpson_sd": round(float(simpson_vals.std()), 4),
+        }
+
+        for genus in top_genus_names:
+            idxs = genus_indices.get(genus, [])
+            row[genus] = round(float(age_rel[:, idxs].sum(axis=1).mean()), 4) if idxs else 0.0
+
+        top_sum = sum(float(row[genus]) for genus in top_genus_names)
+        row["Other"] = round(max(0.0, 100.0 - top_sum), 4)
+        stacked_data.append(row)
+
+    transitions = _lifecycle_top_transitions(rel, sample_ages, stacked_data, top_genus_names, genus_indices)
+    kruskal_results = _lifecycle_kruskal_results(rel, sample_ages, age_groups_present, top_genus_names, genus_indices)
+
+    result = {
+        "disease": disease or "Healthy (NC)",
+        "country": country or "All",
+        "total_samples": len(valid_keys),
+        "genera": top_genus_names + ["Other"],
+        "phylum_map": {genus: phylum_lookup.get(genus, "Unknown") for genus in top_genus_names},
+        "data": stacked_data,
+        "transitions": transitions,
+        "kruskal_results": kruskal_results,
+    }
+
+    if use_cache:
+        set_cached(cache_key, result)
+    return result
+
+
 @app.get("/api/lifecycle",
          summary="Lifecycle microbiome atlas",
          description="Genus-level composition across 8 life stages from Infant to Centenarian.")
@@ -3087,112 +3346,56 @@ def lifecycle_atlas(
     Return genus composition across 8 life stages.
     返回 8 个生命阶段的属级组成
     """
-    cache_key = f"lifecycle:{disease}:{country}:{top_genera}"
+    return _lifecycle_internal(disease=disease, country=country, top_genera=top_genera, use_cache=True)
+
+
+@app.get("/api/lifecycle-compare",
+         summary="Lifecycle comparison: disease vs NC",
+         description="Side-by-side lifecycle trajectories for a disease cohort versus healthy controls.")
+@limiter.limit("30/minute")
+def lifecycle_compare(
+    request: Request,
+    disease: str,
+    country: str = "",
+    top_genera: int = 15,
+):
+    """Return lifecycle trajectories for disease and NC with aligned genera."""
+    if not disease or not disease.strip():
+        raise HTTPException(400, "disease parameter is required for comparison mode")
+
+    cache_key = f"lifecycle_compare:v2:{disease}:{country}:{top_genera}"
     cached = get_cached(cache_key)
     if cached:
         return cached
-    meta = get_metadata()
-    abund = get_abundance()
 
-    if "age_group" not in meta.columns:
-        raise HTTPException(400, "age_group column not found in metadata")
+    disease_seed = _lifecycle_internal(disease=disease, country=country, top_genera=top_genera, use_cache=True)
+    nc_seed = _lifecycle_internal(disease="", country=country, top_genera=top_genera, use_cache=True)
 
-    filtered = meta.copy()
-    INFORM_COLS = [f"inform{i}" for i in range(12)]
-    if disease and disease.strip():
-        mask = pd.Series(False, index=filtered.index)
-        for col in INFORM_COLS:
-            if col in filtered.columns:
-                mask |= (filtered[col].fillna("").astype(str).str.strip() == disease.strip())
-        filtered = filtered[mask]
-    else:
-        mask = pd.Series(False, index=filtered.index)
-        for col in INFORM_COLS:
-            if col in filtered.columns:
-                mask |= (filtered[col].fillna("").astype(str).str.strip() == "NC")
-        filtered = filtered[mask]
-
-    if country and country.strip():
-        filtered = filtered[filtered["country"].str.upper() == country.strip().upper()]
-
-    if len(filtered) < 10:
-        raise HTTPException(400, "Too few samples after filtering")
-
-    valid_keys = abund.index.intersection(filtered["sample_key"].dropna().unique())
-    if len(valid_keys) < 10:
-        raise HTTPException(400, "Too few samples with abundance data")
-
-    raw = abund.loc[valid_keys].values.astype(float)
-    totals = raw.sum(axis=1, keepdims=True)
-    totals[totals == 0] = 1
-    rel = raw / totals * 100
-
-    col_names = abund.columns.tolist()
-    genus_labels = [extract_genus(c) for c in col_names]
-    unique_genera = list(dict.fromkeys(genus_labels))
-
-    genus_indices: dict[str, list[int]] = {}
-    genus_means_list: list[tuple[str, float]] = []
-    for g in unique_genera:
-        if not is_valid_genus(g):
+    union_genera: list[str] = []
+    for genus in disease_seed["genera"] + nc_seed["genera"]:
+        if genus == "Other" or genus in union_genera:
             continue
-        idxs = [j for j, l in enumerate(genus_labels) if l == g]
-        genus_indices[g] = idxs
-        genus_means_list.append((g, float(rel[:, idxs].sum(axis=1).mean())))
+        union_genera.append(genus)
 
-    genus_means_list.sort(key=lambda x: x[1], reverse=True)
-    top_genus_names = [g[0] for g in genus_means_list[:top_genera]]
-
-    key_to_age = dict(zip(filtered["sample_key"], filtered["age_group"].fillna("Unknown").astype(str).str.strip()))
-    sample_ages = [key_to_age.get(k, "Unknown") for k in valid_keys]
-
-    age_groups_present = [ag for ag in AGE_GROUP_ORDER if ag in set(sample_ages)]
-    stacked_data = []
-
-    for ag in age_groups_present:
-        ag_indices = [i for i, a in enumerate(sample_ages) if a == ag]
-        if len(ag_indices) == 0:
-            continue
-
-        ag_rel = rel[ag_indices]
-        row: dict = {"age_group": ag, "sample_count": len(ag_indices)}
-
-        for g in top_genus_names:
-            idxs = genus_indices[g]
-            row[g] = round(float(ag_rel[:, idxs].sum(axis=1).mean()), 4)
-
-        top_sum = sum(row[g] for g in top_genus_names)
-        row["Other"] = round(max(0, 100 - top_sum), 4)
-
-        stacked_data.append(row)
-
-    transitions = []
-    for i in range(1, len(stacked_data)):
-        prev = stacked_data[i - 1]
-        curr = stacked_data[i]
-        max_change_genus = ""
-        max_change = 0.0
-        for g in top_genus_names:
-            change = abs(curr.get(g, 0) - prev.get(g, 0))
-            if change > max_change:
-                max_change = change
-                max_change_genus = g
-        if max_change > 0.5:
-            transitions.append({
-                "from": prev["age_group"],
-                "to": curr["age_group"],
-                "genus": max_change_genus,
-                "change": round(max_change, 4),
-                "direction": "increase" if curr.get(max_change_genus, 0) > prev.get(max_change_genus, 0) else "decrease",
-            })
+    shared_top_genera = max(top_genera, len(union_genera))
+    disease_result = _lifecycle_internal(
+        disease=disease,
+        country=country,
+        top_genera=shared_top_genera,
+        fixed_genera=union_genera,
+        use_cache=False,
+    )
+    nc_result = _lifecycle_internal(
+        disease="",
+        country=country,
+        top_genera=shared_top_genera,
+        fixed_genera=union_genera,
+        use_cache=False,
+    )
 
     result = {
-        "disease": disease or "Healthy (NC)",
-        "country": country or "All",
-        "total_samples": len(valid_keys),
-        "genera": top_genus_names + ["Other"],
-        "data": stacked_data,
-        "transitions": transitions,
+        "disease_data": disease_result,
+        "nc_data": nc_result,
     }
     set_cached(cache_key, result)
     return result
