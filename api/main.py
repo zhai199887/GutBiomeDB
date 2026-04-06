@@ -370,9 +370,16 @@ def count_unique_projects(meta: pd.DataFrame) -> int:
 
 
 def count_unique_genera_from_abundance() -> int:
-    """Count unique genera from abundance matrix columns."""
-    abund = get_abundance()
-    genera = {extract_genus(col).strip() for col in abund.columns if extract_genus(col).strip()}
+    """Count unique genera from abundance matrix headers without loading the full matrix."""
+    if not ABUNDANCE_PATH or not os.path.exists(ABUNDANCE_PATH):
+        return 0
+
+    columns = pd.read_csv(ABUNDANCE_PATH, nrows=0).columns.tolist()
+    if not columns:
+        return 0
+
+    data_columns = columns[1:] if columns[0].strip().lower() in {"sample_id", "sampleid", "sample"} else columns
+    genera = {extract_genus(col).strip() for col in data_columns if extract_genus(col).strip()}
     return len(genera)
 
 
