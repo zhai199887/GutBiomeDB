@@ -16,6 +16,7 @@ const API_BASE = import.meta.env.VITE_API_URL ?? "http://localhost:8000";
 const Overview = () => {
   const { t } = useI18n();
   const summary = useData((state) => state.summary);
+  const abundance = useData((state) => state.abundance);
 
   // API stats (if backend running) / 后端统计数据（后端启动后可用）
   const [apiStats, setApiStats] = useState<ApiStats | null>(null);
@@ -81,10 +82,34 @@ const Overview = () => {
       color: "#10b981",
     },
     {
+      to: "/search",
+      title: t("feature.search.title"),
+      desc: t("feature.search.desc"),
+      color: "#60a5fa",
+    },
+    {
       to: "/metabolism",
       title: t("feature.metabolism.title"),
       desc: t("feature.metabolism.desc"),
       color: "var(--secondary-light)",
+    },
+    {
+      to: "/download",
+      title: t("feature.download.title"),
+      desc: t("feature.download.desc"),
+      color: "#f97316",
+    },
+    {
+      to: "/api-docs",
+      title: t("feature.apiDocs.title"),
+      desc: t("feature.apiDocs.desc"),
+      color: "#22c55e",
+    },
+    {
+      to: "/about",
+      title: t("feature.about.title"),
+      desc: t("feature.about.desc"),
+      color: "#c084fc",
     },
   ];
 
@@ -109,12 +134,12 @@ const Overview = () => {
     },
     {
       icon: PackageIcon,
-      value: apiStats?.total_projects,
+      value: apiStats?.total_projects ?? summary?.total_projects,
       label: t("overview.projects"),
     },
     {
       icon: DatabaseIcon,
-      value: apiStats?.total_genera,
+      value: apiStats?.total_genera ?? summary?.total_genera ?? abundance?.total_genera,
       label: t("overview.genera"),
     },
   ];

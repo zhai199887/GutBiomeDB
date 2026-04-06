@@ -75,8 +75,16 @@ const en = {
   "feature.similarity.desc": "Search for the most similar microbiome samples based on taxonomic composition",
   "feature.studies.title": "Study Datasets",
   "feature.studies.desc": "Browse all included public studies, projects, and cohort-level metadata",
+  "feature.search.title": "Genus Search",
+  "feature.search.desc": "Inspect one genus across diseases, geography, age groups, biomarkers, and local network context",
   "feature.metabolism.title": "Metabolic Functions",
   "feature.metabolism.desc": "Browse microbiota by metabolic role: SCFAs, bile acids, tryptophan, TMAO, and more",
+  "feature.download.title": "Download Hub",
+  "feature.download.desc": "Export reference summaries and module-level aggregated analysis results in CSV, TSV, or JSON",
+  "feature.apiDocs.title": "API Workspace",
+  "feature.apiDocs.desc": "Read endpoint docs, inspect response schemas, and run live requests against local or public API",
+  "feature.about.title": "About & Cite",
+  "feature.about.desc": "Review research background, licensing boundaries, citation guidance, and version history",
 
   // Filter panel
   "filter.title": "Filter",

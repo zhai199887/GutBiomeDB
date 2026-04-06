@@ -156,19 +156,7 @@ app.add_middleware(SecurityHeadersMiddleware)
 @app.on_event("startup")
 def warmup_data():
     """Pre-load data into memory at startup to avoid cold-start latency.
-    启动时预加载数据到内存，避免首次请求延迟"""
-    try:
-        if METADATA_PATH:
-            get_metadata()
-            logging.info("Metadata pre-loaded into cache")
-        if ABUNDANCE_PATH:
-            get_abundance()
-            logging.info("Abundance pre-loaded into cache")
-    except Exception as e:
-        logging.warning(f"Warmup failed (non-fatal): {e}")
-
-    # Pre-warm fixed endpoints in background thread
-    # 后台线程预热固定端点（filter-options, data-stats, disease-list, network）
+    ????????????????????"""
     import threading
 
     def _warmup_endpoints():
@@ -190,8 +178,23 @@ def warmup_data():
             except Exception as e:
                 logging.warning(f"Warmup failed: {url} -> {e}")
 
-    threading.Thread(target=_warmup_endpoints, daemon=True).start()
-    logging.info("Background endpoint warmup started")
+    def _preload_data():
+        # Avoid blocking startup on the full abundance matrix so health checks
+        # and public API probes can recover immediately after code updates.
+        try:
+            if METADATA_PATH:
+                get_metadata()
+                logging.info("Metadata pre-loaded into cache")
+            if ABUNDANCE_PATH:
+                get_abundance()
+                logging.info("Abundance pre-loaded into cache")
+        except Exception as e:
+            logging.warning(f"Warmup failed (non-fatal): {e}")
+
+        _warmup_endpoints()
+
+    threading.Thread(target=_preload_data, daemon=True).start()
+    logging.info("Background data warmup started")
 
 
 # ── Response cache for compute-heavy endpoints / 计算密集端点结果缓存 ─────────

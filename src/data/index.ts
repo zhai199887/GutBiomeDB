@@ -19,6 +19,9 @@ export type CountryStat = {
 
 export type MetadataSummary = {
   total_samples: number;
+  total_unique_diseases?: number;
+  total_projects?: number;
+  total_genera?: number;
   age_counts: Record<string, number>;
   sex_counts: Record<string, number>;
   disease_counts: Record<string, number>;
@@ -46,6 +49,7 @@ export type SampleRecord = {
 
 export type AbundanceSummary = {
   genera: string[];
+  total_genera?: number;
   phylum_map?: Record<string, string>;
   by_age_group: Record<string, Record<string, number>>;
   by_sex: Record<string, Record<string, number>>;
