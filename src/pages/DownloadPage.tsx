@@ -9,7 +9,7 @@ import { diseaseShortNameI18n } from "@/util/diseaseNames";
 import classes from "./DownloadPage.module.css";
 
 const LOCAL_API_BASE = "http://localhost:8000";
-const PUBLIC_API_BASE = "https://1d0fc7d9.r12.cpolar.top";
+const PUBLIC_API_BASE = "https://32c774a.r12.cpolar.top";
 const ACTIVE_API_BASE = import.meta.env.VITE_API_URL ?? LOCAL_API_BASE;
 const FORMATS = ["csv", "tsv", "json"] as const;
 
