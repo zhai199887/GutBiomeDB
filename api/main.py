@@ -378,7 +378,7 @@ def count_unique_genera_from_abundance() -> int:
     if not columns:
         return 0
 
-    data_columns = columns[1:] if columns[0].strip().lower() in {"sample_id", "sampleid", "sample"} else columns
+    data_columns = columns[1:] if columns[0].strip().lower() in {"sample_id", "sampleid", "sample", "rownames"} else columns
     return len(data_columns)
 
 
