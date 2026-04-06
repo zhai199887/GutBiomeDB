@@ -233,36 +233,48 @@ logging.info(f"Disease ontology loaded: {len(DISEASE_ONTOLOGY)} entries")
 def get_metadata() -> pd.DataFrame:
     """Load and clean metadata CSV. / 加载并清理元数据CSV"""
     logging.info(f"Loading metadata from {METADATA_PATH}...")
-    df = pd.read_csv(METADATA_PATH, encoding="gbk", on_bad_lines="skip", low_memory=False)
+    df = _read_csv_with_fallbacks(METADATA_PATH, on_bad_lines="skip", low_memory=False)
 
     # Normalize column names / 规范化列名
     df.columns = [c.strip() for c in df.columns]
 
-    # Use iso column for country (matches frontend data model)
-    # 使用 iso 列作为国家代码（与前端一致，如 US/CN/JP）
-    if "iso" in df.columns:
-        df["country"] = df["iso"].fillna("unknown").astype(str).str.strip()
-        # Merge TW (Taiwan) and HK (Hong Kong) into CN (China)
-        # 将台湾和香港的样本归入中国
-        df.loc[df["country"].isin(["TW", "HK", "MO"]), "country"] = "CN"
-    elif "geo_loc_name" in df.columns:
-        df["country"] = df["geo_loc_name"].str.split(":").str[0].str.strip().str.lower()
-    else:
-        df["country"] = "unknown"
-
-    # Disease columns: keep inform0-11 for per-disease matching
-    # 疾病列：保留 inform0-11 用于单病种匹配
-    # inform-all contains combined diseases (e.g. "IBS;chickenpox;IBD")
-    # inform0-11 are individual diseases split from inform-all
-    # A sample with inform-all="IBS;IBD" has inform0="IBS", inform1="IBD"
-    INFORM_COLS = [f"inform{i}" for i in range(12)]
-    for col in INFORM_COLS:
+    inform_cols = [f"inform{i}" for i in range(12)]
+    for col in inform_cols + ["inform-all"]:
         if col not in df.columns:
             df[col] = pd.NA
 
+    if "sex" in df.columns:
+        sex_series = df["sex"].fillna("").astype(str).str.strip().str.lower()
+        sex_series = sex_series.replace("", "unknown")
+        sex_series = sex_series.where(sex_series.isin(["male", "female", "unknown"]), "unknown")
+        df["sex"] = sex_series
+
+    # Use iso column for country (matches frontend data model)
+    # 使用 iso 列作为国家代码（与前端一致，如 US/CN/JP）
+    if "iso" in df.columns:
+        iso_series = df["iso"].fillna("").astype(str).str.strip().replace("", "unknown")
+        iso_series = iso_series.replace({"TW": "CN", "HK": "CN", "MO": "CN"})
+        df["iso"] = iso_series
+        df["country"] = iso_series
+    elif "geo_loc_name" in df.columns:
+        df["country"] = df["geo_loc_name"].fillna("").astype(str).str.split(":").str[0].str.strip().str.lower()
+        df["country"] = df["country"].replace("", "unknown")
+    else:
+        df["country"] = "unknown"
+
+    inform_all = df["inform-all"].fillna("").astype(str).str.strip()
+    inform0 = df["inform0"].fillna("").astype(str).str.strip()
+    fill_mask = inform_all.ne("") & inform0.eq("")
+    if fill_mask.any():
+        df.loc[fill_mask, "inform0"] = inform_all.loc[fill_mask]
+
+    for col in inform_cols + ["inform-all"]:
+        df[col] = df[col].map(_normalize_inform_label)
+
     # Legacy: keep "disease" as inform-all for backward compatibility
     if "inform-all" in df.columns:
-        df["disease"] = df["inform-all"].fillna("unknown").astype(str).str.strip()
+        df["disease"] = df["inform-all"].fillna("").astype(str).str.strip()
+        df.loc[df["disease"] == "", "disease"] = "unknown"
     else:
         df["disease"] = "unknown"
 
@@ -316,6 +328,57 @@ COUNTRY_NAMES = {
     "UA": "Ukraine", "UG": "Uganda", "US": "United States", "UZ": "Uzbekistan",
     "VE": "Venezuela", "VN": "Vietnam", "ZA": "South Africa", "ZM": "Zambia", "ZW": "Zimbabwe",
 }
+
+SPECIAL_POPULATION_LABELS = {
+    "Healthy first-degree relatives of Crohn's disease patients",
+    "preterm infants",
+    "Low birth weight infant",
+    "Very low birth weight preterm infants",
+}
+SPECIAL_POPULATION_LABELS_LOWER = {label.lower() for label in SPECIAL_POPULATION_LABELS}
+HEALTHY_CONTROL_ALIASES = {"nc", "healthy control", "helminth uninfected control"}
+EXCLUDED_DISEASE_ALIASES = {"dss colitis"}
+
+
+def _read_csv_with_fallbacks(path: str, **kwargs) -> pd.DataFrame:
+    """Read CSV with UTF-8 preference and legacy fallbacks."""
+    last_error: Exception | None = None
+    for encoding in ("utf-8-sig", "utf-8", "gbk", "latin1"):
+        try:
+            return pd.read_csv(path, encoding=encoding, **kwargs)
+        except UnicodeDecodeError as exc:
+            last_error = exc
+    if last_error is not None:
+        raise last_error
+    return pd.read_csv(path, **kwargs)
+
+
+def _normalize_inform_label(value: object) -> str:
+    """Normalize disease/special-population labels across inform fields."""
+    if pd.isna(value):
+        return ""
+    label = str(value).strip()
+    if not label:
+        return ""
+    lower = label.lower()
+    if lower in {"nan", "unknown"}:
+        return ""
+    if lower in HEALTHY_CONTROL_ALIASES:
+        return "NC"
+    if lower in EXCLUDED_DISEASE_ALIASES:
+        return ""
+    return label
+
+
+def _label_kind(label: object) -> str:
+    normalized = _normalize_inform_label(label)
+    if not normalized:
+        return "unknown"
+    if normalized.lower() == "nc":
+        return "healthy_control"
+    if normalized.lower() in SPECIAL_POPULATION_LABELS_LOWER:
+        return "special_population"
+    return "disease"
 
 
 def iso_to_name(code: str) -> str:
@@ -423,28 +486,41 @@ def _clean_text_series(series: pd.Series) -> pd.Series:
     return values[(values != "") & (values.str.lower() != "nan")]
 
 
+def _iter_inform_labels(meta: pd.DataFrame, inform_cols: list[str] | None = None):
+    """Yield normalized labels from inform0-11 columns."""
+    columns = inform_cols or [f"inform{i}" for i in range(12)]
+    for col in columns:
+        if col not in meta.columns:
+            continue
+        for raw_value in meta[col].fillna("").astype(str):
+            label = _normalize_inform_label(raw_value)
+            if label:
+                yield label
+
+
 def _non_nc_disease_mask(meta: pd.DataFrame, inform_cols: list[str] | None = None) -> pd.Series:
-    """Return mask for samples carrying any non-NC disease label."""
+    """Return mask for samples carrying any standard disease label."""
     columns = inform_cols or [f"inform{i}" for i in range(12)]
     mask = pd.Series(False, index=meta.index)
     for col in columns:
         if col not in meta.columns:
             continue
-        values = meta[col].fillna("").astype(str).str.strip()
-        lower = values.str.lower()
-        mask |= (values != "") & (lower != "nan") & (lower != "nc")
+        values = meta[col].fillna("").astype(str).str.strip().map(_normalize_inform_label)
+        mask |= (values != "") & (values.map(_label_kind) == "disease")
     return mask
 
 
 def _collect_project_diseases(meta: pd.DataFrame, inform_cols: list[str] | None = None) -> list[str]:
-    """Collect unique non-NC diseases from inform0-11 columns."""
+    """Collect unique non-NC labels from inform0-11 columns."""
     columns = inform_cols or [f"inform{i}" for i in range(12)]
     diseases: set[str] = set()
     for col in columns:
         if col not in meta.columns:
             continue
-        values = _clean_text_series(meta[col])
-        diseases.update(value for value in values if value.lower() != "nc")
+        for value in meta[col].fillna("").astype(str).str.strip():
+            normalized = _normalize_inform_label(value)
+            if normalized and _label_kind(normalized) != "healthy_control":
+                diseases.add(normalized)
     return sorted(diseases, key=lambda item: item.lower())
 
 
@@ -495,11 +571,11 @@ def _disease_count_rows(meta: pd.DataFrame, inform_cols: list[str] | None = None
     for col in columns:
         if col not in meta.columns:
             continue
-        values = _clean_text_series(meta[col])
-        for value in values:
-            if value.lower() == "nc":
+        for value in meta[col].fillna("").astype(str).str.strip():
+            normalized = _normalize_inform_label(value)
+            if not normalized or _label_kind(normalized) == "healthy_control":
                 continue
-            counts[value] = counts.get(value, 0) + 1
+            counts[normalized] = counts.get(normalized, 0) + 1
     return _sorted_count_rows(counts, "disease", limit=limit)
 
 
@@ -636,11 +712,11 @@ def _metabolism_top_diseases(meta: pd.DataFrame, limit: int) -> list[dict]:
     for col in METABOLISM_INFORM_COLS:
         if col not in meta.columns:
             continue
-        values = meta[col].fillna("").astype(str).str.strip()
-        values = values[(values != "") & (values.str.lower() != "nan")]
-        values = values[values.str.lower() != "nc"]
-        for value in values:
-            counts[value] = counts.get(value, 0) + 1
+        for value in meta[col].fillna("").astype(str).str.strip():
+            normalized = _normalize_inform_label(value)
+            if _label_kind(normalized) != "disease":
+                continue
+            counts[normalized] = counts.get(normalized, 0) + 1
 
     rows = [{"name": name, "sample_count": count} for name, count in counts.items()]
     rows.sort(key=lambda item: item["sample_count"], reverse=True)
@@ -1124,16 +1200,13 @@ def filter_options(request: Request):
         return cached
     meta = get_metadata()
 
-    countries = sorted(meta["country"].dropna().unique().tolist())
+    countries = sorted(meta["country"].dropna().astype(str).str.strip().unique().tolist())
 
-    # Extract individual diseases from inform0-11 columns
-    # 从 inform0-11 列提取独立疾病（非组合值）
-    INFORM_COLS = [f"inform{i}" for i in range(12)]
-    all_diseases: set[str] = set()
-    for col in INFORM_COLS:
-        if col in meta.columns:
-            vals = meta[col].dropna().astype(str).str.strip().unique()
-            all_diseases.update(v for v in vals if v and v != "nan")
+    all_diseases = {
+        label
+        for label in _iter_inform_labels(meta)
+        if _label_kind(label) != "healthy_control"
+    }
     diseases = sorted(all_diseases)
 
     age_groups: list[str] = []
@@ -1142,7 +1215,11 @@ def filter_options(request: Request):
 
     sexes: list[str] = []
     if "sex" in meta.columns:
-        sexes = sorted(meta["sex"].dropna().unique().tolist())
+        sexes = sorted(
+            value
+            for value in meta["sex"].dropna().astype(str).str.strip().unique().tolist()
+            if value in {"male", "female"}
+        )
 
     result = {
         "countries": countries,
@@ -1175,16 +1252,11 @@ def data_stats(request: Request):
         with open(version_file) as f:
             version_info = json.load(f)
 
-    # Count unique diseases from inform0-11 only (not inform-all combinations)
-    # 仅统计 inform0-11 的独立疾病（不含 inform-all 组合值）
-    INFORM_COLS = [f"inform{i}" for i in range(12)]
-    all_diseases: set[str] = set()
-    for col in INFORM_COLS:
-        if col in meta.columns:
-            vals = meta[col].dropna().astype(str).str.strip()
-            all_diseases.update(v for v in vals if v and v != "nan" and v != "")
-    all_diseases.discard("unknown")
-    all_diseases.discard("NC")
+    all_diseases = {
+        label
+        for label in _iter_inform_labels(meta)
+        if _label_kind(label) == "disease"
+    }
 
     project_col = get_project_column(meta)
     country_project_counts: dict[str, int] = {}
@@ -1624,13 +1696,10 @@ def phenotype_groups(request: Request, dim_type: str = "disease"):
     if dim_type == "disease":
         INFORM_COLS = [f"inform{i}" for i in range(12)]
         all_diseases: dict[str, int] = {}
-        for col in INFORM_COLS:
-            if col not in meta.columns:
+        for disease in _iter_inform_labels(meta, INFORM_COLS):
+            if _label_kind(disease) == "healthy_control":
                 continue
-            vals = meta[col].dropna().astype(str).str.strip()
-            vals = vals[(vals != "") & (vals != "nan") & (vals != "NC")]
-            for disease in vals:
-                all_diseases[disease] = all_diseases.get(disease, 0) + 1
+            all_diseases[disease] = all_diseases.get(disease, 0) + 1
         # Unique sample count per disease (may count sample once per inform col)
         # Build proper counts using mask
         groups = []
@@ -1649,7 +1718,7 @@ def phenotype_groups(request: Request, dim_type: str = "disease"):
         if "sex" not in meta.columns:
             return {"dim_type": dim_type, "groups": []}
         vc = meta["sex"].dropna().astype(str).value_counts()
-        groups = [{"group": k, "sample_count": int(v)} for k, v in vc.items() if k.strip()]
+        groups = [{"group": k, "sample_count": int(v)} for k, v in vc.items() if k.strip() and k in {"male", "female"}]
         return {"dim_type": dim_type, "groups": groups}
     return {"dim_type": dim_type, "groups": []}
 
@@ -2159,8 +2228,9 @@ def biomarker_profile(request: Request, genus: str, min_samples: int = 10):
         if col not in mm.columns:
             continue
         for idx, val in mm[col].fillna("").astype(str).str.strip().items():
-            if val and val != "nan" and val != "" and val != "NC" and val != "unknown":
-                disease_samples.setdefault(val, []).append(idx)
+            normalized = _normalize_inform_label(val)
+            if _label_kind(normalized) == "disease":
+                disease_samples.setdefault(normalized, []).append(idx)
 
     # Compute log2FC and Wilcoxon p for each disease / 计算每种疾病的log2FC和Wilcoxon p
     pseudo = 1e-6
@@ -2243,15 +2313,13 @@ def get_disease_list_cached() -> list[dict]:
     构建所有疾病及其样本数的列表
     """
     meta = get_metadata()
-    INFORM_COLS = [f"inform{i}" for i in range(12)]
     disease_counts: dict[str, int] = {}
-    for col in INFORM_COLS:
-        if col not in meta.columns:
-            continue
-        for val in meta[col].dropna().astype(str).str.strip():
-            if val and val != "nan" and val != "":
-                disease_counts[val] = disease_counts.get(val, 0) + 1
-    result = [{"name": k, "sample_count": v} for k, v in disease_counts.items()]
+    for label in _iter_inform_labels(meta):
+        disease_counts[label] = disease_counts.get(label, 0) + 1
+    result = [
+        {"name": label, "sample_count": count, "kind": _label_kind(label)}
+        for label, count in disease_counts.items()
+    ]
     result.sort(key=lambda x: x["sample_count"], reverse=True)
     return result
 
@@ -2274,6 +2342,7 @@ def disease_list(request: Request, q: str = ""):
     for d in diseases:
         entry = dict(d)
         onto = DISEASE_ONTOLOGY.get(d["name"], {})
+        kind = entry.get("kind", _label_kind(entry["name"]))
         entry.update({
             "standard_name": onto.get("standard_name", ""),
             "standard_name_zh": onto.get("standard_name_zh", ""),
@@ -2282,6 +2351,7 @@ def disease_list(request: Request, q: str = ""):
             "icd10": onto.get("icd10", ""),
             "category": onto.get("category", ""),
             "category_zh": onto.get("category_zh", ""),
+            "kind": kind,
         })
         enriched.append(entry)
     return {"diseases": enriched}
@@ -3279,9 +3349,9 @@ def chord_data(request: Request, top_diseases: int = 10, top_genera: int = 12):
         if col not in meta.columns:
             continue
         for idx, val in meta[col].dropna().items():
-            val = str(val).strip()
-            if val and val != "nan" and val != "NC":
-                disease_counts.setdefault(val, set()).add(idx)
+            normalized = _normalize_inform_label(val)
+            if _label_kind(normalized) == "disease":
+                disease_counts.setdefault(normalized, set()).add(idx)
 
     top_d = sorted(disease_counts.items(), key=lambda x: len(x[1]), reverse=True)[:top_diseases]
     disease_names = [d[0] for d in top_d]
@@ -4402,14 +4472,7 @@ def _compute_health_disease_genera() -> dict:
     nc_keys = [k for k in meta.loc[nc_mask, "sample_key"].values if k in abund_idx]
 
     # Disease samples: strict non-NC with at least one disease label in inform0-11
-    disease_mask = ~nc_mask
-    any_disease_mask = pd.Series(False, index=meta.index)
-    for col in INFORM_COLS:
-        if col not in meta.columns:
-            continue
-        values = meta[col].fillna("").astype(str).str.strip()
-        any_disease_mask |= (values != "") & (values.str.lower() != "nan") & (values.str.lower() != "nc")
-    disease_mask &= any_disease_mask
+    disease_mask = _non_nc_disease_mask(meta, INFORM_COLS)
     disease_keys = [k for k in meta.loc[disease_mask, "sample_key"].values if k in abund_idx]
 
     # Subsample for performance
@@ -4674,14 +4737,7 @@ def _compute_population_gmhi() -> dict:
     INFORM_COLS = [f"inform{i}" for i in range(12)]
     nc_mask = _strict_nc_mask(meta, INFORM_COLS)
     nc_keys = [k for k in meta.loc[nc_mask, "sample_key"].values if k in abund_idx]
-    disease_mask = ~nc_mask
-    any_disease_mask = pd.Series(False, index=meta.index)
-    for col in INFORM_COLS:
-        if col not in meta.columns:
-            continue
-        values = meta[col].fillna("").astype(str).str.strip()
-        any_disease_mask |= (values != "") & (values.str.lower() != "nan") & (values.str.lower() != "nc")
-    disease_mask &= any_disease_mask
+    disease_mask = _non_nc_disease_mask(meta, INFORM_COLS)
     disease_keys = [k for k in meta.loc[disease_mask, "sample_key"].values if k in abund_idx]
 
     np.random.seed(42)

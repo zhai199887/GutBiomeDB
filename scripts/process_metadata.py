@@ -1,203 +1,328 @@
 # -*- coding: utf-8 -*-
 """
-Process metadata CSV and export JSON files for the frontend.
+Process metadata CSV and export frontend summary JSON files.
 
-Input:  D:\483项目\result_with_age_sex_with_age_group_meta.csv
+Input:  D:\\**\\result_with_age_sex_with_age_group_meta.csv
 Output: public/data/metadata.json
         public/data/metadata_summary.json
 """
 
-import json
+from __future__ import annotations
+
 import glob
-import os
+import json
+from collections import Counter
+from pathlib import Path
+
 import pandas as pd
 
-# ── Paths ────────────────────────────────────────────────────────────────────
-results = glob.glob(r'D:\**\result_with_age_sex_with_age_group_meta.csv', recursive=True)
-if not results:
-    raise FileNotFoundError("Cannot find result_with_age_sex_with_age_group_meta.csv under D:\\")
-CSV_PATH = results[0]
-print(f"CSV path: {CSV_PATH}")
 
-OUT_DIR = os.path.join(os.path.dirname(__file__), '..', 'public', 'data')
-os.makedirs(OUT_DIR, exist_ok=True)
+ROOT = Path(__file__).resolve().parent.parent
+OUT_DIR = ROOT / "public" / "data"
+OUT_DIR.mkdir(parents=True, exist_ok=True)
+METADATA_OUT = OUT_DIR / "metadata.json"
+SUMMARY_OUT = OUT_DIR / "metadata_summary.json"
+ABUNDANCE_PATH = ROOT.parent / "data" / "unfiltered_abundance.csv"
 
-METADATA_OUT = os.path.join(OUT_DIR, 'metadata.json')
-SUMMARY_OUT  = os.path.join(OUT_DIR, 'metadata_summary.json')
-
-# ── Load ─────────────────────────────────────────────────────────────────────
-print("Loading CSV...")
-df = pd.read_csv(CSV_PATH, encoding='latin1', low_memory=False)
-print(f"  Loaded {len(df):,} rows × {len(df.columns)} columns")
-
-# ── Select & rename columns ──────────────────────────────────────────────────
-keep = {
-    'srr':        'sample_id',
-    'iso':        'country',
-    'region':     'region',
-    'project':    'project',
-    'age_group':  'age_group',
-    'sex':        'sex',
+SPECIAL_POPULATION_LABELS = {
+    "Healthy first-degree relatives of Crohn's disease patients",
+    "preterm infants",
+    "Low birth weight infant",
+    "Very low birth weight preterm infants",
 }
-# Also keep inform0-11 columns for individual disease extraction
-inform_cols = [f'inform{i}' for i in range(12)]
-keep_cols = list(keep.keys()) + [c for c in inform_cols]
-df = df[[c for c in keep_cols if c in df.columns]].rename(columns=keep)
+SPECIAL_POPULATION_LABELS_LOWER = {label.lower() for label in SPECIAL_POPULATION_LABELS}
+HEALTHY_CONTROL_ALIASES = {"nc", "healthy control", "helminth uninfected control"}
+EXCLUDED_DISEASE_ALIASES = {"dss colitis"}
+INFORM_COLS = [f"inform{i}" for i in range(12)]
 
-# ── Merge TW/HK/MO into CN (Taiwan & Hong Kong → China) ────────────────────
-df.loc[df['country'].isin(['TW', 'HK', 'MO']), 'country'] = 'CN'
 
-# ── Extract individual diseases from inform0-11 ─────────────────────────────
-# Each sample can have multiple diseases across inform0-11 columns
-# inform-all contains combined strings like "IBS;chickenpox" — we don't use it
-inform_cols = [f'inform{i}' for i in range(12)]
-all_individual_diseases: set[str] = set()
-for col in inform_cols:
-    if col in df.columns:
-        vals = df[col].dropna().astype(str).str.strip()
-        all_individual_diseases.update(v for v in vals if v and v != 'nan' and v != '')
+def locate_source_csv() -> Path:
+    matches = sorted(glob.glob(r"D:\**\result_with_age_sex_with_age_group_meta.csv", recursive=True))
+    if not matches:
+        raise FileNotFoundError("Cannot find result_with_age_sex_with_age_group_meta.csv under D:\\")
+    return Path(matches[0])
 
-# Create a simple 'disease' column from inform0 for backward compatibility
-if 'inform0' in df.columns:
-    df['disease'] = df['inform0'].fillna('unknown').astype(str).str.strip()
-    df.loc[df['disease'] == '', 'disease'] = 'unknown'
-else:
-    df['disease'] = 'unknown'
 
-# ── Clean sex column ─────────────────────────────────────────────────────────
-df['sex'] = df['sex'].fillna('unknown').str.strip().str.lower()
-df.loc[~df['sex'].isin(['male', 'female']), 'sex'] = 'unknown'
+def read_csv_with_fallbacks(path: Path) -> pd.DataFrame:
+    last_error: Exception | None = None
+    for encoding in ("utf-8-sig", "utf-8", "gbk", "latin1"):
+        try:
+            return pd.read_csv(path, encoding=encoding, low_memory=False)
+        except UnicodeDecodeError as exc:
+            last_error = exc
+    if last_error is not None:
+        raise last_error
+    return pd.read_csv(path, low_memory=False)
 
-# ── Export metadata.json (without inform0-11 columns, frontend doesn't need them)
-print("Writing metadata.json...")
-export_cols = [c for c in df.columns if not c.startswith('inform')]
-records = df[export_cols].to_dict(orient='records')
-with open(METADATA_OUT, 'w', encoding='utf-8') as f:
-    json.dump(records, f, ensure_ascii=False, separators=(',', ':'))
-size_mb = os.path.getsize(METADATA_OUT) / 1024 / 1024
-print(f"  Written {len(records):,} records → {size_mb:.1f} MB")
 
-# ── Build summary ─────────────────────────────────────────────────────────────
-print("Building metadata_summary.json...")
+def normalize_inform_label(value: object) -> str:
+    if pd.isna(value):
+        return ""
+    label = str(value).strip()
+    if not label:
+        return ""
+    lower = label.lower()
+    if lower in {"nan", "unknown"}:
+        return ""
+    if lower in HEALTHY_CONTROL_ALIASES:
+        return "NC"
+    if lower in EXCLUDED_DISEASE_ALIASES:
+        return ""
+    return label
 
-# Global aggregations
-age_counts     = df['age_group'].value_counts().to_dict()
-sex_counts     = df['sex'].value_counts().to_dict()
-# Count individual diseases from inform0-11 (not the combined inform-all)
-disease_sample_counts: dict[str, int] = {}
-for col in inform_cols:
-    if col in df.columns:
-        for val in df[col].dropna().astype(str).str.strip():
-            if val and val != 'nan' and val != '':
-                disease_sample_counts[val] = disease_sample_counts.get(val, 0) + 1
-# Sort by count descending, take top 50 for summary
-disease_counts = dict(sorted(disease_sample_counts.items(), key=lambda x: x[1], reverse=True)[:50])
-country_counts = df['country'].value_counts().to_dict()
-region_counts  = df['region'].value_counts().to_dict()
 
-# Age × Sex cross table
-age_sex = (
-    df.groupby(['age_group', 'sex'])
-    .size()
-    .reset_index(name='count')
-    .to_dict(orient='records')
-)
+def label_kind(label: object) -> str:
+    normalized = normalize_inform_label(label)
+    if not normalized:
+        return "unknown"
+    if normalized.lower() == "nc":
+        return "healthy_control"
+    if normalized.lower() in SPECIAL_POPULATION_LABELS_LOWER:
+        return "special_population"
+    return "disease"
 
-# Age × Disease cross table (Top 20 individual diseases from inform0-11)
-top20_diseases = [d for d in sorted(disease_sample_counts.items(), key=lambda x: x[1], reverse=True)
-                  if d[0] != 'unknown' and d[0] != 'NC'][:20]
-top20_diseases = [d[0] for d in top20_diseases]
 
-# Build age×disease cross table using inform0-11
-age_disease_records = []
-for col in inform_cols:
-    if col in df.columns:
-        sub = df[df[col].astype(str).str.strip().isin(top20_diseases)][['age_group', col]].copy()
-        sub = sub.rename(columns={col: 'disease'})
-        sub['disease'] = sub['disease'].astype(str).str.strip()
-        age_disease_records.append(sub)
-if age_disease_records:
-    age_disease_df = pd.concat(age_disease_records, ignore_index=True)
-    age_disease = (
-        age_disease_df.groupby(['age_group', 'disease'])
+def count_unique_projects(df: pd.DataFrame) -> int:
+    for column in ("project", "BioProject"):
+        if column in df.columns:
+            values = df[column].fillna("").astype(str).str.strip()
+            values = values[values != ""]
+            return int(values.nunique())
+    return 0
+
+
+def count_unique_genera() -> int:
+    if not ABUNDANCE_PATH.exists():
+        return 0
+    columns = pd.read_csv(ABUNDANCE_PATH, nrows=0).columns.tolist()
+    if not columns:
+        return 0
+    head = columns[0].strip().lower()
+    data_columns = columns[1:] if head in {"sample_id", "sampleid", "sample", "rownames"} else columns
+    return len(data_columns)
+
+
+def standardize_metadata(df: pd.DataFrame) -> pd.DataFrame:
+    df = df.copy()
+    df.columns = [str(col).strip() for col in df.columns]
+
+    for col in df.columns:
+        if df[col].dtype == object:
+            df[col] = df[col].fillna("").astype(str).str.strip()
+
+    if "sex" in df.columns:
+        sex = df["sex"].fillna("").astype(str).str.strip().str.lower()
+        sex = sex.replace("", "unknown")
+        sex = sex.where(sex.isin(["male", "female", "unknown"]), "unknown")
+        df["sex"] = sex
+
+    if "iso" in df.columns:
+        iso = df["iso"].fillna("").astype(str).str.strip().replace("", "unknown")
+        iso = iso.replace({"TW": "CN", "HK": "CN", "MO": "CN"})
+        df["iso"] = iso
+        df["country"] = iso
+    else:
+        df["country"] = "unknown"
+
+    for col in INFORM_COLS + ["inform-all"]:
+        if col not in df.columns:
+            df[col] = ""
+        df[col] = df[col].fillna("").astype(str).str.strip()
+
+    fill_mask = df["inform-all"].ne("") & df["inform0"].eq("")
+    if fill_mask.any():
+        df.loc[fill_mask, "inform0"] = df.loc[fill_mask, "inform-all"]
+
+    for col in INFORM_COLS + ["inform-all"]:
+        df[col] = df[col].map(normalize_inform_label)
+
+    df["disease"] = df["inform0"].where(df["inform0"] != "", "unknown")
+    return df
+
+
+def build_union_counter(df: pd.DataFrame) -> Counter:
+    counter: Counter = Counter()
+    for col in INFORM_COLS:
+        if col not in df.columns:
+            continue
+        counter.update(label for label in df[col].tolist() if label)
+    return counter
+
+
+def build_age_disease_cross(df: pd.DataFrame, top_diseases: list[str]) -> list[dict]:
+    rows: list[pd.DataFrame] = []
+    for col in INFORM_COLS:
+        if col not in df.columns:
+            continue
+        sub = df.loc[df[col].isin(top_diseases), ["age_group", col]].copy()
+        if sub.empty:
+            continue
+        sub = sub.rename(columns={col: "disease"})
+        rows.append(sub)
+    if not rows:
+        return []
+    merged = pd.concat(rows, ignore_index=True)
+    return (
+        merged.groupby(["age_group", "disease"])
         .size()
-        .reset_index(name='count')
-        .to_dict(orient='records')
-    )
-else:
-    age_disease = []
-
-# ── Per-country stats (for map tooltip) ─────────────────────────────────────
-print("  Computing per-country stats...")
-
-country_stats = {}
-top_countries = df['country'].value_counts().head(60).index.tolist()
-
-for iso in top_countries:
-    sub = df[df['country'] == iso]
-    total = len(sub)
-    if total == 0:
-        continue
-
-    # Sex ratio
-    male_n   = int((sub['sex'] == 'male').sum())
-    female_n = int((sub['sex'] == 'female').sum())
-    known    = male_n + female_n
-    sex_pct = {
-        'female_pct': round(female_n / known * 100) if known > 0 else None,
-        'male_pct':   round(male_n   / known * 100) if known > 0 else None,
-        'known':      known,
-    }
-
-    # Top 3 age groups
-    top_ages = (
-        sub[sub['age_group'] != 'Unknown']['age_group']
-        .value_counts()
-        .head(3)
-        .to_dict()
+        .reset_index(name="count")
+        .to_dict(orient="records")
     )
 
-    # Top 3 diseases from inform0-11 (excluding unknown/NC)
-    country_disease_counts: dict[str, int] = {}
-    for col in inform_cols:
-        if col in sub.columns:
-            for val in sub[col].dropna().astype(str).str.strip():
-                if val and val != 'nan' and val != '' and val != 'unknown' and val != 'NC':
-                    country_disease_counts[val] = country_disease_counts.get(val, 0) + 1
-    top_diseases = dict(sorted(country_disease_counts.items(), key=lambda x: x[1], reverse=True)[:3])
 
-    country_stats[iso] = {
-        'total':        total,
-        'sex':          sex_pct,
-        'top_ages':     top_ages,
-        'top_diseases': top_diseases,
+def build_country_stats(df: pd.DataFrame) -> dict[str, dict]:
+    country_stats: dict[str, dict] = {}
+    top_countries = df["country"].value_counts().head(60).index.tolist()
+    for iso in top_countries:
+        sub = df[df["country"] == iso].copy()
+        total = len(sub)
+        if total == 0:
+            continue
+
+        male_n = int((sub["sex"] == "male").sum())
+        female_n = int((sub["sex"] == "female").sum())
+        known = male_n + female_n
+
+        top_ages = (
+            sub[sub["age_group"] != "Unknown"]["age_group"]
+            .value_counts()
+            .head(3)
+            .to_dict()
+        )
+
+        disease_counts: Counter = Counter()
+        for col in INFORM_COLS:
+            if col not in sub.columns:
+                continue
+            for value in sub[col].tolist():
+                if label_kind(value) == "disease":
+                    disease_counts[normalize_inform_label(value)] += 1
+
+        country_stats[str(iso)] = {
+            "total": total,
+            "sex": {
+                "female_pct": round(female_n / known * 100) if known > 0 else None,
+                "male_pct": round(male_n / known * 100) if known > 0 else None,
+                "known": known,
+            },
+            "top_ages": top_ages,
+            "top_diseases": dict(disease_counts.most_common(3)),
+        }
+
+    return country_stats
+
+
+def main() -> None:
+    csv_path = locate_source_csv()
+    print(f"CSV path: {csv_path}")
+    print("Loading CSV...")
+    df_raw = read_csv_with_fallbacks(csv_path)
+    print(f"  Loaded {len(df_raw):,} rows x {len(df_raw.columns)} columns")
+
+    df = standardize_metadata(df_raw)
+
+    keep = {
+        "srr": "sample_id",
+        "country": "country",
+        "region": "region",
+        "project": "project",
+        "age_group": "age_group",
+        "sex": "sex",
+        "disease": "disease",
+    }
+    export_frame = pd.DataFrame()
+    for source_col, target_col in keep.items():
+        export_frame[target_col] = df[source_col] if source_col in df.columns else ""
+
+    print("Writing metadata.json...")
+    records = export_frame.to_dict(orient="records")
+    with METADATA_OUT.open("w", encoding="utf-8") as handle:
+        json.dump(records, handle, ensure_ascii=False, separators=(",", ":"))
+    print(f"  Written {len(records):,} records")
+
+    print("Building metadata_summary.json...")
+    sex_counts = {str(k): int(v) for k, v in df["sex"].value_counts(dropna=False).items()}
+    age_counts = {str(k): int(v) for k, v in df["age_group"].value_counts(dropna=False).items()}
+    country_counts = {str(k): int(v) for k, v in df["country"].value_counts(dropna=False).items()}
+    region_counts = {str(k): int(v) for k, v in df["region"].value_counts(dropna=False).items()} if "region" in df.columns else {}
+
+    inform0_counter = Counter(label for label in df["inform0"].tolist() if label)
+    union_counter = build_union_counter(df)
+    standard_disease_counts = Counter({
+        label: count for label, count in union_counter.items() if label_kind(label) == "disease"
+    })
+    special_population_counts = Counter({
+        label: count for label, count in union_counter.items() if label_kind(label) == "special_population"
+    })
+    healthy_control_counts = Counter({
+        label: count for label, count in union_counter.items() if label_kind(label) == "healthy_control"
+    })
+
+    top20_diseases = [
+        label
+        for label, _ in sorted(standard_disease_counts.items(), key=lambda item: (-item[1], item[0].lower()))[:20]
+    ]
+
+    summary = {
+        "total_samples": int(len(df)),
+        "total_projects": count_unique_projects(df),
+        "total_genera": count_unique_genera(),
+        "total_unique_diseases": int(len(standard_disease_counts)),
+        "age_counts": age_counts,
+        "sex_counts": sex_counts,
+        "disease_counts": dict(sorted(standard_disease_counts.items(), key=lambda item: (-item[1], item[0].lower()))[:50]),
+        "country_counts": country_counts,
+        "region_counts": region_counts,
+        "age_sex_cross": (
+            df.groupby(["age_group", "sex"])
+            .size()
+            .reset_index(name="count")
+            .to_dict(orient="records")
+        ),
+        "age_disease_cross": build_age_disease_cross(df, top20_diseases),
+        "top20_diseases": top20_diseases,
+        "country_stats": build_country_stats(df),
+        "special_population_counts": dict(sorted(special_population_counts.items(), key=lambda item: (-item[1], item[0].lower()))),
+        "healthy_control_counts": dict(sorted(healthy_control_counts.items(), key=lambda item: (-item[1], item[0].lower()))),
+        "disease_label_types": {
+            "inform0": {
+                "healthy_control": {
+                    "labels": sum(1 for label in inform0_counter if label_kind(label) == "healthy_control"),
+                    "samples": int(sum(count for label, count in inform0_counter.items() if label_kind(label) == "healthy_control")),
+                },
+                "disease": {
+                    "labels": sum(1 for label in inform0_counter if label_kind(label) == "disease"),
+                    "samples": int(sum(count for label, count in inform0_counter.items() if label_kind(label) == "disease")),
+                },
+                "special_population": {
+                    "labels": sum(1 for label in inform0_counter if label_kind(label) == "special_population"),
+                    "samples": int(sum(count for label, count in inform0_counter.items() if label_kind(label) == "special_population")),
+                },
+            },
+            "inform0_11": {
+                "healthy_control": {
+                    "labels": sum(1 for label in union_counter if label_kind(label) == "healthy_control"),
+                    "samples": int(sum(count for label, count in union_counter.items() if label_kind(label) == "healthy_control")),
+                },
+                "disease": {
+                    "labels": sum(1 for label in union_counter if label_kind(label) == "disease"),
+                    "samples": int(sum(count for label, count in union_counter.items() if label_kind(label) == "disease")),
+                },
+                "special_population": {
+                    "labels": sum(1 for label in union_counter if label_kind(label) == "special_population"),
+                    "samples": int(sum(count for label, count in union_counter.items() if label_kind(label) == "special_population")),
+                },
+            },
+        },
     }
 
-# ── Write summary ─────────────────────────────────────────────────────────────
-all_individual_diseases.discard('unknown')
-all_individual_diseases.discard('NC')
-all_individual_diseases.discard('nan')
-all_individual_diseases.discard('')
+    with SUMMARY_OUT.open("w", encoding="utf-8") as handle:
+        json.dump(summary, handle, ensure_ascii=False, indent=2)
 
-summary = {
-    'total_samples':    len(df),
-    'total_unique_diseases': len(all_individual_diseases),
-    'age_counts':       age_counts,
-    'sex_counts':       sex_counts,
-    'disease_counts':   disease_counts,
-    'country_counts':   country_counts,
-    'region_counts':    region_counts,
-    'age_sex_cross':    age_sex,
-    'age_disease_cross': age_disease,
-    'top20_diseases':   top20_diseases,
-    'country_stats':    country_stats,
-}
+    print(f"  metadata.json: {METADATA_OUT}")
+    print(f"  metadata_summary.json: {SUMMARY_OUT}")
+    print("Done.")
 
-with open(SUMMARY_OUT, 'w', encoding='utf-8') as f:
-    json.dump(summary, f, ensure_ascii=False, indent=2)
-size_kb = os.path.getsize(SUMMARY_OUT) / 1024
-print(f"  Written summary → {size_kb:.1f} KB")
 
-print("\nDone.")
-print(f"  metadata.json:         {METADATA_OUT}")
-print(f"  metadata_summary.json: {SUMMARY_OUT}")
+if __name__ == "__main__":
+    main()

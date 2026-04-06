@@ -31,7 +31,7 @@ interface Props {
 const STATIC_AGE_GROUPS = [
   "Infant", "Child", "Adolescent", "Adult", "Older_Adult", "Oldest_Old", "Centenarian",
 ];
-const STATIC_SEX_GROUPS = ["female", "male", "unknown"];
+const STATIC_SEX_GROUPS = ["female", "male"];
 
 export default function PhenotypeControls({
   dimType, groupA, groupB, taxLevel, minPrevalence, loading,

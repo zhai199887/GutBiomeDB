@@ -1,6 +1,7 @@
 export interface DiseaseListItem {
   name: string;
   sample_count: number;
+  kind?: "disease" | "special_population" | "healthy_control";
   category?: string;
   category_zh?: string;
   standard_name?: string;

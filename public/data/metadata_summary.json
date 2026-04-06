@@ -2,36 +2,34 @@
   "total_samples": 168464,
   "total_projects": 482,
   "total_genera": 4680,
-  "total_unique_diseases": 218,
+  "total_unique_diseases": 221,
   "age_counts": {
-    "Unknown": 85134,
-    "Adult": 31501,
-    "Infant": 27054,
-    "Child": 13468,
-    "Older_Adult": 7254,
-    "Adolescent": 2032,
-    "Oldest_Old": 1609,
+    "Adult": 66303,
+    "Unknown": 37965,
+    "Infant": 36518,
+    "Child": 15841,
+    "Older_Adult": 7739,
+    "Adolescent": 2070,
+    "Oldest_Old": 1616,
     "Centenarian": 412
   },
   "sex_counts": {
-    "unknown": 124628,
-    "male": 22499,
-    "female": 21337
+    "unknown": 93826,
+    "male": 38778,
+    "female": 35860
   },
   "disease_counts": {
-    "NC": 76098,
-    "hematopoietic_stem_cell_transplantation": 7138,
+    "hematopoietic_stem_cell_transplantation": 10540,
     "Hematologic malignancy": 4711,
-    "preterm infants": 3776,
     "chickenpox": 3651,
-    "UC": 2945,
+    "UC": 3051,
     "obesity": 2623,
-    "c_difficile_infection": 2529,
-    "CD": 2036,
-    "colorectal_cancer": 1645,
-    "HIV": 1584,
+    "c_difficile_infection": 2580,
+    "CD": 2371,
+    "colorectal_cancer": 1719,
+    "HIV": 1659,
     "Non-CDI diarrhea control": 1516,
-    "IBS": 1423,
+    "IBS": 1428,
     "HIV-exposed uninfected": 1327,
     "skin_condition": 1305,
     "Acute myeloid leukemia": 1302,
@@ -46,6 +44,7 @@
     "migraine": 832,
     "parkinson": 766,
     "h_pylori_infection": 764,
+    "helminth_infection": 754,
     "Food allergy": 738,
     "autoimmune": 688,
     "IBD": 685,
@@ -55,11 +54,11 @@
     "fungal_overgrowth": 552,
     "asd": 542,
     "thyroid": 508,
-    "asthma": 446,
+    "asthma": 456,
     "Acute Lymphoblastic Leukemia": 406,
     "Epithelial Ovarian Cancer (EOC)": 406,
+    "diarrhea": 404,
     "lung_disease": 402,
-    "diarrhea": 398,
     "Relapsing-remitting multiple sclerosis": 397,
     "Small Intestinal Bacterial Overgrowth": 387,
     "Type 2 diabetes Mellitus with Hyperlipidemia": 372,
@@ -68,59 +67,63 @@
     "gastric_cancer": 338,
     "Preterm neonate": 319,
     "Type 2 diabetes": 314,
-    "stunted": 300
+    "stunted": 300,
+    "HBV": 296
   },
   "country_counts": {
-    "US": 59994,
-    "unknown": 28192,
-    "CN": 11163,
-    "DK": 5980,
-    "JP": 5575,
-    "CA": 5341,
-    "GB": 4940,
-    "FI": 4482,
-    "DE": 4055,
-    "BD": 2988,
-    "IN": 2541,
-    "NL": 2466,
-    "SE": 2335,
-    "RU": 2242,
-    "NZ": 2101,
-    "IT": 2087,
-    "ES": 1897,
-    "AU": 1815,
+    "US": 63433,
+    "CN": 14636,
+    "CA": 7020,
+    "BD": 6535,
+    "DK": 5987,
+    "JP": 5982,
+    "GB": 5528,
+    "FI": 5067,
+    "DE": 4196,
+    "MW": 4172,
+    "unknown": 3854,
+    "NL": 3788,
+    "AU": 2803,
+    "IN": 2711,
+    "KR": 2645,
+    "IT": 2422,
+    "SE": 2336,
+    "RU": 2295,
+    "NZ": 2103,
+    "ES": 1900,
+    "AT": 1884,
     "NG": 1805,
     "BE": 1770,
-    "AT": 1594,
-    "FR": 1476,
-    "IL": 1241,
-    "MW": 1050,
-    "TH": 905,
-    "IE": 740,
+    "FR": 1482,
+    "IL": 1242,
+    "IE": 1207,
+    "PE": 929,
+    "TH": 906,
     "CM": 590,
-    "NO": 471,
-    "MX": 430,
+    "CH": 474,
+    "NO": 474,
+    "EE": 443,
+    "MX": 431,
     "SG": 425,
     "MG": 415,
     "TZ": 410,
-    "KR": 391,
-    "CH": 355,
     "CF": 348,
     "RO": 344,
-    "EE": 334,
     "MZ": 311,
+    "UG": 282,
     "ZW": 281,
-    "UG": 281,
-    "PL": 255,
+    "PL": 256,
     "CO": 244,
     "GR": 230,
-    "KE": 211,
+    "KE": 212,
     "BR": 186,
     "EC": 182,
     "TR": 167,
+    "BG": 145,
+    "BF": 114,
     "GH": 109,
     "VE": 108,
-    "PT": 96,
+    "PT": 97,
     "ML": 88,
     "KZ": 73,
     "GT": 64,
@@ -129,14 +132,17 @@
     "BW": 54,
     "AZ": 51,
     "JO": 40,
+    "CZ": 29,
     "LT": 12,
-    "HU": 7,
+    "HU": 9,
     "UM": 4,
     "HR": 2,
     "MY": 2,
     "IS": 1,
-    "PE": 1,
+    "ID": 1,
+    "MT": 1,
     "AE": 1,
+    "AO": 1,
     "AM": 1
   },
   "region_counts": {
@@ -154,117 +160,122 @@
     {
       "age_group": "Adolescent",
       "sex": "female",
-      "count": 563
+      "count": 775
     },
     {
       "age_group": "Adolescent",
       "sex": "male",
-      "count": 570
+      "count": 770
     },
     {
       "age_group": "Adolescent",
       "sex": "unknown",
-      "count": 899
+      "count": 525
     },
     {
       "age_group": "Adult",
       "sex": "female",
-      "count": 10535
+      "count": 18403
     },
     {
       "age_group": "Adult",
       "sex": "male",
-      "count": 9316
+      "count": 19995
     },
     {
       "age_group": "Adult",
       "sex": "unknown",
-      "count": 11650
+      "count": 27905
     },
     {
       "age_group": "Centenarian",
       "sex": "female",
-      "count": 3
+      "count": 170
+    },
+    {
+      "age_group": "Centenarian",
+      "sex": "male",
+      "count": 190
     },
     {
       "age_group": "Centenarian",
       "sex": "unknown",
-      "count": 409
+      "count": 52
     },
     {
       "age_group": "Child",
       "sex": "female",
-      "count": 1099
+      "count": 2500
     },
     {
       "age_group": "Child",
       "sex": "male",
-      "count": 1306
+      "count": 2733
     },
     {
       "age_group": "Child",
       "sex": "unknown",
-      "count": 11063
+      "count": 10608
     },
     {
       "age_group": "Infant",
       "sex": "female",
-      "count": 3727
+      "count": 7117
     },
     {
       "age_group": "Infant",
       "sex": "male",
-      "count": 4474
+      "count": 7764
     },
     {
       "age_group": "Infant",
       "sex": "unknown",
-      "count": 18853
+      "count": 21637
     },
     {
       "age_group": "Older_Adult",
       "sex": "female",
-      "count": 2635
+      "count": 3145
     },
     {
       "age_group": "Older_Adult",
       "sex": "male",
-      "count": 2635
+      "count": 3024
     },
     {
       "age_group": "Older_Adult",
       "sex": "unknown",
-      "count": 1984
+      "count": 1570
     },
     {
       "age_group": "Oldest_Old",
       "sex": "female",
-      "count": 531
+      "count": 661
     },
     {
       "age_group": "Oldest_Old",
       "sex": "male",
-      "count": 421
+      "count": 542
     },
     {
       "age_group": "Oldest_Old",
       "sex": "unknown",
-      "count": 657
+      "count": 413
     },
     {
       "age_group": "Unknown",
       "sex": "female",
-      "count": 2244
+      "count": 3089
     },
     {
       "age_group": "Unknown",
       "sex": "male",
-      "count": 3777
+      "count": 3760
     },
     {
       "age_group": "Unknown",
       "sex": "unknown",
-      "count": 79113
+      "count": 31116
     }
   ],
   "age_disease_cross": [
@@ -290,6 +301,11 @@
     },
     {
       "age_group": "Adolescent",
+      "disease": "acid_reflux",
+      "count": 6
+    },
+    {
+      "age_group": "Adolescent",
       "disease": "c_difficile_infection",
       "count": 42
     },
@@ -305,11 +321,6 @@
     },
     {
       "age_group": "Adolescent",
-      "disease": "preterm infants",
-      "count": 5
-    },
-    {
-      "age_group": "Adolescent",
       "disease": "seasonal_allergies",
       "count": 25
     },
@@ -320,23 +331,38 @@
     },
     {
       "age_group": "Adult",
+      "disease": "Acute myeloid leukemia",
+      "count": 850
+    },
+    {
+      "age_group": "Adult",
       "disease": "CD",
-      "count": 656
+      "count": 1322
     },
     {
       "age_group": "Adult",
       "disease": "HIV",
-      "count": 688
+      "count": 946
+    },
+    {
+      "age_group": "Adult",
+      "disease": "Hematologic malignancy",
+      "count": 4711
     },
     {
       "age_group": "Adult",
       "disease": "IBS",
-      "count": 1011
+      "count": 1016
     },
     {
       "age_group": "Adult",
       "disease": "ICU patient",
       "count": 697
+    },
+    {
+      "age_group": "Adult",
+      "disease": "Lean",
+      "count": 1109
     },
     {
       "age_group": "Adult",
@@ -346,17 +372,22 @@
     {
       "age_group": "Adult",
       "disease": "UC",
-      "count": 491
+      "count": 899
+    },
+    {
+      "age_group": "Adult",
+      "disease": "acid_reflux",
+      "count": 573
     },
     {
       "age_group": "Adult",
       "disease": "adenoma",
-      "count": 409
+      "count": 513
     },
     {
       "age_group": "Adult",
       "disease": "c_difficile_infection",
-      "count": 907
+      "count": 1040
     },
     {
       "age_group": "Adult",
@@ -366,17 +397,17 @@
     {
       "age_group": "Adult",
       "disease": "colorectal_cancer",
-      "count": 184
+      "count": 287
     },
     {
       "age_group": "Adult",
       "disease": "hematopoietic_stem_cell_transplantation",
-      "count": 85
+      "count": 10515
     },
     {
       "age_group": "Adult",
       "disease": "obesity",
-      "count": 882
+      "count": 2136
     },
     {
       "age_group": "Adult",
@@ -406,7 +437,7 @@
     {
       "age_group": "Child",
       "disease": "CD",
-      "count": 19
+      "count": 537
     },
     {
       "age_group": "Child",
@@ -421,7 +452,12 @@
     {
       "age_group": "Child",
       "disease": "UC",
-      "count": 1229
+      "count": 1319
+    },
+    {
+      "age_group": "Child",
+      "disease": "acid_reflux",
+      "count": 6
     },
     {
       "age_group": "Child",
@@ -440,11 +476,6 @@
     },
     {
       "age_group": "Child",
-      "disease": "preterm infants",
-      "count": 22
-    },
-    {
-      "age_group": "Child",
       "disease": "seasonal_allergies",
       "count": 7
     },
@@ -452,6 +483,21 @@
       "age_group": "Child",
       "disease": "skin_condition",
       "count": 21
+    },
+    {
+      "age_group": "Infant",
+      "disease": "CD",
+      "count": 30
+    },
+    {
+      "age_group": "Infant",
+      "disease": "HIV",
+      "count": 340
+    },
+    {
+      "age_group": "Infant",
+      "disease": "HIV-exposed uninfected",
+      "count": 1327
     },
     {
       "age_group": "Infant",
@@ -465,8 +511,8 @@
     },
     {
       "age_group": "Infant",
-      "disease": "preterm infants",
-      "count": 3422
+      "disease": "colorectal_cancer",
+      "count": 155
     },
     {
       "age_group": "Older_Adult",
@@ -496,7 +542,12 @@
     {
       "age_group": "Older_Adult",
       "disease": "UC",
-      "count": 120
+      "count": 124
+    },
+    {
+      "age_group": "Older_Adult",
+      "disease": "acid_reflux",
+      "count": 302
     },
     {
       "age_group": "Older_Adult",
@@ -506,7 +557,7 @@
     {
       "age_group": "Older_Adult",
       "disease": "c_difficile_infection",
-      "count": 426
+      "count": 427
     },
     {
       "age_group": "Older_Adult",
@@ -565,6 +616,11 @@
     },
     {
       "age_group": "Oldest_Old",
+      "disease": "acid_reflux",
+      "count": 60
+    },
+    {
+      "age_group": "Oldest_Old",
       "disease": "adenoma",
       "count": 25
     },
@@ -596,27 +652,17 @@
     {
       "age_group": "Unknown",
       "disease": "Acute myeloid leukemia",
-      "count": 1302
+      "count": 452
     },
     {
       "age_group": "Unknown",
       "disease": "CD",
-      "count": 1186
+      "count": 307
     },
     {
       "age_group": "Unknown",
       "disease": "HIV",
-      "count": 870
-    },
-    {
-      "age_group": "Unknown",
-      "disease": "HIV-exposed uninfected",
-      "count": 1327
-    },
-    {
-      "age_group": "Unknown",
-      "disease": "Hematologic malignancy",
-      "count": 4711
+      "count": 347
     },
     {
       "age_group": "Unknown",
@@ -630,23 +676,23 @@
     },
     {
       "age_group": "Unknown",
-      "disease": "Lean",
-      "count": 1109
+      "disease": "UC",
+      "count": 658
     },
     {
       "age_group": "Unknown",
-      "disease": "UC",
-      "count": 1054
+      "disease": "acid_reflux",
+      "count": 18
     },
     {
       "age_group": "Unknown",
       "disease": "adenoma",
-      "count": 216
+      "count": 112
     },
     {
       "age_group": "Unknown",
       "disease": "c_difficile_infection",
-      "count": 917
+      "count": 834
     },
     {
       "age_group": "Unknown",
@@ -656,12 +702,7 @@
     {
       "age_group": "Unknown",
       "disease": "colorectal_cancer",
-      "count": 1330
-    },
-    {
-      "age_group": "Unknown",
-      "disease": "hematopoietic_stem_cell_transplantation",
-      "count": 7028
+      "count": 1146
     },
     {
       "age_group": "Unknown",
@@ -671,12 +712,7 @@
     {
       "age_group": "Unknown",
       "disease": "obesity",
-      "count": 1596
-    },
-    {
-      "age_group": "Unknown",
-      "disease": "preterm infants",
-      "count": 327
+      "count": 342
     },
     {
       "age_group": "Unknown",
@@ -692,7 +728,6 @@
   "top20_diseases": [
     "hematopoietic_stem_cell_transplantation",
     "Hematologic malignancy",
-    "preterm infants",
     "chickenpox",
     "UC",
     "obesity",
@@ -709,182 +744,75 @@
     "lactose_intolerance",
     "seasonal_allergies",
     "Lean",
-    "ICU patient"
+    "ICU patient",
+    "acid_reflux"
   ],
   "country_stats": {
     "US": {
-      "total": 59994,
+      "total": 63433,
       "sex": {
         "female_pct": 44,
         "male_pct": 56,
-        "known": 19313
+        "known": 34808
       },
       "top_ages": {
-        "Adult": 15210,
-        "Older_Adult": 4049,
-        "Infant": 3799
+        "Adult": 38605,
+        "Older_Adult": 4251,
+        "Child": 4214
       },
       "top_diseases": {
-        "hematopoietic_stem_cell_transplantation": 6794,
+        "hematopoietic_stem_cell_transplantation": 10196,
         "Hematologic malignancy": 4711,
-        "c_difficile_infection": 1919
-      }
-    },
-    "unknown": {
-      "total": 28192,
-      "sex": {
-        "female_pct": 53,
-        "male_pct": 47,
-        "known": 4083
-      },
-      "top_ages": {
-        "Infant": 5193,
-        "Adult": 3761,
-        "Child": 3571
-      },
-      "top_diseases": {
-        "chickenpox": 1263,
-        "UC": 933,
-        "CD": 672
+        "c_difficile_infection": 2219
       }
     },
     "CN": {
-      "total": 11163,
+      "total": 14636,
       "sex": {
-        "female_pct": 47,
-        "male_pct": 53,
-        "known": 1098
+        "female_pct": 51,
+        "male_pct": 49,
+        "known": 2629
       },
       "top_ages": {
-        "Infant": 2564,
-        "Adult": 1553,
-        "Child": 204
+        "Infant": 3541,
+        "Adult": 3043,
+        "Adolescent": 658
       },
       "top_diseases": {
-        "colorectal_cancer": 881,
+        "colorectal_cancer": 1269,
         "Type 2 diabetes Mellitus with Hyperlipidemia": 372,
         "HBV": 296
       }
     },
-    "DK": {
-      "total": 5980,
-      "sex": {
-        "female_pct": 67,
-        "male_pct": 33,
-        "known": 3
-      },
-      "top_ages": {
-        "Child": 3580,
-        "Infant": 17,
-        "Adult": 3
-      },
-      "top_diseases": {
-        "obesity": 288,
-        "asthma": 145,
-        "metabolic syndrome": 72
-      }
-    },
-    "JP": {
-      "total": 5575,
-      "sex": {
-        "female_pct": 53,
-        "male_pct": 47,
-        "known": 850
-      },
-      "top_ages": {
-        "Infant": 1281,
-        "Adult": 1023,
-        "Older_Adult": 585
-      },
-      "top_diseases": {
-        "hematopoietic_stem_cell_transplantation": 202,
-        "primary biliary cirrhosis": 73,
-        "Non-small cell lung cancer": 70
-      }
-    },
     "CA": {
-      "total": 5341,
+      "total": 7020,
       "sex": {
-        "female_pct": 55,
-        "male_pct": 45,
-        "known": 794
+        "female_pct": 79,
+        "male_pct": 21,
+        "known": 1797
       },
       "top_ages": {
-        "Infant": 1963,
-        "Adult": 1277,
-        "Older_Adult": 252
+        "Infant": 2756,
+        "Adult": 1629,
+        "Older_Adult": 258
       },
       "top_diseases": {
+        "IBS": 265,
         "No_Fecal occult blood positive": 265,
-        "without severe underlying bowel disease": 265,
-        "IBS": 264
-      }
-    },
-    "GB": {
-      "total": 4940,
-      "sex": {
-        "female_pct": 72,
-        "male_pct": 28,
-        "known": 2266
-      },
-      "top_ages": {
-        "Infant": 2387,
-        "Adult": 1408,
-        "Older_Adult": 661
-      },
-      "top_diseases": {
-        "preterm infants": 1606,
-        "chickenpox": 1022,
-        "skin_condition": 342
-      }
-    },
-    "FI": {
-      "total": 4482,
-      "sex": {
-        "female_pct": 29,
-        "male_pct": 71,
-        "known": 1640
-      },
-      "top_ages": {
-        "Adult": 853,
-        "Older_Adult": 203,
-        "Child": 199
-      },
-      "top_diseases": {
-        "obesity": 416,
-        "Type 1 diabetes": 351,
-        "parkinson": 136
-      }
-    },
-    "DE": {
-      "total": 4055,
-      "sex": {
-        "female_pct": 67,
-        "male_pct": 33,
-        "known": 6
-      },
-      "top_ages": {
-        "Adult": 307,
-        "Older_Adult": 3,
-        "Adolescent": 1
-      },
-      "top_diseases": {
-        "h_pylori_infection": 558,
-        "hematopoietic_stem_cell_transplantation": 142,
-        "Antibiotic-associated diarrhea": 39
+        "without severe underlying bowel disease": 265
       }
     },
     "BD": {
-      "total": 2988,
+      "total": 6535,
       "sex": {
-        "female_pct": 47,
-        "male_pct": 53,
-        "known": 2106
+        "female_pct": 41,
+        "male_pct": 59,
+        "known": 5587
       },
       "top_ages": {
-        "Infant": 1830,
-        "Child": 33,
-        "Adult": 28
+        "Infant": 5376,
+        "Adult": 560,
+        "Child": 276
       },
       "top_diseases": {
         "severe acute malnutrition": 835,
@@ -892,16 +820,177 @@
         "diarrhea": 212
       }
     },
+    "DK": {
+      "total": 5987,
+      "sex": {
+        "female_pct": 43,
+        "male_pct": 57,
+        "known": 201
+      },
+      "top_ages": {
+        "Child": 3580,
+        "Infant": 1709,
+        "Adult": 559
+      },
+      "top_diseases": {
+        "obesity": 288,
+        "asthma": 155,
+        "metabolic syndrome": 72
+      }
+    },
+    "JP": {
+      "total": 5982,
+      "sex": {
+        "female_pct": 50,
+        "male_pct": 50,
+        "known": 1962
+      },
+      "top_ages": {
+        "Adult": 2530,
+        "Infant": 1281,
+        "Older_Adult": 675
+      },
+      "top_diseases": {
+        "hematopoietic_stem_cell_transplantation": 202,
+        "primary biliary cirrhosis": 73,
+        "Non-small cell lung cancer": 70
+      }
+    },
+    "GB": {
+      "total": 5528,
+      "sex": {
+        "female_pct": 64,
+        "male_pct": 36,
+        "known": 3582
+      },
+      "top_ages": {
+        "Infant": 2387,
+        "Adult": 1746,
+        "Older_Adult": 810
+      },
+      "top_diseases": {
+        "chickenpox": 1471,
+        "skin_condition": 493,
+        "IBS": 463
+      }
+    },
+    "FI": {
+      "total": 5067,
+      "sex": {
+        "female_pct": 34,
+        "male_pct": 66,
+        "known": 2037
+      },
+      "top_ages": {
+        "Adult": 1535,
+        "Infant": 1258,
+        "Older_Adult": 205
+      },
+      "top_diseases": {
+        "Type 1 diabetes": 544,
+        "obesity": 416,
+        "parkinson": 136
+      }
+    },
+    "DE": {
+      "total": 4196,
+      "sex": {
+        "female_pct": 44,
+        "male_pct": 56,
+        "known": 977
+      },
+      "top_ages": {
+        "Adult": 2028,
+        "Older_Adult": 5,
+        "Adolescent": 1
+      },
+      "top_diseases": {
+        "h_pylori_infection": 558,
+        "hematopoietic_stem_cell_transplantation": 142,
+        "chickenpox": 95
+      }
+    },
+    "MW": {
+      "total": 4172,
+      "sex": {
+        "female_pct": 50,
+        "male_pct": 50,
+        "known": 1874
+      },
+      "top_ages": {
+        "Child": 2812,
+        "Infant": 952,
+        "Adult": 371
+      },
+      "top_diseases": {
+        "Non-kwashiorkor co-twin": 150,
+        "kwashiorkor": 17
+      }
+    },
+    "unknown": {
+      "total": 3854,
+      "sex": {
+        "female_pct": 60,
+        "male_pct": 40,
+        "known": 1047
+      },
+      "top_ages": {
+        "Adult": 1597,
+        "Older_Adult": 197,
+        "Oldest_Old": 24
+      },
+      "top_diseases": {
+        "CD": 700,
+        "UC": 588,
+        "Short Bowel Syndrome": 38
+      }
+    },
+    "NL": {
+      "total": 3788,
+      "sex": {
+        "female_pct": 49,
+        "male_pct": 51,
+        "known": 518
+      },
+      "top_ages": {
+        "Child": 1147,
+        "Infant": 917,
+        "Older_Adult": 293
+      },
+      "top_diseases": {
+        "Cystic Fibrosis": 214,
+        "PPIpost": 105,
+        "helminth_infection": 100
+      }
+    },
+    "AU": {
+      "total": 2803,
+      "sex": {
+        "female_pct": 52,
+        "male_pct": 48,
+        "known": 44
+      },
+      "top_ages": {
+        "Infant": 1368,
+        "Adult": 795,
+        "Older_Adult": 11
+      },
+      "top_diseases": {
+        "Non-haematological malignancy": 56,
+        "chickenpox": 36,
+        "seasonal_allergies": 20
+      }
+    },
     "IN": {
-      "total": 2541,
+      "total": 2711,
       "sex": {
         "female_pct": 53,
         "male_pct": 47,
         "known": 2491
       },
       "top_ages": {
-        "Infant": 2198,
-        "Adult": 41,
+        "Infant": 2438,
+        "Adult": 211,
         "Child": 11
       },
       "top_diseases": {
@@ -909,52 +998,69 @@
         "chickenpox": 2
       }
     },
-    "NL": {
-      "total": 2466,
+    "KR": {
+      "total": 2645,
       "sex": {
-        "female_pct": 24,
-        "male_pct": 76,
-        "known": 173
+        "female_pct": 27,
+        "male_pct": 73,
+        "known": 824
       },
       "top_ages": {
-        "Child": 1147,
-        "Infant": 917,
-        "Adult": 153
+        "Adult": 1313,
+        "Older_Adult": 14
       },
       "top_diseases": {
-        "Cystic Fibrosis": 214,
-        "helminth_infection": 100,
-        "HIV": 82
+        "IBS-D": 85,
+        "UC": 70,
+        "Chronic Superficial gastritis": 62
+      }
+    },
+    "IT": {
+      "total": 2422,
+      "sex": {
+        "female_pct": 66,
+        "male_pct": 34,
+        "known": 917
+      },
+      "top_ages": {
+        "Adult": 1134,
+        "Older_Adult": 367,
+        "Child": 62
+      },
+      "top_diseases": {
+        "Epithelial Ovarian Cancer (EOC)": 406,
+        "Subjects at Risk for Metabolic Syndrome": 342,
+        "Spinal Cord Injury": 100
       }
     },
     "SE": {
-      "total": 2335,
+      "total": 2336,
       "sex": {
-        "female_pct": 45,
-        "male_pct": 55,
-        "known": 153
+        "female_pct": 47,
+        "male_pct": 53,
+        "known": 561
       },
       "top_ages": {
+        "Infant": 1838,
         "Child": 340,
-        "Adult": 144,
-        "Infant": 60
+        "Adult": 145
       },
       "top_diseases": {
+        "CD": 198,
         "HIV": 122,
-        "chickenpox": 11,
-        "acid_reflux": 5
+        "chickenpox": 11
       }
     },
     "RU": {
-      "total": 2242,
+      "total": 2295,
       "sex": {
-        "female_pct": 100,
-        "male_pct": 0,
-        "known": 56
+        "female_pct": 48,
+        "male_pct": 52,
+        "known": 444
       },
       "top_ages": {
-        "Adult": 1068,
-        "Adolescent": 30,
+        "Adult": 1639,
+        "Adolescent": 80,
         "Older_Adult": 22
       },
       "top_diseases": {
@@ -964,50 +1070,32 @@
       }
     },
     "NZ": {
-      "total": 2101,
+      "total": 2103,
       "sex": {
-        "female_pct": 49,
-        "male_pct": 51,
-        "known": 595
+        "female_pct": 51,
+        "male_pct": 49,
+        "known": 637
       },
       "top_ages": {
-        "Infant": 846,
+        "Infant": 1166,
         "Child": 440,
-        "Adult": 254
+        "Adult": 375
       },
       "top_diseases": {
-        "preterm infants": 320,
         "NAFLD": 130,
-        "obesity": 120
-      }
-    },
-    "IT": {
-      "total": 2087,
-      "sex": {
-        "female_pct": 70,
-        "male_pct": 30,
-        "known": 788
-      },
-      "top_ages": {
-        "Adult": 534,
-        "Older_Adult": 219,
-        "Infant": 25
-      },
-      "top_diseases": {
-        "Epithelial Ovarian Cancer (EOC)": 406,
-        "Subjects at Risk for Metabolic Syndrome": 342,
-        "Spinal Cord Injury": 100
+        "obesity": 120,
+        "chickenpox": 13
       }
     },
     "ES": {
-      "total": 1897,
+      "total": 1900,
       "sex": {
-        "female_pct": 27,
-        "male_pct": 73,
-        "known": 442
+        "female_pct": 47,
+        "male_pct": 53,
+        "known": 1239
       },
       "top_ages": {
-        "Adult": 374,
+        "Adult": 740,
         "Older_Adult": 4
       },
       "top_diseases": {
@@ -1016,35 +1104,35 @@
         "colorectal_cancer": 98
       }
     },
-    "AU": {
-      "total": 1815,
+    "AT": {
+      "total": 1884,
       "sex": {
-        "female_pct": 50,
-        "male_pct": 50,
-        "known": 38
+        "female_pct": 62,
+        "male_pct": 38,
+        "known": 948
       },
       "top_ages": {
-        "Adult": 24,
-        "Older_Adult": 10,
-        "Oldest_Old": 3
+        "Adult": 564,
+        "Infant": 540,
+        "Child": 22
       },
       "top_diseases": {
-        "Non-haematological malignancy": 56,
-        "chickenpox": 31,
-        "seasonal_allergies": 18
+        "compensated cirrhosis": 232,
+        "IBS": 122,
+        "Type 2 diabetes with obesity": 93
       }
     },
     "NG": {
       "total": 1805,
       "sex": {
-        "female_pct": 44,
-        "male_pct": 56,
-        "known": 27
+        "female_pct": 96,
+        "male_pct": 4,
+        "known": 366
       },
       "top_ages": {
+        "Infant": 1667,
         "Adolescent": 15,
-        "Child": 6,
-        "Adult": 4
+        "Child": 6
       },
       "top_diseases": {
         "HIV-exposed uninfected": 1327,
@@ -1055,9 +1143,9 @@
     "BE": {
       "total": 1770,
       "sex": {
-        "female_pct": 48,
-        "male_pct": 52,
-        "known": 968
+        "female_pct": 49,
+        "male_pct": 51,
+        "known": 1279
       },
       "top_ages": {
         "Adult": 1091,
@@ -1070,51 +1158,33 @@
         "IBS": 24
       }
     },
-    "AT": {
-      "total": 1594,
-      "sex": {
-        "female_pct": 71,
-        "male_pct": 29,
-        "known": 829
-      },
-      "top_ages": {
-        "Infant": 540,
-        "Child": 22,
-        "Adult": 5
-      },
-      "top_diseases": {
-        "preterm infants": 574,
-        "compensated cirrhosis": 232,
-        "IBS": 121
-      }
-    },
     "FR": {
-      "total": 1476,
+      "total": 1482,
       "sex": {
-        "female_pct": 54,
-        "male_pct": 46,
-        "known": 84
+        "female_pct": 39,
+        "male_pct": 61,
+        "known": 484
       },
       "top_ages": {
-        "Adult": 394,
+        "Adult": 666,
         "Adolescent": 8,
-        "Older_Adult": 5
+        "Older_Adult": 6
       },
       "top_diseases": {
         "c_difficile_infection": 200,
         "Narcolepsy": 35,
-        "Antibiotic-associated diarrhea": 17
+        "Antibiotic-associated diarrhea": 22
       }
     },
     "IL": {
-      "total": 1241,
+      "total": 1242,
       "sex": {
-        "female_pct": 52,
-        "male_pct": 48,
-        "known": 505
+        "female_pct": 55,
+        "male_pct": 45,
+        "known": 1234
       },
       "top_ages": {
-        "Adult": 232,
+        "Adult": 488,
         "Older_Adult": 17
       },
       "top_diseases": {
@@ -1123,52 +1193,57 @@
         "obesity": 180
       }
     },
-    "MW": {
-      "total": 1050,
-      "sex": {
-        "female_pct": 47,
-        "male_pct": 53,
-        "known": 1026
-      },
-      "top_ages": {
-        "Infant": 952,
-        "Child": 33,
-        "Adult": 28
-      },
-      "top_diseases": {
-        "Non-kwashiorkor co-twin": 150,
-        "kwashiorkor": 17
-      }
-    },
-    "TH": {
-      "total": 905,
-      "sex": {
-        "female_pct": 51,
-        "male_pct": 49,
-        "known": 721
-      },
-      "top_ages": {
-        "Child": 683,
-        "Adult": 168
-      },
-      "top_diseases": {}
-    },
     "IE": {
-      "total": 740,
+      "total": 1207,
       "sex": {
-        "female_pct": 39,
-        "male_pct": 61,
-        "known": 604
+        "female_pct": 40,
+        "male_pct": 60,
+        "known": 622
       },
       "top_ages": {
         "Infant": 714,
-        "Adult": 17,
+        "Adult": 368,
         "Older_Adult": 6
       },
       "top_diseases": {
-        "chickenpox": 19,
-        "IBS": 9,
-        "skin_condition": 9
+        "UC": 292,
+        "CD": 109,
+        "chickenpox": 21
+      }
+    },
+    "PE": {
+      "total": 929,
+      "sex": {
+        "female_pct": 63,
+        "male_pct": 37,
+        "known": 929
+      },
+      "top_ages": {
+        "Infant": 747,
+        "Child": 181,
+        "Adult": 1
+      },
+      "top_diseases": {
+        "diarrhea": 71,
+        "fungal_overgrowth": 1,
+        "IBS": 1
+      }
+    },
+    "TH": {
+      "total": 906,
+      "sex": {
+        "female_pct": 51,
+        "male_pct": 49,
+        "known": 722
+      },
+      "top_ages": {
+        "Child": 683,
+        "Adult": 168,
+        "Older_Adult": 1
+      },
+      "top_diseases": {
+        "helminth_infection": 270,
+        "autoimmune": 1
       }
     },
     "CM": {
@@ -1178,50 +1253,91 @@
         "male_pct": null,
         "known": 0
       },
-      "top_ages": {},
-      "top_diseases": {}
+      "top_ages": {
+        "Adult": 425,
+        "Older_Adult": 61,
+        "Child": 48
+      },
+      "top_diseases": {
+        "helminth_infection": 233
+      }
+    },
+    "CH": {
+      "total": 474,
+      "sex": {
+        "female_pct": 48,
+        "male_pct": 52,
+        "known": 170
+      },
+      "top_ages": {
+        "Infant": 420,
+        "Adult": 45,
+        "Older_Adult": 6
+      },
+      "top_diseases": {
+        "asthma": 20,
+        "chickenpox": 7,
+        "IBS": 4
+      }
     },
     "NO": {
-      "total": 471,
+      "total": 474,
       "sex": {
-        "female_pct": 72,
-        "male_pct": 28,
-        "known": 163
+        "female_pct": 70,
+        "male_pct": 30,
+        "known": 167
       },
       "top_ages": {
         "Infant": 306,
-        "Adult": 135,
+        "Adult": 138,
         "Older_Adult": 26
       },
       "top_diseases": {
         "Chronic alcohol overconsumption": 33,
         "chickenpox": 8,
-        "migraine": 4
+        "skin_condition": 5
+      }
+    },
+    "EE": {
+      "total": 443,
+      "sex": {
+        "female_pct": 48,
+        "male_pct": 52,
+        "known": 252
+      },
+      "top_ages": {
+        "Adult": 207,
+        "Infant": 109,
+        "Child": 63
+      },
+      "top_diseases": {
+        "Type 1 diabetes": 32
       }
     },
     "MX": {
-      "total": 430,
+      "total": 431,
       "sex": {
         "female_pct": 72,
         "male_pct": 28,
         "known": 430
       },
       "top_ages": {
-        "Adult": 397,
+        "Adult": 398,
         "Older_Adult": 21,
         "Adolescent": 8
       },
       "top_diseases": {
         "prediabetes": 151,
-        "Type 2 diabetes": 65
+        "Type 2 diabetes": 65,
+        "IBS": 1
       }
     },
     "SG": {
       "total": 425,
       "sex": {
-        "female_pct": null,
-        "male_pct": null,
-        "known": 0
+        "female_pct": 0,
+        "male_pct": 100,
+        "known": 1
       },
       "top_ages": {
         "Infant": 424,
@@ -1250,47 +1366,16 @@
     "TZ": {
       "total": 410,
       "sex": {
-        "female_pct": null,
-        "male_pct": null,
-        "known": 0
+        "female_pct": 52,
+        "male_pct": 48,
+        "known": 54
       },
-      "top_ages": {},
+      "top_ages": {
+        "Child": 12,
+        "Adult": 8,
+        "Adolescent": 3
+      },
       "top_diseases": {}
-    },
-    "KR": {
-      "total": 391,
-      "sex": {
-        "female_pct": null,
-        "male_pct": null,
-        "known": 0
-      },
-      "top_ages": {
-        "Adult": 83,
-        "Older_Adult": 14
-      },
-      "top_diseases": {
-        "IBS-D": 85,
-        "Chronic Superficial gastritis": 62,
-        "gastric_cancer": 46
-      }
-    },
-    "CH": {
-      "total": 355,
-      "sex": {
-        "female_pct": 50,
-        "male_pct": 50,
-        "known": 8
-      },
-      "top_ages": {
-        "Infant": 303,
-        "Adult": 44,
-        "Older_Adult": 6
-      },
-      "top_diseases": {
-        "asthma": 20,
-        "chickenpox": 7,
-        "IBS": 4
-      }
     },
     "CF": {
       "total": 348,
@@ -1309,39 +1394,45 @@
     "RO": {
       "total": 344,
       "sex": {
-        "female_pct": null,
-        "male_pct": null,
-        "known": 0
+        "female_pct": 48,
+        "male_pct": 52,
+        "known": 344
       },
       "top_ages": {},
       "top_diseases": {
-        "Antibiotic-associated diarrhea": 9,
-        "c_difficile_infection": 9
+        "c_difficile_infection": 12,
+        "Antibiotic-associated diarrhea": 11
       }
-    },
-    "EE": {
-      "total": 334,
-      "sex": {
-        "female_pct": null,
-        "male_pct": null,
-        "known": 0
-      },
-      "top_ages": {
-        "Adult": 207,
-        "Child": 63,
-        "Older_Adult": 29
-      },
-      "top_diseases": {}
     },
     "MZ": {
       "total": 311,
       "sex": {
-        "female_pct": null,
-        "male_pct": null,
-        "known": 0
+        "female_pct": 67,
+        "male_pct": 33,
+        "known": 54
       },
-      "top_ages": {},
+      "top_ages": {
+        "Adult": 53,
+        "Adolescent": 1
+      },
       "top_diseases": {}
+    },
+    "UG": {
+      "total": 282,
+      "sex": {
+        "female_pct": 50,
+        "male_pct": 50,
+        "known": 2
+      },
+      "top_ages": {
+        "Child": 280,
+        "Adult": 2
+      },
+      "top_diseases": {
+        "skin_condition": 2,
+        "chickenpox": 2,
+        "fungal_overgrowth": 1
+      }
     },
     "ZW": {
       "total": 281,
@@ -1358,38 +1449,22 @@
         "chickenpox": 1
       }
     },
-    "UG": {
-      "total": 281,
-      "sex": {
-        "female_pct": 100,
-        "male_pct": 0,
-        "known": 1
-      },
-      "top_ages": {
-        "Child": 280,
-        "Adult": 1
-      },
-      "top_diseases": {
-        "skin_condition": 1,
-        "chickenpox": 1
-      }
-    },
     "PL": {
-      "total": 255,
+      "total": 256,
       "sex": {
-        "female_pct": 21,
-        "male_pct": 79,
-        "known": 14
+        "female_pct": 65,
+        "male_pct": 35,
+        "known": 256
       },
       "top_ages": {
-        "Adult": 239,
+        "Adult": 240,
         "Infant": 14,
         "Older_Adult": 2
       },
       "top_diseases": {
         "asthma": 123,
         "vesicoureteral reflux": 14,
-        "chickenpox": 3
+        "chickenpox": 4
       }
     },
     "CO": {
@@ -1397,7 +1472,7 @@
       "sex": {
         "female_pct": 42,
         "male_pct": 58,
-        "known": 131
+        "known": 132
       },
       "top_ages": {
         "Adult": 114,
@@ -1413,33 +1488,33 @@
     "GR": {
       "total": 230,
       "sex": {
-        "female_pct": 67,
-        "male_pct": 33,
-        "known": 3
+        "female_pct": 42,
+        "male_pct": 58,
+        "known": 200
       },
       "top_ages": {
         "Adult": 3
       },
       "top_diseases": {
         "NAFLD": 62,
-        "Antibiotic-associated diarrhea": 17,
-        "c_difficile_infection": 2
+        "Antibiotic-associated diarrhea": 20,
+        "c_difficile_infection": 3
       }
     },
     "KE": {
-      "total": 211,
+      "total": 212,
       "sex": {
-        "female_pct": 0,
-        "male_pct": 100,
-        "known": 1
+        "female_pct": 67,
+        "male_pct": 33,
+        "known": 212
       },
       "top_ages": {
-        "Adult": 1
+        "Adult": 2
       },
       "top_diseases": {
-        "fungal_overgrowth": 1,
-        "skin_condition": 1,
-        "chickenpox": 1
+        "helminth_infection": 112,
+        "chickenpox": 2,
+        "fungal_overgrowth": 1
       }
     },
     "BR": {
@@ -1478,9 +1553,9 @@
     "TR": {
       "total": 167,
       "sex": {
-        "female_pct": 38,
-        "male_pct": 62,
-        "known": 32
+        "female_pct": 39,
+        "male_pct": 61,
+        "known": 33
       },
       "top_ages": {
         "Infant": 32,
@@ -1490,6 +1565,37 @@
         "obesity": 54,
         "Acute Infectious Diarrhea": 50,
         "vesicoureteral reflux": 32
+      }
+    },
+    "BG": {
+      "total": 145,
+      "sex": {
+        "female_pct": 100,
+        "male_pct": 0,
+        "known": 1
+      },
+      "top_ages": {
+        "Adult": 144,
+        "Adolescent": 1
+      },
+      "top_diseases": {
+        "obesity": 144,
+        "add_adhd": 1,
+        "asd": 1
+      }
+    },
+    "BF": {
+      "total": 114,
+      "sex": {
+        "female_pct": 33,
+        "male_pct": 67,
+        "known": 114
+      },
+      "top_ages": {
+        "Infant": 114
+      },
+      "top_diseases": {
+        "undernourished infants": 114
       }
     },
     "GH": {
@@ -1510,7 +1616,7 @@
       "sex": {
         "female_pct": 43,
         "male_pct": 57,
-        "known": 93
+        "known": 107
       },
       "top_ages": {
         "Child": 40,
@@ -1520,21 +1626,21 @@
       "top_diseases": {}
     },
     "PT": {
-      "total": 96,
+      "total": 97,
       "sex": {
-        "female_pct": 40,
-        "male_pct": 60,
-        "known": 5
+        "female_pct": 43,
+        "male_pct": 57,
+        "known": 7
       },
       "top_ages": {
         "Adult": 2,
         "Child": 2,
-        "Older_Adult": 1
+        "Older_Adult": 2
       },
       "top_diseases": {
         "Type 2 diabetes": 90,
-        "skin_condition": 2,
-        "seasonal_allergies": 2
+        "seasonal_allergies": 3,
+        "skin_condition": 2
       }
     },
     "ML": {
@@ -1580,9 +1686,9 @@
     "RS": {
       "total": 58,
       "sex": {
-        "female_pct": null,
-        "male_pct": null,
-        "known": 0
+        "female_pct": 44,
+        "male_pct": 56,
+        "known": 34
       },
       "top_ages": {},
       "top_diseases": {
@@ -1629,54 +1735,44 @@
       "top_diseases": {
         "Type 1 diabetes": 19
       }
-    },
-    "JO": {
-      "total": 40,
-      "sex": {
-        "female_pct": 57,
-        "male_pct": 42,
-        "known": 40
+    }
+  },
+  "special_population_counts": {
+    "preterm infants": 3777,
+    "Healthy first-degree relatives of Crohn's disease patients": 3481,
+    "Low birth weight infant": 80,
+    "Very low birth weight preterm infants": 66
+  },
+  "healthy_control_counts": {
+    "NC": 78691
+  },
+  "disease_label_types": {
+    "inform0": {
+      "healthy_control": {
+        "labels": 1,
+        "samples": 78691
       },
-      "top_ages": {
-        "Child": 26,
-        "Adolescent": 14
+      "disease": {
+        "labels": 206,
+        "samples": 65304
       },
-      "top_diseases": {
-        "Type 1 diabetes": 20
+      "special_population": {
+        "labels": 4,
+        "samples": 7404
       }
     },
-    "LT": {
-      "total": 12,
-      "sex": {
-        "female_pct": 9,
-        "male_pct": 91,
-        "known": 11
+    "inform0_11": {
+      "healthy_control": {
+        "labels": 1,
+        "samples": 78691
       },
-      "top_ages": {
-        "Infant": 11,
-        "Older_Adult": 1
+      "disease": {
+        "labels": 221,
+        "samples": 74042
       },
-      "top_diseases": {
-        "vesicoureteral reflux": 11,
-        "thyroid": 1,
-        "fungal_overgrowth": 1
-      }
-    },
-    "HU": {
-      "total": 7,
-      "sex": {
-        "female_pct": 0,
-        "male_pct": 100,
-        "known": 3
-      },
-      "top_ages": {
-        "Adult": 6,
-        "Older_Adult": 1
-      },
-      "top_diseases": {
-        "chickenpox": 5,
-        "acid_reflux": 4,
-        "autoimmune": 1
+      "special_population": {
+        "labels": 4,
+        "samples": 7404
       }
     }
   }

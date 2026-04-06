@@ -170,11 +170,23 @@ const DiseasePage = () => {
               >
                 <div className={classes.diseaseMeta}>
                   <span>{diseaseName(item.name)}</span>
-                  {(locale === "zh" ? item.category_zh : item.category) && (
-                    <span className={classes.diseaseCategory}>
-                      {locale === "zh" ? item.category_zh : item.category}
-                    </span>
-                  )}
+                  <div className={classes.diseaseTags}>
+                    {(locale === "zh" ? item.category_zh : item.category) && (
+                      <span className={classes.diseaseCategory}>
+                        {locale === "zh" ? item.category_zh : item.category}
+                      </span>
+                    )}
+                    {item.kind === "special_population" && (
+                      <span className={classes.specialPopulationTag}>
+                        {locale === "zh" ? "特殊人群" : "Special population"}
+                      </span>
+                    )}
+                    {item.kind === "healthy_control" && (
+                      <span className={classes.healthyControlTag}>
+                        {locale === "zh" ? "健康对照" : "Healthy control"}
+                      </span>
+                    )}
+                  </div>
                 </div>
                 <span className={classes.diseaseCount}>{item.sample_count.toLocaleString("en")}</span>
               </button>
