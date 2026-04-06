@@ -1848,10 +1848,21 @@ def species_profile(request: Request, genus: str):
     present_count = int((ga > 0).sum())
     total_count = len(ga)
     mean_abundance = float(ga.mean())
+    median_abundance = float(np.median(ga.values.astype(float))) if total_count > 0 else 0.0
     prevalence = present_count / total_count if total_count > 0 else 0
+    phylum = extract_phylum(matching_cols[0]) or "Other"
+
+    # Strict NC baseline / 严格健康对照基线
+    INFORM_COLS = [f"inform{i}" for i in range(12)]
+    nc_mask = _strict_nc_mask(mm, INFORM_COLS)
+    nc_vals = ga.loc[nc_mask].values.astype(float)
+    nc_mean_val = float(np.mean(nc_vals)) if len(nc_vals) > 0 else 0.0
+    nc_prevalence_val = float((nc_vals > 0).sum() / len(nc_vals)) if len(nc_vals) > 0 else 0.0
+
+    AGE_GROUP_ORDER = ["Infant", "Child", "Adolescent", "Adult", "Older_Adult", "Oldest_Old", "Centenarian", "Unknown"]
 
     # Helper: group mean abundance / 辅助函数：按分组计算平均丰度
-    def group_means(col_name: str, top_n: int = 30) -> list[dict]:
+    def group_means(col_name: str, top_n: int = 30, order: list[str] | None = None) -> list[dict]:
         if col_name not in mm.columns:
             return []
         grouped = mm.groupby(mm[col_name].fillna("unknown").astype(str).str.strip())
@@ -1864,45 +1875,87 @@ def species_profile(request: Request, genus: str):
             results.append({
                 "name": display_name,
                 "mean_abundance": round(float(vals.mean()), 8),
+                "median_abundance": round(float(np.median(vals)), 8),
+                "std_abundance": round(float(np.std(vals)), 8),
+                "p25": round(float(np.percentile(vals, 25)), 8),
+                "p75": round(float(np.percentile(vals, 75)), 8),
                 "prevalence": round(float((vals > 0).sum() / len(vals)), 4),
                 "sample_count": len(vals),
             })
-        results.sort(key=lambda x: x["mean_abundance"], reverse=True)
+        if order:
+            order_index = {item: idx for idx, item in enumerate(order)}
+            results.sort(key=lambda x: (order_index.get(x["name"], len(order_index)), -x["sample_count"]))
+        else:
+            results.sort(key=lambda x: x["mean_abundance"], reverse=True)
         return results[:top_n]
 
     # Disease distribution (from inform0-11) / 疾病分布（来自inform0-11）
-    INFORM_COLS = [f"inform{i}" for i in range(12)]
-    disease_data: dict[str, list[float]] = {}
+    disease_samples: dict[str, set[str]] = {}
     for col in INFORM_COLS:
         if col not in mm.columns:
             continue
-        for disease_name, group_idx in mm.groupby(mm[col].fillna("").astype(str).str.strip()).groups.items():
-            if not disease_name or disease_name == "nan" or disease_name == "":
+        for sample_key, disease_name in mm[col].fillna("").astype(str).str.strip().items():
+            disease_name = disease_name.strip()
+            if (not disease_name or disease_name == "nan" or disease_name == "" or
+                    disease_name == "NC" or disease_name.lower() == "unknown"):
                 continue
-            if disease_name not in disease_data:
-                disease_data[disease_name] = []
-            disease_data[disease_name].extend(ga.loc[group_idx].tolist())
+            disease_samples.setdefault(disease_name, set()).add(str(sample_key))
 
+    pseudo = 1e-6
     by_disease = []
-    for disease_name, vals_list in disease_data.items():
-        arr = np.array(vals_list)
+    disease_pvals: list[float] = []
+    for disease_name, sample_ids in disease_samples.items():
+        valid_ids = ga.index.intersection(list(sample_ids))
+        if len(valid_ids) == 0:
+            continue
+        arr = ga.loc[valid_ids].values.astype(float)
+        mean_dis = float(arr.mean())
+        log2fc = float(math.log2((mean_dis + pseudo) / (nc_mean_val + pseudo)))
+        p = 1.0
+        effect_size = 0.0
+        if len(arr) >= 5 and len(nc_vals) >= 5:
+            try:
+                u_stat, p = stats.mannwhitneyu(arr, nc_vals, alternative="two-sided")
+                p = float(p)
+                effect_size = float(1 - 2 * float(u_stat) / (len(arr) * len(nc_vals)))
+            except Exception:
+                p = 1.0
+                effect_size = 0.0
         by_disease.append({
             "name": disease_name,
-            "mean_abundance": round(float(arr.mean()), 8),
+            "mean_abundance": round(mean_dis, 8),
+            "median_abundance": round(float(np.median(arr)), 8),
+            "std_abundance": round(float(np.std(arr)), 8),
+            "p25": round(float(np.percentile(arr, 25)), 8),
+            "p75": round(float(np.percentile(arr, 75)), 8),
             "prevalence": round(float((arr > 0).sum() / len(arr)), 4),
             "sample_count": len(arr),
+            "log2fc": round(log2fc, 4),
+            "p_value": round(p, 8),
+            "effect_size": round(effect_size, 4),
         })
-    by_disease.sort(key=lambda x: x["mean_abundance"], reverse=True)
+        disease_pvals.append(p)
+
+    if by_disease:
+        adjusted = bh_correction(disease_pvals)
+        for idx, entry in enumerate(by_disease):
+            entry["adjusted_p"] = round(float(adjusted[idx]), 8)
+            entry["significant"] = bool(adjusted[idx] < 0.05)
+    by_disease.sort(key=lambda x: abs(float(x.get("log2fc", 0.0))), reverse=True)
 
     result = {
         "genus": canonical_name,
+        "phylum": phylum,
         "total_samples": total_count,
         "present_samples": present_count,
         "prevalence": round(prevalence, 4),
         "mean_abundance": round(mean_abundance, 8),
-        "by_disease": by_disease[:50],
+        "median_abundance": round(median_abundance, 8),
+        "nc_mean": round(nc_mean_val, 8),
+        "nc_prevalence": round(nc_prevalence_val, 4),
+        "by_disease": by_disease[:100],
         "by_country": group_means("country", 30),
-        "by_age_group": group_means("age_group" if "age_group" in mm.columns else "age", 10),
+        "by_age_group": group_means("age_group" if "age_group" in mm.columns else "age", 10, AGE_GROUP_ORDER),
         "by_sex": group_means("sex", 5),
     }
     set_cached(cache_key, result)
@@ -1952,12 +2005,8 @@ def biomarker_profile(request: Request, genus: str, min_samples: int = 10):
     ga = genus_rel.loc[common]
     mm = meta_keyed.loc[common]
 
-    # Get NC (healthy control) samples / 获取健康对照样本
     INFORM_COLS = [f"inform{i}" for i in range(12)]
-    nc_mask = pd.Series(False, index=mm.index)
-    for col in INFORM_COLS:
-        if col in mm.columns:
-            nc_mask |= (mm[col].fillna("").astype(str).str.strip() == "NC")
+    nc_mask = _strict_nc_mask(mm, INFORM_COLS)
     nc_vals = ga.loc[nc_mask].values.astype(float)
 
     if len(nc_vals) < min_samples:
@@ -1988,27 +2037,32 @@ def biomarker_profile(request: Request, genus: str, min_samples: int = 10):
         log2fc = float(math.log2((d_mean + pseudo) / (nc_mean + pseudo)))
 
         try:
-            _, p = stats.mannwhitneyu(d_vals, nc_vals, alternative="two-sided")
+            u_stat, p = stats.mannwhitneyu(d_vals, nc_vals, alternative="two-sided")
             p = float(p)
+            effect_size = float(1 - 2 * float(u_stat) / (len(d_vals) * len(nc_vals)))
         except Exception:
             p = 1.0
+            effect_size = 0.0
 
         direction = "enriched" if log2fc > 0 else "depleted"
         results.append({
             "disease": disease_name,
             "n_samples": len(valid_ids),
+            "n_control": len(nc_vals),
             "mean_disease": round(d_mean, 6),
             "mean_control": round(nc_mean, 6),
             "log2fc": round(log2fc, 4),
             "p_value": round(p, 8),
             "direction": direction,
+            "effect_size": round(effect_size, 4),
+            "prevalence_disease": round(float((d_vals > 0).sum() / len(d_vals)), 4),
+            "prevalence_control": round(float((nc_vals > 0).sum() / len(nc_vals)), 4),
         })
 
     # BH FDR correction / BH FDR校正
     if results:
-        from analysis import _bh_correction
         p_vals = [r["p_value"] for r in results]
-        adj_p = _bh_correction(p_vals)
+        adj_p = bh_correction(p_vals)
         for i, r in enumerate(results):
             r["adjusted_p"] = round(adj_p[i], 8)
             r["significant"] = adj_p[i] < 0.05
@@ -2891,10 +2945,10 @@ def chord_data(request: Request, top_diseases: int = 10, top_genera: int = 12):
 
 @app.get("/api/species-cooccurrence",
          summary="Species co-occurrence partners",
-         description="Top co-occurring genera for a given genus, based on Spearman correlation across healthy samples.",
+         description="Top co-occurring genera for a given genus, based on Spearman correlation across healthy controls or a selected disease context.",
          tags=["Species"])
 @limiter.limit("30/minute")
-def species_cooccurrence(request: Request, genus: str, top_k: int = 10):
+def species_cooccurrence(request: Request, genus: str, top_k: int = 10, disease: str = ""):
     """
     Return top co-occurring genera for a given genus.
     返回给定属的 Top 共现微生物
@@ -2902,7 +2956,8 @@ def species_cooccurrence(request: Request, genus: str, top_k: int = 10):
     if not genus or not genus.strip():
         raise HTTPException(400, "genus parameter is required")
 
-    cache_key = f"species_cooccurrence:{genus.strip().lower()}:{top_k}"
+    disease_name = disease.strip()
+    cache_key = f"species_cooccurrence:{genus.strip().lower()}:{top_k}:{disease_name.lower() or '__nc__'}"
     cached = get_cached(cache_key)
     if cached:
         return cached
@@ -2917,13 +2972,18 @@ def species_cooccurrence(request: Request, genus: str, top_k: int = 10):
 
     canonical = extract_genus(matching_cols[0])
 
-    # Use NC samples
     INFORM_COLS = [f"inform{i}" for i in range(12)]
-    nc_mask = pd.Series(False, index=meta.index)
-    for col in INFORM_COLS:
-        if col in meta.columns:
-            nc_mask |= (meta[col].fillna("").astype(str).str.strip() == "NC")
-    sample_keys = meta.loc[nc_mask, "sample_key"].dropna().unique()
+    if disease_name:
+        disease_mask = pd.Series(False, index=meta.index)
+        for col in INFORM_COLS:
+            if col in meta.columns:
+                disease_mask |= (meta[col].fillna("").astype(str).str.strip() == disease_name)
+        sample_keys = meta.loc[disease_mask, "sample_key"].dropna().unique()
+        context_label = disease_name
+    else:
+        nc_mask = _strict_nc_mask(meta, INFORM_COLS)
+        sample_keys = meta.loc[nc_mask, "sample_key"].dropna().unique()
+        context_label = "NC (Healthy)"
     valid_keys = abund.index.intersection(sample_keys)
 
     np.random.seed(42)
@@ -2931,7 +2991,7 @@ def species_cooccurrence(request: Request, genus: str, top_k: int = 10):
         valid_keys = valid_keys[np.random.choice(len(valid_keys), 3000, replace=False)]
 
     if len(valid_keys) < 20:
-        return {"genus": canonical, "partners": []}
+        return {"genus": canonical, "context": context_label, "n_samples": int(len(valid_keys)), "partners": []}
 
     raw = abund.loc[valid_keys].values.astype(float)
     totals = raw.sum(axis=1, keepdims=True)
@@ -2939,14 +2999,19 @@ def species_cooccurrence(request: Request, genus: str, top_k: int = 10):
     rel = raw / totals * 100
 
     col_names = abund.columns.tolist()
-    genus_labels = [extract_genus(c) for c in col_names]
-    unique_genera = list(dict.fromkeys(genus_labels))
+    genus_indices: dict[str, list[int]] = {}
+    genus_phylum: dict[str, str] = {}
+    for idx, col_name in enumerate(col_names):
+        genus_name = extract_genus(col_name)
+        if not is_valid_genus(genus_name):
+            continue
+        genus_indices.setdefault(genus_name, []).append(idx)
+        genus_phylum.setdefault(genus_name, extract_phylum(col_name))
 
-    # Aggregate to genus level
+    unique_genera = list(genus_indices.keys())
     genus_matrix = np.zeros((rel.shape[0], len(unique_genera)))
-    for i, g in enumerate(unique_genera):
-        idxs = [j for j, l in enumerate(genus_labels) if l == g]
-        genus_matrix[:, i] = rel[:, idxs].sum(axis=1)
+    for i, genus_name in enumerate(unique_genera):
+        genus_matrix[:, i] = rel[:, genus_indices[genus_name]].sum(axis=1)
 
     # Find target genus index
     target_idx = None
@@ -2955,31 +3020,52 @@ def species_cooccurrence(request: Request, genus: str, top_k: int = 10):
             target_idx = i
             break
     if target_idx is None:
-        return {"genus": canonical, "partners": []}
+        return {"genus": canonical, "context": context_label, "n_samples": int(len(valid_keys)), "partners": []}
 
     target_vec = genus_matrix[:, target_idx]
     # Skip if target has no variance
     if np.std(target_vec) == 0:
-        return {"genus": canonical, "partners": []}
+        return {"genus": canonical, "context": context_label, "n_samples": int(len(valid_keys)), "partners": []}
 
-    partners = []
+    partners_raw = []
+    raw_pvals: list[float] = []
     for i, g in enumerate(unique_genera):
         if i == target_idx or not is_valid_genus(g):
             continue
         other_vec = genus_matrix[:, i]
-        if np.std(other_vec) == 0 or (other_vec > 0).sum() < 10:
+        if np.std(other_vec) == 0 or (other_vec > 0).sum() < 5:
             continue
         r, p = stats.spearmanr(target_vec, other_vec)
-        if abs(r) >= 0.2 and p < 0.05:
-            partners.append({
+        if not np.isfinite(r) or not np.isfinite(p):
+            continue
+        if abs(float(r)) >= 0.15:
+            partners_raw.append({
                 "genus": g,
                 "r": round(float(r), 4),
                 "p_value": round(float(p), 6),
+                "phylum": genus_phylum.get(g, "Other"),
                 "type": "positive" if r > 0 else "negative",
             })
+            raw_pvals.append(float(p))
+
+    partners = []
+    if partners_raw:
+        adjusted = bh_correction(raw_pvals)
+        for idx, candidate in enumerate(partners_raw):
+            adjusted_p = float(adjusted[idx])
+            if adjusted_p >= 0.05:
+                continue
+            candidate["adjusted_p"] = round(adjusted_p, 6)
+            candidate["significant"] = True
+            partners.append(candidate)
 
     partners.sort(key=lambda x: abs(x["r"]), reverse=True)
-    result = {"genus": canonical, "partners": partners[:top_k]}
+    result = {
+        "genus": canonical,
+        "context": context_label,
+        "n_samples": int(len(valid_keys)),
+        "partners": partners[:top_k],
+    }
     set_cached(cache_key, result)
     return result
 

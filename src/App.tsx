@@ -52,7 +52,7 @@ const ROUTE_TITLES: Record<string, string> = {
   "/metabolism": "Metabolism Pathway",
   "/similarity": "Sample Similarity",
   "/lifecycle": "Lifecycle Atlas",
-  "/search": "Search",
+  "/search": "Genus Search",
   "/api-docs": "API Documentation",
   "/about": "About & Cite",
   "/download": "Download",
