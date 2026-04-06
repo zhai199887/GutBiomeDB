@@ -137,7 +137,7 @@ const MainPage = () => {
   }, []);
 
   return (
-    <>
+    <div className="home-shell">
       <Header />
       <main id="main-content">
         <Overview />
@@ -147,7 +147,7 @@ const MainPage = () => {
         <SankeyChart />
         <Footer />
       </main>
-    </>
+    </div>
   );
 };
 

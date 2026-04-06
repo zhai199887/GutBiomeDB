@@ -6,6 +6,7 @@
   "Healthy first-degree relatives of Crohn's disease patients": "克罗恩病患者健康一级亲属",
   "Low birth weight infant": "低出生体重婴儿",
   "Very low birth weight preterm infants": "极低出生体重早产儿",
+  "Cancer": "癌症",
   "chickenpox": "水痘",
   "UC": "溃疡性结肠炎",
   "obesity": "肥胖症",
@@ -121,5 +122,9 @@
   "premature_birth": "早产",
   "malnutrition": "营养不良",
   "kwashiorkor": "夸希奥科病",
-  "marasmus": "消瘦症"
+  "marasmus": "消瘦症",
+  "End-stage renal disease": "终末期肾病",
+  "Enterobacterales infection": "肠杆菌目感染",
+  "Nonrecurrent Clostridioides difficile infection": "非复发性艰难梭菌感染",
+  "Recurrent Clostridioides difficile infection": "复发性艰难梭菌感染"
 }

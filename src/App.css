@@ -90,6 +90,15 @@ footer {
   --col: 1200px;
 }
 
+.home-shell > header {
+  --col: 1480px;
+}
+
+.home-shell > main > section,
+.home-shell > main > footer {
+  --col: 1320px;
+}
+
 .sub-section {
   display: flex;
   flex-direction: column;
@@ -301,6 +310,11 @@ svg rect {
   header, section, footer {
     padding: 30px 16px;
     gap: 20px;
+  }
+  .home-shell > header,
+  .home-shell > main > section,
+  .home-shell > main > footer {
+    --col: 800px;
   }
   h1 { font-size: 1.4rem; }
 }
