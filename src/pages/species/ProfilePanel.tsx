@@ -7,7 +7,15 @@ import { exportSVG, exportPNG } from "@/util/chartExport";
 import { exportTable } from "@/util/export";
 
 import type { ProfileEntry, SpeciesProfile } from "./types";
-import { formatPValue, formatPrevalence, formatPercent, starsForPValue, translateDimensionName, type DimensionType } from "./utils";
+import {
+  formatAbundancePercent,
+  formatAbundanceTick,
+  formatPValue,
+  formatPrevalence,
+  starsForPValue,
+  translateDimensionName,
+  type DimensionType,
+} from "./utils";
 
 interface ProfilePanelProps {
   profile: SpeciesProfile;
@@ -96,8 +104,8 @@ export default function ProfilePanel({ profile }: ProfilePanelProps) {
 
       <div className="species-summaryPills">
         <span>{`${t("species.phylum")}: ${profile.phylum}`}</span>
-        <span>{`${t("search.medianAbundance")}: ${formatPercent(profile.median_abundance, 4)}`}</span>
-        <span>{`${t("search.ncMeanAbundance")}: ${formatPercent(profile.nc_mean, 4)}`}</span>
+        <span>{`${t("search.medianAbundance")}: ${formatAbundancePercent(profile.median_abundance)}`}</span>
+        <span>{`${t("search.ncMeanAbundance")}: ${formatAbundancePercent(profile.nc_mean)}`}</span>
         <span>{`${t("search.ncPrevalence")}: ${formatPrevalence(profile.nc_prevalence)}`}</span>
       </div>
 
@@ -213,10 +221,10 @@ function drawDiseaseChart(
     .attr("x", x(baseline))
     .attr("y", -6)
     .attr("text-anchor", "middle")
-    .attr("font-size", 10)
+    .attr("font-size", 11)
     .attr("fill", "currentColor")
     .attr("opacity", 0.72)
-    .text(metric === "abundance" ? "NC mean" : "NC prevalence");
+    .text(metric === "abundance" ? "NC baseline mean" : "NC baseline prevalence");
 
   root.selectAll("rect")
     .data(rows)
@@ -231,8 +239,8 @@ function drawDiseaseChart(
     .attr("data-tooltip", (row) => renderToString(
       <div className="tooltip-table">
         <span>{locale === "zh" ? "疾病" : "Disease"}</span><span>{translateDimensionName(row.name, locale, "disease")}</span>
-        <span>{locale === "zh" ? "均值" : "Mean"}</span><span>{formatPercent(row.mean_abundance, 4)}</span>
-        <span>{locale === "zh" ? "中位数" : "Median"}</span><span>{formatPercent(row.median_abundance ?? row.mean_abundance, 4)}</span>
+        <span>{locale === "zh" ? "均值" : "Mean"}</span><span>{formatAbundancePercent(row.mean_abundance)}</span>
+        <span>{locale === "zh" ? "中位数" : "Median"}</span><span>{formatAbundancePercent(row.median_abundance ?? row.mean_abundance)}</span>
         <span>{locale === "zh" ? "流行率" : "Prevalence"}</span><span>{formatPrevalence(row.prevalence)}</span>
         <span>log2FC</span><span>{(row.log2fc ?? 0).toFixed(3)}</span>
         <span>FDR</span><span>{formatPValue(row.adjusted_p)}</span>
@@ -247,11 +255,11 @@ function drawDiseaseChart(
     .attr("x", (row) => x(accessor(row)) + 6)
     .attr("y", (row) => (y(row.name) ?? 0) + y.bandwidth() / 2 + 1)
     .attr("dominant-baseline", "middle")
-    .attr("font-size", 10)
+    .attr("font-size", 11)
     .attr("fill", "currentColor")
     .text((row) => {
       const value = accessor(row);
-      return metric === "abundance" ? `${value.toFixed(3)}%` : `${value.toFixed(1)}%`;
+      return metric === "abundance" ? formatAbundancePercent(value) : `${value.toFixed(1)}%`;
     });
 
   root.selectAll(".species-sigLabel")
@@ -261,7 +269,7 @@ function drawDiseaseChart(
     .attr("x", (row) => x(accessor(row)) + 68)
     .attr("y", (row) => (y(row.name) ?? 0) + y.bandwidth() / 2 + 1)
     .attr("dominant-baseline", "middle")
-    .attr("font-size", 10)
+    .attr("font-size", 11)
     .attr("fill", "#facc15")
     .text((row) => starsForPValue(row.adjusted_p));
 
@@ -276,8 +284,8 @@ function drawDiseaseChart(
 
   root.append("g")
     .attr("transform", `translate(0,${plotHeight})`)
-    .call(d3.axisBottom(x).ticks(5).tickFormat((value) => `${Number(value).toFixed(metric === "abundance" ? 2 : 1)}%`))
-    .attr("font-size", 10);
+    .call(d3.axisBottom(x).ticks(5).tickFormat((value) => metric === "abundance" ? formatAbundanceTick(Number(value)) : `${Number(value).toFixed(1)}%`))
+    .attr("font-size", 11);
 }
 
 function drawDistributionChart(
@@ -318,8 +326,8 @@ function drawDistributionChart(
     .attr("data-tooltip", (row) => renderToString(
       <div className="tooltip-table">
         <span>{locale === "zh" ? "名称" : "Name"}</span><span>{translateDimensionName(row.name, locale, type)}</span>
-        <span>{locale === "zh" ? "均值" : "Mean"}</span><span>{formatPercent(row.mean_abundance, 4)}</span>
-        <span>{locale === "zh" ? "中位数" : "Median"}</span><span>{formatPercent(row.median_abundance ?? row.mean_abundance, 4)}</span>
+        <span>{locale === "zh" ? "均值" : "Mean"}</span><span>{formatAbundancePercent(row.mean_abundance)}</span>
+        <span>{locale === "zh" ? "中位数" : "Median"}</span><span>{formatAbundancePercent(row.median_abundance ?? row.mean_abundance)}</span>
         <span>{locale === "zh" ? "流行率" : "Prevalence"}</span><span>{formatPrevalence(row.prevalence)}</span>
         <span>{locale === "zh" ? "样本数" : "Samples"}</span><span>{row.sample_count.toLocaleString("en")}</span>
       </div>,
@@ -332,11 +340,11 @@ function drawDistributionChart(
     .attr("x", (row) => x(accessor(row)) + 6)
     .attr("y", (row) => (y(row.name) ?? 0) + y.bandwidth() / 2 + 1)
     .attr("dominant-baseline", "middle")
-    .attr("font-size", 10)
+    .attr("font-size", 11)
     .attr("fill", "currentColor")
     .text((row) => {
       const value = accessor(row);
-      return metric === "abundance" ? `${value.toFixed(3)}%` : `${value.toFixed(1)}%`;
+      return metric === "abundance" ? formatAbundancePercent(value) : `${value.toFixed(1)}%`;
     });
 
   root.append("g")
@@ -351,6 +359,6 @@ function drawDistributionChart(
 
   root.append("g")
     .attr("transform", `translate(0,${plotHeight})`)
-    .call(d3.axisBottom(x).ticks(4).tickFormat((value) => `${Number(value).toFixed(metric === "abundance" ? 2 : 1)}%`))
-    .attr("font-size", 10);
+    .call(d3.axisBottom(x).ticks(4).tickFormat((value) => metric === "abundance" ? formatAbundanceTick(Number(value)) : `${Number(value).toFixed(1)}%`))
+    .attr("font-size", 11);
 }

@@ -317,7 +317,7 @@ COUNTRY_NAMES = {
     "HR": "Croatia", "HU": "Hungary", "ID": "Indonesia", "IE": "Ireland", "IL": "Israel",
     "IN": "India", "IR": "Iran", "IS": "Iceland", "IT": "Italy", "JM": "Jamaica",
     "JO": "Jordan", "JP": "Japan", "KE": "Kenya", "KR": "South Korea", "KZ": "Kazakhstan",
-    "LK": "Sri Lanka", "LT": "Lithuania", "LV": "Latvia", "MA": "Morocco", "MD": "Moldova",
+    "LK": "Sri Lanka", "LT": "Lithuania", "LV": "Latvia", "MA": "Morocco", "MD": "Moldova", "MT": "Malta",
     "MG": "Madagascar", "ML": "Mali", "MM": "Myanmar", "MN": "Mongolia", "MW": "Malawi",
     "MX": "Mexico", "MY": "Malaysia", "MZ": "Mozambique", "NG": "Nigeria", "NL": "Netherlands",
     "NO": "Norway", "NP": "Nepal", "NZ": "New Zealand", "PE": "Peru", "PG": "Papua New Guinea",
@@ -326,7 +326,7 @@ COUNTRY_NAMES = {
     "SD": "Sudan", "SG": "Singapore", "SI": "Slovenia", "SK": "Slovakia", "SN": "Senegal", "SV": "El Salvador",
     "TH": "Thailand", "TN": "Tunisia", "TR": "Turkey", "TW": "Taiwan", "TZ": "Tanzania",
     "UA": "Ukraine", "UG": "Uganda", "US": "United States", "UZ": "Uzbekistan",
-    "VE": "Venezuela", "VN": "Vietnam", "ZA": "South Africa", "ZM": "Zambia", "ZW": "Zimbabwe",
+    "VE": "Venezuela", "VN": "Vietnam", "ZA": "South Africa", "ZM": "Zambia", "ZW": "Zimbabwe", "AO": "Angola",
 }
 
 SPECIAL_POPULATION_LABELS = {
@@ -1233,7 +1233,7 @@ def filter_options(request: Request):
 
 @app.get("/api/data-stats",
          summary="Dataset statistics",
-         description="Returns total sample count, country count, disease count, and data version.")
+         description="Returns total sample count, country count, condition-label counts, and data version.")
 @limiter.limit("120/minute")
 def data_stats(request: Request):
     """
@@ -1252,11 +1252,13 @@ def data_stats(request: Request):
         with open(version_file) as f:
             version_info = json.load(f)
 
-    all_diseases = {
+    unique_labels = set(_iter_inform_labels(meta))
+    non_nc_condition_labels = {
         label
-        for label in _iter_inform_labels(meta)
-        if _label_kind(label) == "disease"
+        for label in unique_labels
+        if _label_kind(label) != "healthy_control"
     }
+    has_nc_category = any(_label_kind(label) == "healthy_control" for label in unique_labels)
 
     project_col = get_project_column(meta)
     country_project_counts: dict[str, int] = {}
@@ -1275,7 +1277,10 @@ def data_stats(request: Request):
     result = {
         "total_samples": int(len(meta)),
         "total_countries": int(meta.loc[meta["country"] != "unknown", "country"].nunique()) if "country" in meta.columns else 0,
-        "total_diseases": len(all_diseases),
+        # Legacy alias kept for compatibility: non-NC condition labels only.
+        "total_diseases": len(non_nc_condition_labels),
+        "total_non_nc_condition_labels": len(non_nc_condition_labels),
+        "total_condition_categories": len(non_nc_condition_labels) + int(has_nc_category),
         "total_projects": count_unique_projects(meta),
         "total_genera": count_unique_genera_from_abundance(),
         "country_project_counts": country_project_counts,
@@ -1492,6 +1497,10 @@ def diff_analysis(request: Request, req: DiffAnalysisRequest):
         group_b_name=filter_to_label(req.group_b_filter),
     )
 
+    # NOTE:
+    # The legacy implementation below is unreachable and retained only as historical debt.
+    # /api/diff-analysis is contractually served by run_compare_analysis() above.
+
     # Extract abundance matrices and normalize to relative abundance (%)
     # 提取丰度矩阵并归一化为相对丰度（%）
     raw_a = abund.loc[valid_a].values.astype(float)
@@ -1683,6 +1692,7 @@ def _get_samples_by_pheno(meta: pd.DataFrame, dim_type: str, group: str) -> pd.S
     return pd.Series(False, index=meta.index)
 
 
+# End of unreachable legacy implementation for /api/diff-analysis.
 @app.get("/api/phenotype-groups",
          summary="List phenotype groups",
          description="Return all available groups for a dimension type with sample counts.")

@@ -166,8 +166,8 @@ function drawMiniNetwork(
   const svg = d3.select(svgEl);
   svg.selectAll("*").remove();
 
-  const width = 760;
-  const height = 480;
+  const width = 920;
+  const height = 520;
   svg.attr("viewBox", `0 0 ${width} ${height}`);
 
   const rootNode: MiniNode = { id: genus, phylum, r: 0, type: "root" };
@@ -176,9 +176,9 @@ function drawMiniNetwork(
 
   const simulation = d3.forceSimulation<MiniNode>(nodes)
     .force("center", d3.forceCenter(width / 2, height / 2))
-    .force("charge", d3.forceManyBody().strength(-220))
-    .force("link", d3.forceLink<MiniNode, MiniLink>(links).id((node) => node.id).distance((link) => 140 - Math.min(Math.abs(link.r) * 90, 60)))
-    .force("collision", d3.forceCollide(30));
+    .force("charge", d3.forceManyBody().strength(-240))
+    .force("link", d3.forceLink<MiniNode, MiniLink>(links).id((node) => node.id).distance((link) => 150 - Math.min(Math.abs(link.r) * 92, 62)))
+    .force("collision", d3.forceCollide(34));
 
   const link = svg.append("g")
     .selectAll("line")
@@ -191,7 +191,7 @@ function drawMiniNetwork(
     .selectAll("circle")
     .data(nodes)
     .join("circle")
-    .attr("r", (item) => (item.id === genus ? 20 : 11 + Math.abs(item.r) * 6))
+    .attr("r", (item) => (item.id === genus ? 23 : 13 + Math.abs(item.r) * 6))
     .attr("fill", (item) => phylumColor(item.phylum))
     .attr("stroke", "rgba(255,255,255,0.7)")
     .attr("stroke-width", (item) => (item.id === genus ? 2.2 : 1))
@@ -207,7 +207,7 @@ function drawMiniNetwork(
     .selectAll("text")
     .data(nodes)
     .join("text")
-    .attr("font-size", 10)
+    .attr("font-size", 12)
     .attr("text-anchor", "middle")
     .attr("fill", "currentColor")
     .text((item) => item.id);
@@ -225,6 +225,6 @@ function drawMiniNetwork(
 
     labels
       .attr("x", (item) => item.x ?? 0)
-      .attr("y", (item) => (item.y ?? 0) + 28);
+      .attr("y", (item) => (item.y ?? 0) + 32);
   });
 }

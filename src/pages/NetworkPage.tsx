@@ -83,7 +83,7 @@ const NetworkPage = () => {
         <h1>{locale === "zh" ? "Network 工作台" : "Network workspace"}</h1>
         <p>
           {locale === "zh"
-            ? "对齐 GMrepo / ResMicroDb 的网络交互方式，集中查看关联图、弦图、共现网络与疾病对照重塑。"
+            ? "集中查看关联图、弦图、共现网络与疾病对照重塑。"
             : "An integrated workspace for association graphs, chord diagrams, co-occurrence structure, and disease-vs-control rewiring."}
         </p>
       </div>

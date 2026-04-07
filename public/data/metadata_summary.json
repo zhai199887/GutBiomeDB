@@ -2,7 +2,10 @@
   "total_samples": 168464,
   "total_projects": 482,
   "total_genera": 4680,
-  "total_unique_diseases": 221,
+  "total_unique_diseases": 225,
+  "total_non_nc_condition_labels": 225,
+  "total_condition_categories": 226,
+  "total_unique_countries": 72,
   "age_counts": {
     "Adult": 66303,
     "Unknown": 37965,
@@ -1744,13 +1747,13 @@
     "Very low birth weight preterm infants": 66
   },
   "healthy_control_counts": {
-    "NC": 78691
+    "NC": 78426
   },
   "disease_label_types": {
     "inform0": {
       "healthy_control": {
         "labels": 1,
-        "samples": 78691
+        "samples": 78426
       },
       "disease": {
         "labels": 206,
@@ -1764,7 +1767,7 @@
     "inform0_11": {
       "healthy_control": {
         "labels": 1,
-        "samples": 78691
+        "samples": 78426
       },
       "disease": {
         "labels": 221,

@@ -6,7 +6,7 @@
 
 .headingRow {
   display: grid;
-  grid-template-columns: minmax(0, 1.25fr) minmax(240px, 0.75fr);
+  grid-template-columns: 1fr;
   gap: 1rem;
   align-items: start;
 }
@@ -15,28 +15,6 @@
   margin: 0.75rem 0 0;
   color: rgba(218, 227, 240, 0.82);
   line-height: 1.75;
-}
-
-.noteCard {
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 18px;
-  padding: 1rem 1.1rem;
-  background: linear-gradient(180deg, rgba(92, 104, 255, 0.14), rgba(255, 255, 255, 0.04));
-}
-
-.noteEyebrow {
-  display: block;
-  color: rgba(126, 232, 255, 0.8);
-  font-size: 0.78rem;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
-.noteCard p {
-  margin: 0.55rem 0 0;
-  color: rgba(229, 236, 246, 0.86);
-  font-size: 0.94rem;
-  line-height: 1.65;
 }
 
 .tiles {

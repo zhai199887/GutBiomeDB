@@ -418,11 +418,43 @@ const HeatmapView = ({
   const width = Math.max(880, 260 + projectIds.length * 60);
   const cellWidth = 58;
   const cellHeight = 24;
-  const height = 124 + markers.length * cellHeight;
+  const topPadding = 126;
+  const labelY = 62;
+  const rowStartY = 100;
+  const legendX = Math.max(248, width - 220);
+  const height = topPadding + markers.length * cellHeight;
   const color = (value: number) => value >= 0 ? `rgba(34, 197, 94, ${0.16 + Math.min(Math.abs(value) / 2.5, 0.64)})` : `rgba(59, 130, 246, ${0.16 + Math.min(Math.abs(value) / 2.5, 0.64)})`;
 
   return (
     <svg ref={svgRef} className="compare-chart" viewBox={`0 0 ${width} ${height}`} style={{ width: "100%", maxWidth: width }}>
+      <defs>
+        <linearGradient id="cross-study-heatmap-gradient" x1="0%" y1="0%" x2="100%" y2="0%">
+          <stop offset="0%" stopColor="rgba(59, 130, 246, 0.8)" />
+          <stop offset="50%" stopColor="rgba(148, 163, 184, 0.18)" />
+          <stop offset="100%" stopColor="rgba(34, 197, 94, 0.8)" />
+        </linearGradient>
+      </defs>
+      <text x={legendX} y={28} fill="#cbd5e1" fontSize="10">
+        log2FC
+      </text>
+      <rect
+        x={legendX}
+        y={34}
+        width={150}
+        height={10}
+        rx={999}
+        fill="url(#cross-study-heatmap-gradient)"
+        stroke="rgba(148, 163, 184, 0.22)"
+      />
+      <text x={legendX} y={58} fill="#94a3b8" fontSize="9">
+        {locale === "zh" ? "对照富集 (-)" : "Control-enriched (-)"}
+      </text>
+      <text x={legendX + 74} y={58} textAnchor="middle" fill="#94a3b8" fontSize="9">
+        0
+      </text>
+      <text x={legendX + 150} y={58} textAnchor="end" fill="#94a3b8" fontSize="9">
+        {locale === "zh" ? "疾病富集 (+)" : "Disease-enriched (+)"}
+      </text>
       <text x={width / 2} y={18} textAnchor="middle" fill="currentColor" fontSize="13">
         {locale === "zh" ? "项目内 log2FC 热图" : "Per-project log2FC heatmap"}
       </text>
@@ -430,8 +462,8 @@ const HeatmapView = ({
         <text
           key={projectId}
           x={248 + col * cellWidth + cellWidth / 2}
-          y={72}
-          transform={`rotate(-40, ${248 + col * cellWidth + cellWidth / 2}, 72)`}
+          y={labelY}
+          transform={`rotate(-40, ${248 + col * cellWidth + cellWidth / 2}, ${labelY})`}
           fill="#94a3b8"
           fontSize="9"
           textAnchor="end"
@@ -441,23 +473,23 @@ const HeatmapView = ({
       ))}
       {markers.map((marker, row) => (
         <g key={marker.taxon}>
-          <text x={220} y={100 + row * cellHeight + 15} textAnchor="end" fill="currentColor" fontSize="10">
+          <text x={220} y={rowStartY + row * cellHeight + 15} textAnchor="end" fill="currentColor" fontSize="10">
             {marker.taxon.length > 18 ? `${marker.taxon.slice(0, 16)}...` : marker.taxon}
           </text>
           {projectIds.map((projectId, col) => {
             const value = marker.per_project[projectId]?.log2fc ?? 0;
-            const adj = marker.per_project[projectId]?.p_value;
+            const pValue = marker.per_project[projectId]?.p_value;
             return (
               <rect
                 key={`${marker.taxon}-${projectId}`}
                 x={248 + col * cellWidth}
-                y={84 + row * cellHeight}
+                y={rowStartY + row * cellHeight}
                 width={cellWidth - 4}
                 height={cellHeight - 4}
                 rx={4}
                 fill={marker.per_project[projectId] ? color(value) : "rgba(148, 163, 184, 0.12)"}
               >
-                <title>{`${marker.taxon}\n${projectId}\nlog2FC: ${value.toFixed(3)}\np: ${adj?.toExponential(2) ?? "NA"}`}</title>
+                <title>{`${marker.taxon}\n${projectId}\nlog2FC: ${value.toFixed(3)}\np: ${pValue?.toExponential(2) ?? "NA"}\nadj.p(meta): ${marker.adjusted_meta_p.toExponential(2)}`}</title>
               </rect>
             );
           })}

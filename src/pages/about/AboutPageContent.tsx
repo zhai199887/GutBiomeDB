@@ -28,6 +28,8 @@ type StatsPayload = {
   total_samples?: number;
   total_countries?: number;
   total_diseases?: number;
+  total_non_nc_condition_labels?: number;
+  total_condition_categories?: number;
   total_projects?: number;
   total_genera?: number;
   version?: string;
@@ -102,7 +104,7 @@ const COPY: Record<"en" | "zh", Copy> = {
     teamAffiliations:
       "Primary affiliations include the Department of Gastroenterology, The First Hospital of China Medical University; The First Affiliated Hospital of Jinzhou Medical University; and Peking Union Medical College Hospital.",
     dataIntro:
-      "Gut Microbiome Atlas integrates processed human gut microbiome cohorts retrieved from public repositories and harmonizes them into a genus-level analysis layer for cross-study exploration, visualization, and hypothesis generation.",
+      "Gut Microbiome Atlas integrates processed human gut microbiome cohorts retrieved from public repositories and harmonizes them into a genus-level analysis layer for cross-study exploration, visualization, and hypothesis generation. The current release covers 225 non-NC condition labels plus one NC category, yielding 226 condition categories in total.",
     sourceLabel: "Data Sources",
     pipelineLabel: "Processing Pipeline",
     statsLabel: "Current Dataset Snapshot",
@@ -163,8 +165,8 @@ const COPY: Record<"en" | "zh", Copy> = {
     statsCards: [
       { key: "total_samples", label: "Samples", fallback: "168,464" },
       { key: "total_projects", label: "Projects", fallback: "482" },
-      { key: "total_diseases", label: "Diseases", fallback: "218" },
-      { key: "total_countries", label: "Countries", fallback: "66" },
+      { key: "total_condition_categories", label: "Condition categories", fallback: "226" },
+      { key: "total_countries", label: "Countries", fallback: "72" },
       { key: "total_genera", label: "Genera", fallback: "4,680" },
       { key: "contact", label: "Contact", fallback: "cdai@cmu.edu.cn" },
     ],
@@ -327,10 +329,23 @@ const AboutPageContent = () => {
   }, []);
 
   const activeBibtex = citationTab === "paper" ? PAPER_BIBTEX : SOFTWARE_BIBTEX;
+  const dataIntroText = locale === "zh"
+    ? "Gut Microbiome Atlas 整合公开数据库中的人类肠道微生物组队列，并统一到 genus 层级分析框架中，用于跨研究浏览、可视化和假设生成。当前发布版包含 225 个非 NC 条件标签，再加 1 个 NC 类别，合计 226 个条件类别。"
+    : text.dataIntro;
+  const statsCards = locale === "zh"
+    ? [
+        { key: "total_samples" as const, label: "样本数", fallback: "168,464" },
+        { key: "total_projects" as const, label: "项目数", fallback: "482" },
+        { key: "total_condition_categories" as const, label: "条件类别", fallback: "226" },
+        { key: "total_countries" as const, label: "国家数", fallback: "72" },
+        { key: "total_genera" as const, label: "菌属数", fallback: "4,680" },
+        { key: "contact" as const, label: "联系邮箱", fallback: "cdai@cmu.edu.cn" },
+      ]
+    : text.statsCards;
 
   const statRows = useMemo(
     () =>
-      text.statsCards.map((item) => ({
+      statsCards.map((item) => ({
         label: item.label,
         value:
           item.key === "contact"
@@ -339,7 +354,7 @@ const AboutPageContent = () => {
               ? Number(stats[item.key]).toLocaleString()
               : item.fallback,
       })),
-    [stats, text.statsCards],
+    [stats, statsCards],
   );
 
   const handleCopy = async () => {
@@ -382,7 +397,7 @@ const AboutPageContent = () => {
 
         <section className={classes.card}>
           <h2 className={classes.cardTitle}>{text.sections.data}</h2>
-          <p className={classes.cardText}>{text.dataIntro}</p>
+          <p className={classes.cardText}>{dataIntroText}</p>
 
           <div className={classes.subsection}>
             <h3>{text.sourceLabel}</h3>

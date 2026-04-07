@@ -27,11 +27,13 @@ const Overview = () => {
       .catch(() => {});
   }, []);
 
-  const countries = apiStats?.total_countries ?? (summary
+  const countries = apiStats?.total_countries ?? summary?.total_unique_countries ?? (summary
     ? Object.keys(summary.country_counts).filter((key) => key !== "unknown").length
     : undefined);
 
-  const diseases = apiStats?.total_diseases
+  const diseases = apiStats?.total_condition_categories
+    ?? summary?.total_condition_categories
+    ?? apiStats?.total_diseases
     ?? summary?.total_unique_diseases
     ?? (summary
       ? Object.keys(summary.disease_counts).filter((key) => key !== "unknown" && key !== "NC").length
@@ -170,10 +172,6 @@ const Overview = () => {
           <h2>{t("overview.title")}</h2>
           <p>{t("overview.intro")}</p>
         </div>
-        <aside className={classes.noteCard}>
-          <span className={classes.noteEyebrow}>{t("overview.methods")}</span>
-          <p>{t("overview.featureIntro")}</p>
-        </aside>
       </div>
 
       {summary ? (

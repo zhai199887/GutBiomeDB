@@ -18,6 +18,20 @@ const I18nContext = createContext<I18nContextValue>({
 });
 
 const STORAGE_KEY = "gut-atlas-locale";
+const TRANSLATION_OVERRIDES: Partial<Record<Locale, Partial<Record<TranslationKey, string>>>> = {
+  en: {
+    "overview.diseaseTypes": "condition categories",
+    "apiDocs.overviewText": "The Gut Microbiome Atlas API provides programmatic access to 168,464 human gut microbiome samples across 4,680 genera, 72 countries, and 226 condition categories, including one NC control category. All endpoints return JSON responses.",
+    "cite.dataSourcesText": "Gut Microbiome Atlas integrates 168,464 human gut 16S rRNA gene sequencing samples from public repositories including NCBI SRA, ENA, and DDBJ. Samples span 72 countries, 225 non-NC condition labels plus one NC category, and 8 life stages from Infant to Centenarian.",
+    "cite.statDiseases": "Condition categories",
+  },
+  zh: {
+    "overview.diseaseTypes": "条件类别",
+    "apiDocs.overviewText": "肠道微生物图谱 API 提供对 168,464 份人类肠道微生物样本的编程访问，涵盖 4,680 个属、72 个国家和 226 个条件类别，其中包含 1 个 NC 对照类别。所有端点返回 JSON 格式数据。",
+    "cite.dataSourcesText": "肠道微生物图谱整合了来自 NCBI SRA、ENA 和 DDBJ 等公共数据库的 168,464 份人类肠道 16S rRNA 基因测序样本，覆盖 72 个国家、225 个非 NC 条件标签加 1 个 NC 类别，以及从婴儿到百岁老人的 8 个生命阶段。",
+    "cite.statDiseases": "条件类别",
+  },
+};
 
 function getInitialLocale(): Locale {
   try {
@@ -44,7 +58,7 @@ export const I18nProvider = ({ children }: { children: ReactNode }) => {
 
   const t = useCallback(
     (key: TranslationKey, vars?: Record<string, string>) => {
-      let s = translations[locale][key] ?? key;
+      let s = TRANSLATION_OVERRIDES[locale]?.[key] ?? translations[locale][key] ?? key;
       if (vars) for (const [k, v] of Object.entries(vars)) s = s.replace(`{${k}}`, v);
       return s;
     },

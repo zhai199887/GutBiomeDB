@@ -361,13 +361,15 @@ const StudiesPage = () => {
                       <td className={css.ncValue}>{project.nc_count > 0 ? project.nc_count.toLocaleString("en-US") : "—"}</td>
                       <td className={css.diseaseValue}>{project.disease_count > 0 ? project.disease_count.toLocaleString("en-US") : "—"}</td>
                       <td className={css.dimText}>{project.region_16s}</td>
-                      <td className={css.diseaseTags}>
-                        {project.diseases.slice(0, 4).map((disease) => (
-                          <span key={disease} className={css.tag}>
-                            {diseaseDisplayNameI18n(disease, locale)}
-                          </span>
-                        ))}
-                        {project.diseases.length > 4 ? <span className={css.tagMore}>+{project.diseases.length - 4}</span> : null}
+                      <td>
+                        <div className={css.diseaseTags}>
+                          {project.diseases.slice(0, 4).map((disease) => (
+                            <span key={disease} className={css.tag}>
+                              {diseaseDisplayNameI18n(disease, locale)}
+                            </span>
+                          ))}
+                          {project.diseases.length > 4 ? <span className={css.tagMore}>+{project.diseases.length - 4}</span> : null}
+                        </div>
                       </td>
                       <td onClick={(event) => event.stopPropagation()}>
                         <input

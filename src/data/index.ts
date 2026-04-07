@@ -20,6 +20,9 @@ export type CountryStat = {
 export type MetadataSummary = {
   total_samples: number;
   total_unique_diseases?: number;
+  total_non_nc_condition_labels?: number;
+  total_condition_categories?: number;
+  total_unique_countries?: number;
   total_projects?: number;
   total_genera?: number;
   age_counts: Record<string, number>;
@@ -62,6 +65,8 @@ export type ApiStats = {
   total_samples?: number;
   total_countries?: number;
   total_diseases?: number;
+  total_non_nc_condition_labels?: number;
+  total_condition_categories?: number;
   total_projects?: number;
   total_genera?: number;
   country_project_counts?: Record<string, number>;

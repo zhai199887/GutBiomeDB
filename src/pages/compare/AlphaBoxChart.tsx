@@ -13,7 +13,8 @@ const PANELS = [
   { key: "chao1", titleEn: "Chao1", titleZh: "Chao1 丰富度" },
 ] as const;
 
-const formatP = (p: number, locale: string) => {
+const formatP = (p: number | undefined, locale: string) => {
+  if (p == null || Number.isNaN(p)) return locale === "zh" ? "p 不可用" : "p unavailable";
   if (p < 0.001) return locale === "zh" ? "p < 0.001" : "p < 0.001";
   return `p = ${p.toFixed(3)}`;
 };
@@ -33,9 +34,11 @@ const AlphaBoxChart = ({ result }: { result: DiffResult }) => {
     const panelWidth = (width - margin.left - margin.right) / 3;
     const panelHeight = height - margin.top - margin.bottom;
 
+    const alphaGroupA = result.alpha_diversity?.group_a;
+    const alphaGroupB = result.alpha_diversity?.group_b;
     const values = PANELS.flatMap((panel) => [
-      ...result.alpha_diversity.group_a[panel.key],
-      ...result.alpha_diversity.group_b[panel.key],
+      ...(alphaGroupA?.[panel.key] ?? []),
+      ...(alphaGroupB?.[panel.key] ?? []),
     ]);
 
     if (!values.length) {
@@ -114,15 +117,19 @@ const AlphaBoxChart = ({ result }: { result: DiffResult }) => {
 
       const xA = panelWidth * 0.3;
       const xB = panelWidth * 0.7;
-      const groupAValues = result.alpha_diversity.group_a[panel.key];
-      const groupBValues = result.alpha_diversity.group_b[panel.key];
+      const groupAValues = alphaGroupA?.[panel.key] ?? [];
+      const groupBValues = alphaGroupB?.[panel.key] ?? [];
 
       if (panelIndex === 0) {
         panelGroup.append("g").call(d3.axisLeft(y).ticks(5)).attr("font-size", 11);
       }
 
-      drawBox(panelGroup, xA, groupAValues, "var(--secondary)");
-      drawBox(panelGroup, xB, groupBValues, "var(--primary)");
+      if (groupAValues.length > 0) {
+        drawBox(panelGroup, xA, groupAValues, "var(--secondary)");
+      }
+      if (groupBValues.length > 0) {
+        drawBox(panelGroup, xB, groupBValues, "var(--primary)");
+      }
 
       panelGroup.append("text")
         .attr("x", panelWidth / 2)
@@ -139,7 +146,9 @@ const AlphaBoxChart = ({ result }: { result: DiffResult }) => {
         .attr("text-anchor", "middle")
         .attr("fill", "var(--secondary)")
         .attr("font-size", 10)
-        .text(result.summary.group_a_name.length > 12 ? `${result.summary.group_a_name.slice(0, 11)}...` : result.summary.group_a_name);
+        .text(groupAValues.length > 0
+          ? (result.summary.group_a_name.length > 12 ? `${result.summary.group_a_name.slice(0, 11)}...` : result.summary.group_a_name)
+          : (locale === "zh" ? "无数据" : "No data"));
 
       panelGroup.append("text")
         .attr("x", xB)
@@ -147,7 +156,9 @@ const AlphaBoxChart = ({ result }: { result: DiffResult }) => {
         .attr("text-anchor", "middle")
         .attr("fill", "var(--primary)")
         .attr("font-size", 10)
-        .text(result.summary.group_b_name.length > 12 ? `${result.summary.group_b_name.slice(0, 11)}...` : result.summary.group_b_name);
+        .text(groupBValues.length > 0
+          ? (result.summary.group_b_name.length > 12 ? `${result.summary.group_b_name.slice(0, 11)}...` : result.summary.group_b_name)
+          : (locale === "zh" ? "无数据" : "No data"));
 
       const bracketY = 18;
       panelGroup.append("path")
@@ -161,7 +172,7 @@ const AlphaBoxChart = ({ result }: { result: DiffResult }) => {
         .attr("text-anchor", "middle")
         .attr("fill", "var(--light-gray)")
         .attr("font-size", 10)
-        .text(formatP(result.alpha_pvalues[panel.key], locale));
+        .text(formatP(result.alpha_pvalues?.[panel.key], locale));
 
       if (panelIndex < PANELS.length - 1) {
         svg.append("line")

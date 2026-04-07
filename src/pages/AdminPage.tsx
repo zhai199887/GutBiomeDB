@@ -12,6 +12,7 @@ interface DataStats {
   total_samples: number;
   total_countries: number;
   total_diseases: number;
+  total_condition_categories?: number;
   last_updated: string;
   version: string;
 }
@@ -175,8 +176,8 @@ const AdminPage = () => {
                   <span className={classes.statLabel}>Countries</span>
                 </div>
                 <div className={classes.statCard}>
-                  <span className={classes.statValue}>{stats.total_diseases}</span>
-                  <span className={classes.statLabel}>Diseases</span>
+                  <span className={classes.statValue}>{stats.total_condition_categories ?? stats.total_diseases}</span>
+                  <span className={classes.statLabel}>Condition Categories</span>
                 </div>
                 <div className={classes.statCard}>
                   <span className={classes.statValue}>{stats.version}</span>
