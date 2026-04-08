@@ -38,6 +38,12 @@ interface DomExportOptions {
   scale?: number;
 }
 
+const exportErrorMessage = () => (
+  navigator.language.toLowerCase().startsWith("zh")
+    ? "PNG 导出失败，请先使用 SVG 导出。"
+    : "PNG export failed. Please use SVG export first."
+);
+
 const inlineComputedStyles = (sourceRoot: Element, targetRoot: Element, options: InlineStyleOptions = {}) => {
   const sourceNodes = [sourceRoot, ...Array.from(sourceRoot.querySelectorAll("*"))];
   const targetNodes = [targetRoot, ...Array.from(targetRoot.querySelectorAll("*"))];
@@ -63,6 +69,57 @@ const inlineComputedStyles = (sourceRoot: Element, targetRoot: Element, options:
   });
 };
 
+const svgMarkupToDataUrl = (svgMarkup: string) => {
+  const encoded = window.btoa(unescape(encodeURIComponent(svgMarkup)));
+  return `data:image/svg+xml;base64,${encoded}`;
+};
+
+const serializeSvgNode = (
+  sourceSvg: SVGSVGElement,
+  targetSvg: SVGSVGElement,
+  options: { backgroundFill?: string | null; watermark?: boolean; forceTextColor?: string | null } = {},
+) => {
+  const clone = targetSvg.cloneNode(true) as SVGSVGElement;
+  const { width, height } = parseViewBox(sourceSvg);
+
+  clone.setAttribute("xmlns", "http://www.w3.org/2000/svg");
+  clone.setAttribute("width", String(width));
+  clone.setAttribute("height", String(height));
+  if (!clone.getAttribute("viewBox")) {
+    clone.setAttribute("viewBox", `0 0 ${width} ${height}`);
+  }
+
+  if (options.backgroundFill) {
+    const background = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+    background.setAttribute("width", "100%");
+    background.setAttribute("height", "100%");
+    background.setAttribute("fill", options.backgroundFill);
+    clone.insertBefore(background, clone.firstChild);
+  }
+
+  if (options.watermark) {
+    const watermark = document.createElementNS("http://www.w3.org/2000/svg", "text");
+    watermark.setAttribute("x", String(width - 10));
+    watermark.setAttribute("y", String(height - 8));
+    watermark.setAttribute("text-anchor", "end");
+    watermark.setAttribute("font-size", "10");
+    watermark.setAttribute("fill", "#9ca3af");
+    watermark.setAttribute("font-family", "Arial, sans-serif");
+    watermark.textContent = "Gut Microbiome Atlas";
+    clone.appendChild(watermark);
+  }
+
+  if (options.forceTextColor) {
+    const svgTextNodes = clone.querySelectorAll("text");
+    svgTextNodes.forEach((node) => {
+      const style = node.getAttribute("style") ?? "";
+      node.setAttribute("style", `${style};fill:${options.forceTextColor};color:${options.forceTextColor};`);
+    });
+  }
+
+  return new XMLSerializer().serializeToString(clone);
+};
+
 const prepareExportSvg = (svgElement: SVGSVGElement) => {
   const clone = svgElement.cloneNode(true) as SVGSVGElement;
   const { width, height } = parseViewBox(svgElement);
@@ -75,24 +132,13 @@ const prepareExportSvg = (svgElement: SVGSVGElement) => {
   }
 
   inlineComputedStyles(svgElement, clone, { forceSvgTextColor: EXPORT_TEXT_COLOR });
+  const xml = serializeSvgNode(svgElement, clone, {
+    backgroundFill: "white",
+    watermark: true,
+    forceTextColor: EXPORT_TEXT_COLOR,
+  });
 
-  const background = document.createElementNS("http://www.w3.org/2000/svg", "rect");
-  background.setAttribute("width", "100%");
-  background.setAttribute("height", "100%");
-  background.setAttribute("fill", "white");
-  clone.insertBefore(background, clone.firstChild);
-
-  const watermark = document.createElementNS("http://www.w3.org/2000/svg", "text");
-  watermark.setAttribute("x", String(width - 10));
-  watermark.setAttribute("y", String(height - 8));
-  watermark.setAttribute("text-anchor", "end");
-  watermark.setAttribute("font-size", "10");
-  watermark.setAttribute("fill", "#9ca3af");
-  watermark.setAttribute("font-family", "Arial, sans-serif");
-  watermark.textContent = "Gut Microbiome Atlas";
-  clone.appendChild(watermark);
-
-  return { clone, width, height };
+  return { xml, width, height };
 };
 
 const getElementBounds = (element: HTMLElement) => {
@@ -118,6 +164,32 @@ const buildElementExportSvg = (element: HTMLElement, options: DomExportOptions =
   clone.style.width = `${width}px`;
   clone.style.maxWidth = `${width}px`;
 
+  const sourceSvgs = Array.from(element.querySelectorAll<SVGSVGElement>("svg"));
+  const targetSvgs = Array.from(clone.querySelectorAll<SVGSVGElement>("svg"));
+  sourceSvgs.forEach((sourceSvg, index) => {
+    const targetSvg = targetSvgs[index];
+    if (!targetSvg || !targetSvg.parentNode) return;
+
+    const svgMarkup = serializeSvgNode(sourceSvg, targetSvg, {
+      backgroundFill: null,
+      watermark: false,
+      forceTextColor: null,
+    });
+    const svgUrl = svgMarkupToDataUrl(svgMarkup);
+    const renderedWidth = Math.max(1, Math.ceil(sourceSvg.getBoundingClientRect().width || sourceSvg.clientWidth || parseViewBox(sourceSvg).width));
+    const renderedHeight = Math.max(1, Math.ceil(sourceSvg.getBoundingClientRect().height || sourceSvg.clientHeight || parseViewBox(sourceSvg).height));
+    const image = document.createElement("img");
+    image.setAttribute("src", svgUrl);
+    image.setAttribute("alt", "");
+    image.setAttribute("width", String(renderedWidth));
+    image.setAttribute("height", String(renderedHeight));
+    image.style.display = "block";
+    image.style.width = `${renderedWidth}px`;
+    image.style.height = `${renderedHeight}px`;
+    image.style.maxWidth = "100%";
+    targetSvg.parentNode.replaceChild(image, targetSvg);
+  });
+
   const xhtml = new XMLSerializer().serializeToString(clone);
   const watermark = `
     <text
@@ -131,7 +203,7 @@ const buildElementExportSvg = (element: HTMLElement, options: DomExportOptions =
   `;
 
   const svg = `
-    <svg xmlns="http://www.w3.org/2000/svg" width="${exportWidth}" height="${exportHeight}" viewBox="0 0 ${exportWidth} ${exportHeight}">
+    <svg xmlns="http://www.w3.org/2000/svg" xmlns:xhtml="http://www.w3.org/1999/xhtml" width="${exportWidth}" height="${exportHeight}" viewBox="0 0 ${exportWidth} ${exportHeight}">
       <rect width="100%" height="100%" rx="18" ry="18" fill="${background}" />
       <foreignObject x="${padding}" y="${padding}" width="${width}" height="${height}">
         ${xhtml}
@@ -164,12 +236,16 @@ const rasterizeSvgString = (svg: string, width: number, height: number, filename
     const context = canvas.getContext("2d");
     if (!context) {
       URL.revokeObjectURL(svgUrl);
+      window.alert(exportErrorMessage());
       return;
     }
+    context.fillStyle = "white";
+    context.fillRect(0, 0, canvas.width, canvas.height);
     context.drawImage(image, 0, 0, canvas.width, canvas.height);
     canvas.toBlob((blob) => {
       if (!blob) {
         URL.revokeObjectURL(svgUrl);
+        window.alert(exportErrorMessage());
         return;
       }
       downloadBlob(blob, `${filename}.png`);
@@ -178,22 +254,21 @@ const rasterizeSvgString = (svg: string, width: number, height: number, filename
   };
   image.onerror = () => {
     URL.revokeObjectURL(svgUrl);
+    window.alert(exportErrorMessage());
   };
   image.src = svgUrl;
 };
 
 /** Export an SVG element as an .svg file. */
 export function exportSVG(svgElement: SVGSVGElement, filename: string) {
-  const { clone } = prepareExportSvg(svgElement);
-  const xml = new XMLSerializer().serializeToString(clone);
+  const { xml } = prepareExportSvg(svgElement);
   const blob = new Blob([xml], { type: "image/svg+xml;charset=utf-8" });
   downloadBlob(blob, `${filename}.svg`);
 }
 
 /** Export an SVG element as a PNG file. */
 export function exportPNG(svgElement: SVGSVGElement, filename: string, scale = 2) {
-  const { clone, width, height } = prepareExportSvg(svgElement);
-  const xml = new XMLSerializer().serializeToString(clone);
+  const { xml, width, height } = prepareExportSvg(svgElement);
   rasterizeSvgString(xml, width, height, filename, scale);
 }
 
