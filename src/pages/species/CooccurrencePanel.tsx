@@ -8,6 +8,7 @@ import { cachedFetch } from "@/util/apiCache";
 import { exportTable } from "@/util/export";
 import { API_BASE } from "@/util/apiBase";
 import { phylumColor } from "@/util/phylumColors";
+import { sortDiseaseItemsByName } from "@/util/diseaseNames";
 
 import type { CooccurrenceResponse, DiseaseListItem } from "./types";
 import { formatPValue, translateDimensionName } from "./utils";
@@ -29,6 +30,8 @@ export default function CooccurrencePanel({ genus, phylum }: CooccurrencePanelPr
       .then((payload) => setDiseases(payload.diseases ?? []))
       .catch(() => setDiseases([]));
   }, []);
+
+  const sortedDiseases = useMemo(() => sortDiseaseItemsByName(diseases), [diseases]);
 
   useEffect(() => {
     const search = new URLSearchParams({
@@ -70,7 +73,7 @@ export default function CooccurrencePanel({ genus, phylum }: CooccurrencePanelPr
           <label htmlFor="species-cooccurrence-disease">{t("species.cooccurrence.context")}</label>
           <select id="species-cooccurrence-disease" value={disease} onChange={(event) => setDisease(event.target.value)}>
             <option value="">{t("species.cooccurrence.nc")}</option>
-            {diseases.map((item) => (
+            {sortedDiseases.map((item) => (
               <option key={item.name} value={item.name}>
                 {translateDimensionName(item.name, locale, "disease")}
               </option>

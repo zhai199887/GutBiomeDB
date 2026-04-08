@@ -2,14 +2,14 @@
  * LifecyclePage.tsx — Lifecycle Microbiome Atlas workspace
  * 全生命周期微生物组图谱工作台
  */
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 
 import * as d3 from "d3";
 
 import { useI18n } from "@/i18n";
 import { API_BASE } from "@/util/apiBase";
-import { diseaseDisplayNameI18n } from "@/util/diseaseNames";
+import { diseaseDisplayNameI18n, sortDiseaseItemsByName } from "@/util/diseaseNames";
 import { countryName, AGE_GROUP_ZH } from "@/util/countries";
 import { cachedFetch } from "@/util/apiCache";
 import { exportSVG, exportPNG } from "@/util/chartExport";
@@ -134,6 +134,8 @@ const LifecyclePage = () => {
       .then((payload) => setCountries(payload.countries ?? []))
       .catch(() => {});
   }, []);
+
+  const sortedDiseases = useMemo(() => sortDiseaseItemsByName(diseases), [diseases]);
 
   useEffect(() => {
     if (!disease && viewMode === "compare") {
@@ -295,7 +297,7 @@ const LifecyclePage = () => {
           <label>{t("lifecycle.filterDisease")}</label>
           <select className={classes.select} value={disease} onChange={(e) => setDisease(e.target.value)}>
             <option value="">{t("lifecycle.allDiseases")}</option>
-            {diseases.map((item) => (
+            {sortedDiseases.map((item) => (
               <option key={item.name} value={item.name}>
                 {`${diseaseLabel(item.name)} (${item.sample_count.toLocaleString()})`}
               </option>

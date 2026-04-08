@@ -2,12 +2,12 @@
  * BiomarkerPage.tsx — Disease Biomarker Discovery
  * 疾病标志物发现：Wilcoxon + BH FDR + LDA + 森林图
  */
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import * as d3 from "d3";
 import { useI18n } from "@/i18n";
 import { API_BASE } from "@/util/apiBase";
-import { diseaseDisplayNameI18n } from "@/util/diseaseNames";
+import { diseaseDisplayNameI18n, sortDiseaseItemsByName } from "@/util/diseaseNames";
 import classes from "./BiomarkerPage.module.css";
 
 interface Marker {
@@ -55,6 +55,8 @@ const BiomarkerPage = () => {
       .then(setDiseaseZh).catch(() => {});
   }, []);
 
+  const sortedDiseases = useMemo(() => sortDiseaseItemsByName(diseases), [diseases]);
+
   const runAnalysis = () => {
     if (!selected) return;
     setLoading(true);
@@ -89,7 +91,7 @@ const BiomarkerPage = () => {
           <label>{t("biomarker.selectDisease")}</label>
           <select className={classes.select} value={selected} onChange={e => setSelected(e.target.value)}>
             <option value="">--</option>
-            {diseases.slice(0, 200).map(d => (
+            {sortedDiseases.slice(0, 200).map(d => (
               <option key={d.name} value={d.name}>{dName(d.name)} ({d.sample_count})</option>
             ))}
           </select>

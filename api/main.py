@@ -7,6 +7,7 @@ import logging
 import os
 import json
 import math
+import re
 import tempfile
 from datetime import datetime
 from functools import lru_cache
@@ -415,10 +416,50 @@ if _DISEASE_ZH_PATH.exists():
     with open(_DISEASE_ZH_PATH, encoding="utf-8") as f:
         DISEASE_NAMES_ZH = json.load(f)
 
+DISEASE_NAMES_EN_FALLBACK: dict[str, str] = {
+    "NC": "Non-disease Control",
+    "Healthy first-degree relatives of Crohn's disease patients": "Healthy First-degree Relatives of Crohn's Disease Patients",
+    "End-stage renal disease": "End-stage Renal Disease",
+    "Low birth weight infant": "Low Birth Weight Infant",
+    "Very low birth weight preterm infants": "Very Low Birth Weight Preterm Infants",
+    "Enterobacterales infection": "Enterobacterales Infection",
+    "Cancer": "Cancer",
+    "Nonrecurrent Clostridioides difficile infection": "Nonrecurrent Clostridioides difficile Infection",
+    "Recurrent Clostridioides difficile infection": "Recurrent Clostridioides difficile Infection",
+}
+
 
 def disease_to_zh(name: str) -> str:
     """Return Chinese name if available, else original. / 返回中文疾病名（如有）"""
     return DISEASE_NAMES_ZH.get(name, name)
+
+
+def _humanize_disease_name(name: str) -> str:
+    """Build a readable English fallback for unmapped disease keys."""
+    cleaned = str(name).strip().replace("_", " ")
+    if not cleaned:
+        return ""
+    return re.sub(
+        r"\b([A-Za-z][A-Za-z'-]*)\b",
+        lambda match: match.group(1) if match.group(1).isupper() else match.group(1)[0].upper() + match.group(1)[1:],
+        cleaned,
+    )
+
+
+def disease_to_en(name: str) -> str:
+    """Return a canonical English display name for a disease/control key."""
+    manual = DISEASE_NAMES_EN_FALLBACK.get(name, "")
+    if manual:
+        return manual
+    onto = DISEASE_ONTOLOGY.get(name, {})
+    standard = str(onto.get("standard_name", "")).strip()
+    if standard:
+        return standard
+    return _humanize_disease_name(name)
+
+
+def _disease_sort_key(name: str) -> tuple[int, str]:
+    return (0 if str(name).upper() == "NC" else 1, disease_to_en(str(name)).casefold())
 
 
 def extract_genus(col_name: str) -> str:
@@ -590,7 +631,7 @@ def _non_nc_disease_mask(meta: pd.DataFrame, inform_cols: list[str] | None = Non
 def _collect_project_diseases(meta: pd.DataFrame, inform_cols: list[str] | None = None) -> list[str]:
     """Collect unique non-NC labels from inform0-11 after NC normalization."""
     counts = _inform_label_counts(meta, inform_cols, include_nc=False)
-    return sorted(counts.keys(), key=lambda item: item.lower())
+    return sorted(counts.keys(), key=_disease_sort_key)
 
 
 def _infer_region_16s(instrument: str) -> str:
@@ -1261,10 +1302,7 @@ def filter_options(request: Request):
     countries = sorted(meta["country"].dropna().astype(str).str.strip().unique().tolist())
 
     disease_counts = _inform_label_counts(meta, include_nc=True)
-    diseases = sorted(
-        disease_counts.keys(),
-        key=lambda label: (0 if label == "NC" else 1, -disease_counts[label], label.lower()),
-    )
+    diseases = sorted(disease_counts.keys(), key=_disease_sort_key)
 
     age_groups: list[str] = []
     if "age_group" in meta.columns:
@@ -1424,11 +1462,9 @@ def get_disease_names_zh(request: Request):
 def get_disease_display_names(request: Request):
     """Return standardized display names (full name only, no abbreviation suffix)
     返回标准化疾病显示名称映射（仅全称，不附加缩写括号）"""
-    result: dict[str, str] = {}
-    for key, info in DISEASE_ONTOLOGY.items():
-        std = info.get("standard_name", "")
-        if std:
-            result[key] = std
+    keys = set(DISEASE_ONTOLOGY.keys()) | set(DISEASE_NAMES_EN_FALLBACK.keys())
+    keys.update(item["name"] for item in get_disease_list_cached())
+    result = {key: disease_to_en(key) for key in sorted(keys, key=_disease_sort_key)}
     return result
 
 

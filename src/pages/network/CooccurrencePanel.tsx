@@ -3,7 +3,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useI18n } from "@/i18n";
 import { cachedFetch } from "@/util/apiCache";
 import { exportPNG, exportSVG } from "@/util/chartExport";
-import { diseaseDisplayNameI18n } from "@/util/diseaseNames";
+import { diseaseDisplayNameI18n, sortDiseaseItemsByName } from "@/util/diseaseNames";
 import { exportTable } from "@/util/export";
 
 import NetworkEdgeTable from "./NetworkEdgeTable";
@@ -31,6 +31,8 @@ const CooccurrencePanel = () => {
       .then((payload) => setDiseases(payload.diseases ?? []))
       .catch(() => {});
   }, []);
+
+  const sortedDiseases = useMemo(() => sortDiseaseItemsByName(diseases), [diseases]);
 
   useEffect(() => {
     setLoading(true);
@@ -96,7 +98,7 @@ const CooccurrencePanel = () => {
             placeholder={locale === "zh" ? "留空表示健康对照" : "Leave blank for healthy controls"}
           />
           <datalist id="network-disease-list">
-            {diseases.map((item) => (
+            {sortedDiseases.map((item) => (
               <option key={item.name} value={item.name} label={diseaseDisplayNameI18n(item.name, locale)} />
             ))}
           </datalist>

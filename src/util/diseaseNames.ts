@@ -423,8 +423,32 @@ const DISEASE_ZH: Record<string, string> = {
  * - 无映射 → 返回原始 key，下划线替换为空格，首字母大写
  */
 export function diseaseDisplayName(key: string): string {
-  const name = displayMap && displayMap[key] ? displayMap[key] : key.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
-  return name;
+  const mapped = displayMap && displayMap[key] ? displayMap[key] : "";
+  if (mapped) return mapped;
+  if (DISEASE_EN_FALLBACK[key]) return DISEASE_EN_FALLBACK[key];
+  return humanizeDiseaseKey(key);
+}
+
+const DISEASE_EN_FALLBACK: Record<string, string> = {
+  NC: "Non-disease Control",
+  "Healthy first-degree relatives of Crohn's disease patients": "Healthy First-degree Relatives of Crohn's Disease Patients",
+  "End-stage renal disease": "End-stage Renal Disease",
+  "Low birth weight infant": "Low Birth Weight Infant",
+  "Very low birth weight preterm infants": "Very Low Birth Weight Preterm Infants",
+  "Enterobacterales infection": "Enterobacterales Infection",
+  Cancer: "Cancer",
+  "Nonrecurrent Clostridioides difficile infection": "Nonrecurrent Clostridioides difficile Infection",
+  "Recurrent Clostridioides difficile infection": "Recurrent Clostridioides difficile Infection",
+};
+
+const DISEASE_EN_COLLATOR = new Intl.Collator("en", { sensitivity: "base", numeric: true });
+
+function humanizeDiseaseKey(key: string): string {
+  const cleaned = key.replace(/_/g, " ").trim();
+  if (!cleaned) return key;
+  return cleaned.replace(/\b([A-Za-z][A-Za-z'-]*)\b/g, (match) => (
+    match === match.toUpperCase() ? match : match[0].toUpperCase() + match.slice(1)
+  ));
 }
 
 // Build normalized lookup for fuzzy matching (once)
@@ -452,6 +476,20 @@ export function diseaseDisplayNameI18n(key: string, locale: string): string {
     if (zh) return zh;
   }
   return diseaseDisplayName(key);
+}
+
+export function compareDiseaseKeys(a: string, b: string): number {
+  if (a.toUpperCase() === "NC" && b.toUpperCase() !== "NC") return -1;
+  if (b.toUpperCase() === "NC" && a.toUpperCase() !== "NC") return 1;
+  return DISEASE_EN_COLLATOR.compare(diseaseDisplayName(a), diseaseDisplayName(b));
+}
+
+export function sortDiseaseKeys<T extends string>(keys: readonly T[]): T[] {
+  return [...keys].sort((a, b) => compareDiseaseKeys(a, b));
+}
+
+export function sortDiseaseItemsByName<T extends { name: string }>(items: readonly T[]): T[] {
+  return [...items].sort((a, b) => compareDiseaseKeys(a.name, b.name));
 }
 
 /** 获取简短显示名（用于按钮/标签等空间有限的场景） */

@@ -8,7 +8,7 @@ import { exportPNG, exportSVG } from "@/util/chartExport";
 import { cachedFetch } from "@/util/apiCache";
 import { API_BASE } from "@/util/apiBase";
 import { countryName, AGE_GROUP_ZH, SEX_ZH } from "@/util/countries";
-import { diseaseDisplayNameI18n } from "@/util/diseaseNames";
+import { compareDiseaseKeys, diseaseDisplayNameI18n } from "@/util/diseaseNames";
 import "@/components/tooltip";
 import BiomarkerPanel from "./disease/BiomarkerPanel";
 import DemoBarChart from "./disease/DemoBarChart";
@@ -92,7 +92,7 @@ const DiseasePage = () => {
     if (sortMode === "count") {
       sorted.sort((a, b) => b.sample_count - a.sample_count);
     } else {
-      sorted.sort((a, b) => diseaseName(a.name).localeCompare(diseaseName(b.name)));
+      sorted.sort((a, b) => compareDiseaseKeys(a.name, b.name));
     }
     return sorted;
   }, [categoryFilter, diseaseName, diseaseZh, diseases, search, sortMode]);

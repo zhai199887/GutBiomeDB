@@ -2,14 +2,14 @@
  * SimilarityPage.tsx — 样本相似性搜索
  * 基于用户提交的属级丰度向量检索数据库中最相近的样本
  */
-import { useEffect, useRef, useState, type DragEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type DragEvent } from "react";
 import { Link } from "react-router-dom";
 
 import { useI18n } from "@/i18n";
 import { cachedFetch } from "@/util/apiCache";
 import { API_BASE } from "@/util/apiBase";
 import { countryName, AGE_GROUP_ZH } from "@/util/countries";
-import { diseaseDisplayNameI18n } from "@/util/diseaseNames";
+import { diseaseDisplayNameI18n, sortDiseaseItemsByName } from "@/util/diseaseNames";
 import { exportTable } from "@/util/export";
 
 import HealthIndexPanel from "./similarity/HealthIndexPanel";
@@ -105,6 +105,8 @@ const SimilarityPage = () => {
       })
       .finally(() => setOptionsLoading(false));
   }, []);
+
+  const sortedDiseases = useMemo(() => sortDiseaseItemsByName(diseases), [diseases]);
 
   const readFile = (candidate: File) =>
     new Promise<string>((resolve, reject) => {
@@ -316,7 +318,7 @@ const SimilarityPage = () => {
                 placeholder={optionsLoading ? (locale === "zh" ? "加载中…" : "Loading…") : t("filter.searchDisease")}
               />
               <datalist id="similarity-disease-list">
-                {diseases.map((item) => (
+                {sortedDiseases.map((item) => (
                   <option key={item.name} value={item.name}>{`${diseaseLabel(item.name)} (${item.sample_count})`}</option>
                 ))}
               </datalist>

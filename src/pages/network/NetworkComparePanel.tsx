@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 
 import { useI18n } from "@/i18n";
 import { cachedFetch } from "@/util/apiCache";
-import { diseaseDisplayNameI18n } from "@/util/diseaseNames";
+import { diseaseDisplayNameI18n, sortDiseaseItemsByName } from "@/util/diseaseNames";
 
 import styles from "./NetworkPanel.module.css";
 import { cooccurrenceEdgeKey, drawCooccurrenceGraph } from "./graphUtils";
@@ -27,6 +27,8 @@ const NetworkComparePanel = () => {
       .then((payload) => setDiseases(payload.diseases ?? []))
       .catch(() => {});
   }, []);
+
+  const sortedDiseases = useMemo(() => sortDiseaseItemsByName(diseases), [diseases]);
 
   const runComparison = async () => {
     if (!disease.trim()) {
@@ -104,7 +106,7 @@ const NetworkComparePanel = () => {
             placeholder={locale === "zh" ? "输入疾病名..." : "Enter a disease..."}
           />
           <datalist id="network-compare-disease-list">
-            {diseases.map((item) => (
+            {sortedDiseases.map((item) => (
               <option key={item.name} value={item.name} label={diseaseDisplayNameI18n(item.name, locale)} />
             ))}
           </datalist>

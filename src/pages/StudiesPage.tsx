@@ -5,7 +5,7 @@ import { useI18n } from "@/i18n";
 import { cachedFetch } from "@/util/apiCache";
 import { API_BASE } from "@/util/apiBase";
 import { countryName } from "@/util/countries";
-import { diseaseDisplayNameI18n } from "@/util/diseaseNames";
+import { diseaseDisplayNameI18n, sortDiseaseKeys } from "@/util/diseaseNames";
 import { exportTable } from "@/util/export";
 
 import css from "./StudiesPage.module.css";
@@ -69,7 +69,7 @@ const StudiesPage = () => {
   }, []);
 
   const diseaseOptions = useMemo(
-    () => Array.from(new Set(projects.flatMap((project) => project.diseases))).sort((a, b) => a.localeCompare(b)),
+    () => sortDiseaseKeys(Array.from(new Set(projects.flatMap((project) => project.diseases)))),
     [projects],
   );
   const countryOptions = useMemo(

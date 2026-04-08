@@ -5,7 +5,7 @@ import { useI18n } from "@/i18n";
 import { cachedFetch } from "@/util/apiCache";
 import { resolveApiBase } from "@/util/apiBase";
 import { countryName } from "@/util/countries";
-import { diseaseDisplayNameI18n } from "@/util/diseaseNames";
+import { diseaseDisplayNameI18n, sortDiseaseItemsByName } from "@/util/diseaseNames";
 
 import classes from "./DownloadPage.module.css";
 
@@ -381,7 +381,7 @@ const DownloadPage = () => {
 
   const diseaseOptions = useMemo(
     () =>
-      diseases.map((item) => ({
+      sortDiseaseItemsByName(diseases).map((item) => ({
         value: item.name,
         label: diseaseDisplayNameI18n(item.name, locale),
         hint: typeof item.sample_count === "number" ? `n=${item.sample_count}` : undefined,

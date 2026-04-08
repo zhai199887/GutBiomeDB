@@ -2,12 +2,12 @@
  * LollipopPage.tsx — Lollipop Differential Abundance Plot
  * 棒棒糖差异丰度图：log2FC + 显著性 + 门级着色
  */
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import * as d3 from "d3";
 import { useI18n } from "@/i18n";
 import { API_BASE } from "@/util/apiBase";
-import { diseaseDisplayNameI18n } from "@/util/diseaseNames";
+import { diseaseDisplayNameI18n, sortDiseaseItemsByName } from "@/util/diseaseNames";
 import classes from "./LollipopPage.module.css";
 
 const PHYLUM_COLORS: Record<string, string> = {
@@ -52,6 +52,8 @@ const LollipopPage = () => {
       .then(setDiseaseZh).catch(() => {});
   }, []);
 
+  const sortedDiseases = useMemo(() => sortDiseaseItemsByName(diseases), [diseases]);
+
   useEffect(() => {
     if (!selected) return;
     setLoading(true);
@@ -82,7 +84,7 @@ const LollipopPage = () => {
           <label>{t("biomarker.selectDisease")}</label>
           <select className={classes.select} value={selected} onChange={e => setSelected(e.target.value)}>
             <option value="">--</option>
-            {diseases.slice(0, 200).map(d => (
+            {sortedDiseases.slice(0, 200).map(d => (
               <option key={d.name} value={d.name}>{dName(d.name)} ({d.sample_count})</option>
             ))}
           </select>
