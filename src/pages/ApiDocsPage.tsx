@@ -10,6 +10,9 @@ import type { ApiEndpoint } from "./apiDocs/types";
 import css from "./ApiDocsPage.module.css";
 
 const ACTIVE_API_BASE = resolveApiBase();
+const ACTIVE_API_ROOT = new URL("/api", `${ACTIVE_API_BASE}/`).toString().replace(/\/$/, "");
+const ACTIVE_OPENAPI_SPEC = new URL("/api/openapi.json", `${ACTIVE_API_BASE}/`).toString();
+const ACTIVE_SWAGGER_UI = new URL("/api/docs", `${ACTIVE_API_BASE}/`).toString();
 
 type LocaleCopy = {
   title: string;
@@ -328,10 +331,10 @@ const ApiDocsPage = () => {
       <main className={css.page}>
         <section className={css.hero}>
           <div className={css.badges}>
-            <a className={css.badge} href={`${ACTIVE_API_BASE}/api/openapi.json`} target="_blank" rel="noreferrer">
+            <a className={css.badge} href={ACTIVE_OPENAPI_SPEC} target="_blank" rel="noreferrer">
               {text.openapi}
             </a>
-            <a className={css.badge} href={`${ACTIVE_API_BASE}/api/docs`} target="_blank" rel="noreferrer">
+            <a className={css.badge} href={ACTIVE_SWAGGER_UI} target="_blank" rel="noreferrer">
               {text.swagger}
             </a>
           </div>
@@ -340,15 +343,15 @@ const ApiDocsPage = () => {
         <section className={css.infoCards}>
           <div className={css.infoCard}>
             <h3>{text.apiBase}</h3>
-            <code>{`${ACTIVE_API_BASE}/api`}</code>
+            <code>{ACTIVE_API_ROOT}</code>
           </div>
           <div className={css.infoCard}>
             <h3>{text.openapi}</h3>
-            <code>{`${ACTIVE_API_BASE}/api/openapi.json`}</code>
+            <code>{ACTIVE_OPENAPI_SPEC}</code>
           </div>
           <div className={css.infoCard}>
             <h3>{text.swagger}</h3>
-            <code>{`${ACTIVE_API_BASE}/api/docs`}</code>
+            <code>{ACTIVE_SWAGGER_UI}</code>
           </div>
         </section>
 

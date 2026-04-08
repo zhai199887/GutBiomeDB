@@ -115,8 +115,8 @@ const en = {
   "feature.metabolism.desc": "Browse microbiota by metabolic role: SCFAs, bile acids, tryptophan, TMAO, and more",
   "feature.download.title": "Download Hub",
   "feature.download.desc": "Export reference summaries and module-level aggregated analysis results in CSV, TSV, or JSON",
-  "feature.apiDocs.title": "API Workspace",
-  "feature.apiDocs.desc": "Read endpoint docs, inspect response schemas, and run live requests against local or public API",
+  "feature.apiDocs.title": "API Reference",
+  "feature.apiDocs.desc": "Review endpoint documentation, response schemas, and example requests for atlas workflows",
   "feature.about.title": "About & Cite",
   "feature.about.desc": "Review research background, licensing boundaries, citation guidance, and version history",
 
@@ -849,8 +849,8 @@ const zh: Record<keyof typeof en, string> = {
   "feature.search.desc": "围绕单个菌属查看疾病、地理、年龄、标志物和局部网络信息",
   "feature.download.title": "下载中心",
   "feature.download.desc": "导出参考汇总与模块级聚合分析结果，支持 CSV、TSV 和 JSON",
-  "feature.apiDocs.title": "API 工作台",
-  "feature.apiDocs.desc": "查看接口文档、响应结构，并直接对本地或公网 API 发起请求",
+  "feature.apiDocs.title": "API 参考",
+  "feature.apiDocs.desc": "查看接口文档、响应结构与示例请求，用于复现平台分析流程",
   "feature.about.title": "关于与引用",
   "feature.about.desc": "查看研究背景、许可边界、引用方式与版本历史",
 

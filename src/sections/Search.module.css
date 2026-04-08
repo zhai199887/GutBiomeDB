@@ -2,7 +2,7 @@
 
 .searchContainer {
   position: relative;
-  max-width: 980px;
+  max-width: 1280px;
   margin: 0 auto 2rem;
 }
 
@@ -114,7 +114,7 @@
   display: flex;
   align-items: center;
   gap: 0.6rem;
-  max-width: 980px;
+  max-width: 1280px;
   margin: 0.8rem auto 1.5rem;
 }
 
@@ -160,6 +160,9 @@
 .profileContainer {
   margin-top: 1.5rem;
   width: 100%;
+  max-width: 1380px;
+  margin-left: auto;
+  margin-right: auto;
 }
 
 .profileHeader {
@@ -212,7 +215,7 @@
 }
 
 .chartBlock {
-  padding: 1.2rem 1.25rem;
+  padding: 1.35rem 1.5rem;
   border: 1px solid var(--gray);
   border-radius: 14px;
   background: rgba(255, 255, 255, 0.02);
@@ -229,7 +232,7 @@
 .profileChart {
   width: 100%;
   max-width: none;
-  min-height: 320px;
+  min-height: 440px;
 }
 
 /* Sex table / 性别分布表 */
@@ -265,5 +268,15 @@
 
   .statValue {
     font-size: 1.1rem;
+  }
+
+  .searchContainer,
+  .quickPicker,
+  .profileContainer {
+    max-width: 100%;
+  }
+
+  .profileChart {
+    min-height: 320px;
   }
 }

@@ -3,7 +3,7 @@
  * 物种搜索引擎：输入属名 → 展示该属在疾病/国家/年龄组中的分布
  * Genus search workspace with disease, country, and age-group profile views
  */
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import { renderToString } from "react-dom/server";
 import { Link } from "react-router-dom";
 import * as d3 from "d3";
@@ -235,18 +235,37 @@ const SpeciesProfileView = ({ profile }: { profile: SpeciesProfile }) => {
   const diseaseRef = useRef<SVGSVGElement>(null);
   const countryRef = useRef<SVGSVGElement>(null);
   const ageRef = useRef<SVGSVGElement>(null);
+  const rankProfileEntries = useCallback((entries: ProfileEntry[]) => (
+    [...entries].sort((left, right) => (
+      right.mean_abundance - left.mean_abundance
+      || right.prevalence - left.prevalence
+      || right.sample_count - left.sample_count
+      || left.name.localeCompare(right.name)
+    ))
+  ), []);
+
+  const diseaseEntries = useMemo(() => {
+    const ranked = rankProfileEntries(profile.by_disease);
+    const informative = ranked.filter((item) => item.mean_abundance > 0 || item.prevalence > 0);
+    return (informative.length > 0 ? informative : ranked).slice(0, 28);
+  }, [profile.by_disease, rankProfileEntries]);
+
+  const countryEntries = useMemo(
+    () => rankProfileEntries(profile.by_country).slice(0, 24),
+    [profile.by_country, rankProfileEntries],
+  );
 
   // Draw disease bar chart / 绘制疾病丰度柱状图
   useEffect(() => {
-    if (!diseaseRef.current || profile.by_disease.length === 0) return;
-    drawBarChart(diseaseRef.current, profile.by_disease.slice(0, 28), "var(--primary)", locale, "disease");
-  }, [profile, locale]);
+    if (!diseaseRef.current || diseaseEntries.length === 0) return;
+    drawBarChart(diseaseRef.current, diseaseEntries, "var(--primary)", locale, "disease");
+  }, [diseaseEntries, locale]);
 
   // Draw country bar chart / 绘制国家丰度柱状图
   useEffect(() => {
-    if (!countryRef.current || profile.by_country.length === 0) return;
-    drawBarChart(countryRef.current, profile.by_country.slice(0, 24), "var(--secondary)", locale, "country");
-  }, [profile, locale]);
+    if (!countryRef.current || countryEntries.length === 0) return;
+    drawBarChart(countryRef.current, countryEntries, "var(--secondary)", locale, "country");
+  }, [countryEntries, locale]);
 
   // Draw age group bar chart / 绘制年龄组丰度柱状图
   useEffect(() => {
@@ -375,9 +394,9 @@ function drawBarChart(svgEl: SVGSVGElement, data: ProfileEntry[], color: string,
   svg.selectAll("*").remove();
 
   const isDisease = nameType === "disease";
-  const leftM = isDisease ? 380 : nameType === "country" ? 240 : 200;
+  const leftM = isDisease ? 430 : nameType === "country" ? 260 : 220;
   const margin = { top: 16, right: 120, bottom: 42, left: leftM };
-  const W = 1260;
+  const W = 1400;
   const H = Math.max(220, data.length * 30 + margin.top + margin.bottom);
   svg.attr("viewBox", `0 0 ${W} ${H}`);
 
@@ -434,7 +453,7 @@ function drawBarChart(svgEl: SVGSVGElement, data: ProfileEntry[], color: string,
   g.append("g")
     .call(d3.axisLeft(yScale).tickFormat((d) => {
       const translated = translateLabel(d, locale, nameType);
-      const limit = isDisease ? 56 : nameType === "country" ? 28 : 24;
+      const limit = isDisease ? 68 : nameType === "country" ? 34 : 28;
       return translated.length > limit ? translated.slice(0, limit - 2) + "…" : translated;
     }))
     .attr("font-size", 12);

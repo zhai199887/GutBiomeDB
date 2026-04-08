@@ -32,17 +32,20 @@ function rewriteLocalConfiguredBase(value: string): string {
 }
 
 export function resolveApiBase(): string {
-  const configured = import.meta.env.VITE_API_URL?.trim();
-  if (configured) return rewriteLocalConfiguredBase(configured);
-
   if (typeof window !== "undefined") {
     const host = window.location.hostname;
     if (LOCAL_HOSTS.has(host)) {
+      const configured = import.meta.env.VITE_API_URL?.trim();
+      if (configured) return rewriteLocalConfiguredBase(configured);
       return `${window.location.protocol}//${host}:${LOCAL_API_PORT}`;
     }
-    // Static Vercel deployments do not serve the FastAPI routes themselves.
-    return stripTrailingSlash(PUBLIC_API_BASE);
+
+    // Production and preview deployments should talk to the same-origin /api proxy.
+    return stripTrailingSlash(window.location.origin);
   }
+
+  const configured = import.meta.env.VITE_API_URL?.trim();
+  if (configured) return stripTrailingSlash(configured);
 
   return PUBLIC_API_BASE;
 }

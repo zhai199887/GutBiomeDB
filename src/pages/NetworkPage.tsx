@@ -280,9 +280,9 @@ function drawAssociationNetwork(svgEl: SVGSVGElement, rawData: NetworkData, loca
     .join("text")
     .text((item) => {
       const labelText = item.type === "disease" ? diseaseDisplayNameI18n(item.id, locale) : item.id;
-      return labelText.length > 24 ? `${labelText.slice(0, 22)}...` : labelText;
+      return labelText.length > 38 ? `${labelText.slice(0, 35)}...` : labelText;
     })
-    .attr("font-size", (item) => item.type === "disease" ? 13 : 11.5)
+    .attr("font-size", (item) => item.type === "disease" ? 14.5 : 12.5)
     .attr("font-style", (item) => item.type === "genus" ? "italic" : "normal")
     .attr("font-weight", (item) => item.type === "disease" ? 700 : 500)
     .attr("fill", "currentColor")

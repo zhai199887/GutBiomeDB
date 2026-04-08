@@ -70,7 +70,7 @@ export function drawCooccurrenceGraph(
     highlightEdgeKeys,
     highlightStroke,
     highlightDasharray,
-    height = 620,
+    height = 700,
   }: {
     locale: string;
     colorMode: ColorMode;
@@ -163,13 +163,14 @@ export function drawCooccurrenceGraph(
     .selectAll("text")
     .data(nodes)
     .join("text")
-    .text((d) => (d.id.length > 18 ? `${d.id.slice(0, 16)}...` : d.id))
-    .attr("font-size", 10)
+    .text((d) => (d.id.length > 28 ? `${d.id.slice(0, 25)}...` : d.id))
+    .attr("font-size", 12)
     .attr("font-style", "italic")
     .attr("fill", "currentColor")
     .attr("text-anchor", "middle")
     .attr("dy", (d) => -(radius(d.mean_abundance) + 7))
     .style("pointer-events", "none")
+    .style("font-weight", 600)
     .style("text-shadow", "0 1px 4px rgba(0,0,0,0.85)");
 
   const simulation = d3.forceSimulation(nodes)
