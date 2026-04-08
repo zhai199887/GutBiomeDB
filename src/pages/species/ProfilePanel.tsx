@@ -23,6 +23,26 @@ interface ProfilePanelProps {
 
 type MetricMode = "abundance" | "prevalence";
 
+function rankProfileEntries(entries: ProfileEntry[], metric: MetricMode) {
+  const primaryValue = (entry: ProfileEntry) => (metric === "abundance" ? entry.mean_abundance : entry.prevalence);
+
+  return [...entries].sort((left, right) => {
+    const primaryDelta = primaryValue(right) - primaryValue(left);
+    if (primaryDelta !== 0) return primaryDelta;
+
+    const abundanceDelta = right.mean_abundance - left.mean_abundance;
+    if (abundanceDelta !== 0) return abundanceDelta;
+
+    const prevalenceDelta = right.prevalence - left.prevalence;
+    if (prevalenceDelta !== 0) return prevalenceDelta;
+
+    const sampleDelta = right.sample_count - left.sample_count;
+    if (sampleDelta !== 0) return sampleDelta;
+
+    return left.name.localeCompare(right.name);
+  });
+}
+
 export default function ProfilePanel({ profile }: ProfilePanelProps) {
   const { locale, t } = useI18n();
   const diseaseRef = useRef<SVGSVGElement>(null);
@@ -36,8 +56,16 @@ export default function ProfilePanel({ profile }: ProfilePanelProps) {
     const filtered = significantOnly
       ? profile.by_disease.filter((item) => item.significant)
       : profile.by_disease;
-    return filtered.slice(0, 34);
-  }, [profile.by_disease, significantOnly]);
+    const ranked = rankProfileEntries(filtered, metric);
+    const informative = ranked.filter((item) => item.mean_abundance > 0 || item.prevalence > 0);
+    return (informative.length > 0 ? informative : ranked).slice(0, 34);
+  }, [metric, profile.by_disease, significantOnly]);
+
+  const countryRows = useMemo(() => {
+    const ranked = rankProfileEntries(profile.by_country, metric);
+    const informative = ranked.filter((item) => item.mean_abundance > 0 || item.prevalence > 0);
+    return (informative.length > 0 ? informative : ranked).slice(0, 24);
+  }, [metric, profile.by_country]);
 
   useEffect(() => {
     if (!diseaseRef.current || diseaseRows.length === 0) return;
@@ -45,9 +73,9 @@ export default function ProfilePanel({ profile }: ProfilePanelProps) {
   }, [diseaseRows, locale, metric, profile]);
 
   useEffect(() => {
-    if (!countryRef.current || profile.by_country.length === 0) return;
-    drawDistributionChart(countryRef.current, profile.by_country.slice(0, 24), metric, locale, "country", "#06b6d4");
-  }, [locale, metric, profile.by_country]);
+    if (!countryRef.current || countryRows.length === 0) return;
+    drawDistributionChart(countryRef.current, countryRows, metric, locale, "country", "#06b6d4");
+  }, [countryRows, locale, metric]);
 
   useEffect(() => {
     if (!ageRef.current || profile.by_age_group.length === 0) return;
