@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="-50 -50 100 100" id="logo" role="img" aria-labelledby="logo-title logo-desc">
-  <title id="logo-title">Gut Microbiome Atlas</title>
+  <title id="logo-title">GutBiomeDB</title>
   <desc id="logo-desc">A circular emblem with a ZW-shaped intestinal tract with villi and microbial colonies</desc>
 
   <defs>

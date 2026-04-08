@@ -50,7 +50,7 @@ type LocaleCopy = {
 const COPY: Record<"en" | "zh", LocaleCopy> = {
   en: {
     title: "API Documentation",
-    subtitle: "Interactive endpoint reference for atlas queries, analysis workflows, and reproducible programmatic access.",
+    subtitle: "Interactive endpoint reference for database queries, analysis workflows, and reproducible programmatic access.",
     apiBase: "API base",
     openapi: "OpenAPI Spec",
     swagger: "Swagger UI",

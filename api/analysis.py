@@ -1,5 +1,5 @@
 """
-analysis.py — Statistical analysis utilities for Gut Microbiome Atlas
+analysis.py — Statistical analysis utilities for GutBiomeDB
 统计分析工具：标志物检验、相关性计算、相似性搜索
 """
 import os

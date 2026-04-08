@@ -10,15 +10,15 @@ import faqEn from "./faq.en.json";
 import faqZh from "./faq.zh.json";
 import classes from "../CitePage.module.css";
 
-const PAPER_BIBTEX = `@unpublished{zhai2026gutmicrobiomeatlas,
-  title   = {Gut Microbiome Atlas: an analytical platform for 168,464 human gut microbiome samples},
+const PAPER_BIBTEX = `@unpublished{zhai2026gutbiomedb,
+  title   = {GutBiomeDB: An Integrated Human Gut Microbiome Database},
   author  = {Zhai, Jinxia and Li, Yingjie and Liu, Jiameng and Su, Xinyi and Cui, Runze and Zheng, Dianyu and Sun, Yuhan and Yu, Jingsheng and Dai, Cong},
   note    = {Manuscript in preparation},
   year    = {2026}
 }`;
 
-const SOFTWARE_BIBTEX = `@software{gutmicrobiomeatlas2026,
-  title   = {Gut Microbiome Atlas},
+const SOFTWARE_BIBTEX = `@software{gutbiomedb2026,
+  title   = {GutBiomeDB},
   author  = {Zhai, Jinxia and Dai, Cong and collaborators},
   year    = {2026},
   url     = {https://github.com/zhai199887/gut-microbiome-atlas},
@@ -84,7 +84,7 @@ type Copy = {
 const COPY: Record<"en" | "zh", Copy> = {
   en: {
     title: "About & Cite",
-    subtitle: "Research background, dataset scope, citation guidance, licensing boundaries, and release history for Gut Microbiome Atlas.",
+    subtitle: "Research background, dataset scope, citation guidance, licensing boundaries, and release history for GutBiomeDB.",
     sections: {
       team: "Research Team",
       data: "Data Sources / Pipeline / Statistics",
@@ -98,16 +98,16 @@ const COPY: Record<"en" | "zh", Copy> = {
       privacy: "Privacy / Disclaimer",
     },
     teamIntro:
-      "The platform is maintained as a collaborative gut microbiome analysis resource anchored to the author group of the Gut Microbiome Atlas manuscript.",
+      "The platform is maintained as a collaborative gut microbiome analysis resource anchored to the author group of the GutBiomeDB manuscript.",
     teamAffiliations:
       "Primary affiliations include the Department of Gastroenterology, The First Hospital of China Medical University; The First Affiliated Hospital of Jinzhou Medical University; and Peking Union Medical College Hospital.",
     dataIntro:
-      "Gut Microbiome Atlas integrates processed human gut microbiome cohorts retrieved from public repositories and harmonizes them into a genus-level analysis layer for cross-study exploration, visualization, and hypothesis generation. The current release covers 223 non-NC condition labels plus one NC category, yielding 224 condition categories in total.",
+      "GutBiomeDB integrates processed human gut microbiome cohorts retrieved from public repositories and harmonizes them into a genus-level analysis layer for cross-study exploration, visualization, and hypothesis generation. The current release covers 223 non-NC condition labels plus one NC category, yielding 224 condition categories in total.",
     sourceLabel: "Data Sources",
     pipelineLabel: "Processing Pipeline",
     statsLabel: "Current Dataset Snapshot",
     citeIntro:
-      "Use the paper citation for manuscripts describing the atlas scientifically, and the software citation for workflows or reproducible computational use of the platform.",
+      "Use the paper citation for manuscripts describing the database scientifically, and the software citation for workflows or reproducible computational use of the platform.",
     paper: "Paper",
     software: "Software",
     copy: "Copy BibTeX",
@@ -115,7 +115,7 @@ const COPY: Record<"en" | "zh", Copy> = {
     fundingText:
       "This work was supported by the National Natural Science Foundation of China (grant No. 82270571 and No. 82570632 to Cong Dai).",
     licenseProcessed:
-      "Processed atlas-level statistics and derived aggregate visual outputs are described under a CC BY 4.0 sharing model.",
+      "Processed database-level statistics and derived aggregate visual outputs are described under a CC BY 4.0 sharing model.",
     licenseSource:
       "Platform source code is released under the MIT License, following the repository license in the active workspace.",
     licenseRaw:
@@ -124,7 +124,7 @@ const COPY: Record<"en" | "zh", Copy> = {
       "Findable: project identifiers, disease labels, and genus entities are surfaced through searchable interfaces and documented APIs.",
       "Accessible: core derived statistics are exposed through the web UI, human-readable API docs, and the OpenAPI specification.",
       "Interoperable: outputs are exported in JSON, CSV, and TSV using stable field names for downstream scripting.",
-      "Reusable: methods, caveats, and licensing boundaries are documented so the derived atlas outputs can be reused responsibly.",
+      "Reusable: methods, caveats, and licensing boundaries are documented so the derived database outputs can be reused responsibly.",
     ],
     relatedLinks: [
       { label: "GitHub", url: "https://github.com/zhai199887/gut-microbiome-atlas", desc: "Source repository and issue context." },
@@ -146,11 +146,11 @@ const COPY: Record<"en" | "zh", Copy> = {
       {
         date: "2026-04-03 to 2026-04-05",
         label: "Home / Compare / Diseases / Network / Metabolism upgrade wave",
-        detail: "Core atlas modules were rebuilt into research workspaces with richer statistics, exportability, and cross-study behaviors.",
+        detail: "Core database modules were rebuilt into research workspaces with richer statistics, exportability, and cross-study behaviors.",
       },
       {
         date: "2026-03-28",
-        label: "Initial public atlas baseline",
+        label: "Initial public database baseline",
         detail: "Overview, map, phenotype, search, and core page scaffolds were first released.",
       },
     ],
@@ -170,7 +170,7 @@ const COPY: Record<"en" | "zh", Copy> = {
   },
   zh: {
     title: "关于与引用",
-    subtitle: "说明 Gut Microbiome Atlas 的研究背景、数据范围、引用方式、许可边界与版本历史。",
+    subtitle: "说明 GutBiomeDB 的研究背景、数据范围、引用方式、许可边界与版本历史。",
     sections: {
       team: "研究团队",
       data: "数据来源 / 流程 / 统计",
@@ -184,16 +184,16 @@ const COPY: Record<"en" | "zh", Copy> = {
       privacy: "隐私 / 免责声明",
     },
     teamIntro:
-      "平台由 Gut Microbiome Atlas 稿件相关作者团队协作维护，用于支持肠道微生物组的队列级浏览、比较分析和结果复用。",
+      "平台由 GutBiomeDB 稿件相关作者团队协作维护，用于支持肠道微生物组的队列级浏览、比较分析和结果复用。",
     teamAffiliations:
       "主要机构包括：中国医科大学附属第一医院消化内科、锦州医科大学附属第一医院以及北京协和医院。",
     dataIntro:
-      "Gut Microbiome Atlas 整合公开数据库中的人类肠道微生物组队列，并统一到 genus 层级分析框架中，用于跨研究浏览、可视化和假设生成。当前发布版本包含 223 个非 NC 条件标签，另加 1 个 NC 类别，共 224 个条件类别。",
+      "GutBiomeDB 整合公开数据库中的人类肠道微生物组队列，并统一到 genus 层级分析框架中，用于跨研究浏览、可视化和假设生成。当前发布版本包含 223 个非 NC 条件标签，另加 1 个 NC 类别，共 224 个条件类别。",
     sourceLabel: "数据来源",
     pipelineLabel: "处理流程",
     statsLabel: "当前数据快照",
     citeIntro:
-      "若论文描述的是 Atlas 本身，请使用论文引用；若引用的是平台工作流、程序化访问或复现实验，请同时给出软件引用。",
+      "若论文描述的是数据库本身，请使用论文引用；若引用的是平台工作流、程序化访问或复现实验，请同时给出软件引用。",
     paper: "论文引用",
     software: "软件引用",
     copy: "复制 BibTeX",
@@ -201,7 +201,7 @@ const COPY: Record<"en" | "zh", Copy> = {
     fundingText:
       "本研究获得国家自然科学基金资助（Cong Dai：82270571、82570632）。",
     licenseProcessed:
-      "平台处理后的 atlas 级统计结果和聚合可视化输出按 CC BY 4.0 口径说明共享边界。",
+      "平台处理后的数据库级统计结果和聚合可视化输出按 CC BY 4.0 口径说明共享边界。",
     licenseSource:
       "平台源代码遵循主仓库中的 MIT License。",
     licenseRaw:
@@ -285,7 +285,7 @@ const PIPELINE_STEPS = {
   en: [
     "Collect public human gut microbiome cohorts from public repository records and project-level metadata.",
     "Normalize metadata fields across disease, country, age group, sex, and project dimensions.",
-    "Map taxonomic abundance into a verified genus-level analysis layer used by the atlas.",
+    "Map taxonomic abundance into a verified genus-level analysis layer used by the database.",
     "Compute disease-vs-control, lifecycle, similarity, network, and cross-study statistics on derived abundance matrices.",
   ],
   zh: [
@@ -299,7 +299,7 @@ const PIPELINE_STEPS = {
 const DATA_SOURCES = {
   en: [
     "Public microbiome cohort metadata linked to BioProject and sequencing repository records.",
-    "Derived genus-level abundance matrices used for atlas statistics and visualization.",
+    "Derived genus-level abundance matrices used for database statistics and visualization.",
     "Internal harmonization layers that map project, disease, and phenotype fields into shared analysis categories.",
   ],
   zh: [

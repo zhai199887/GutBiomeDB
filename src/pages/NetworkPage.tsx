@@ -79,7 +79,7 @@ const NetworkPage = () => {
   return (
     <div className={classes.page}>
       <div className={classes.topBar}>
-        <Link to="/" className={classes.back}>{locale === "zh" ? "← 返回 Atlas" : "← Back to Atlas"}</Link>
+        <Link to="/" className={classes.back}>{locale === "zh" ? "← 返回首页" : "← Back to Home"}</Link>
         <h1>{locale === "zh" ? "Network 工作台" : "Network workspace"}</h1>
         <p>
           {locale === "zh"

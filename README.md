@@ -1,6 +1,6 @@
-# Gut Microbiome Atlas
+# GutBiomeDB
 
-A comprehensive platform for exploring the human gut microbiome across diseases, geography, and lifespan.
+An Integrated Human Gut Microbiome Database.
 
 **168,464 samples | 4,680 genera | 72 countries | 224 condition categories | 8 life stages**
 
@@ -101,19 +101,18 @@ cat("Prevalence:", profile$prevalence, "\n")
 
 ## Citation
 
-If you use Gut Microbiome Atlas in your research, please cite:
+If you use GutBiomeDB in your research, please cite:
 
-> Zhai J, Li Y, Liu J, Su X, Cui R, Zheng D, Sun Y, Yu J, Dai C. Gut Microbiome Atlas: a comprehensive platform for exploring human gut microbiome across diseases, geography, and lifespan. *Manuscript in preparation*, 2025.
+> Zhai J, Li Y, Liu J, Su X, Cui R, Zheng D, Sun Y, Yu J, Dai C. GutBiomeDB: An Integrated Human Gut Microbiome Database. *Manuscript in preparation*, 2026.
 
 ```bibtex
-@unpublished{zhai2025gutmicrobiomeatlas,
-  title   = {Gut Microbiome Atlas: a comprehensive platform for exploring
-             human gut microbiome across diseases, geography, and lifespan},
+@unpublished{zhai2026gutbiomedb,
+  title   = {GutBiomeDB: An Integrated Human Gut Microbiome Database},
   author  = {Zhai, Jinxia and Li, Yingjie and Liu, Jiameng and Su, Xinyi
              and Cui, Runze and Zheng, Dianyu and Sun, Yuhan and Yu, Jingsheng
              and Dai, Cong},
   note    = {Manuscript in preparation},
-  year    = {2025}
+  year    = {2026}
 }
 ```
 

@@ -107,7 +107,7 @@ const serializeSvgNode = (
     watermark.setAttribute("font-size", "10");
     watermark.setAttribute("fill", "#9ca3af");
     watermark.setAttribute("font-family", "Arial, sans-serif");
-    watermark.textContent = "Gut Microbiome Atlas";
+    watermark.textContent = "GutBiomeDB";
     clone.appendChild(watermark);
   }
 
@@ -201,7 +201,7 @@ const buildElementExportSvg = (element: HTMLElement, options: DomExportOptions =
       font-size="10"
       fill="#94a3b8"
       font-family="Arial, sans-serif"
-    >Gut Microbiome Atlas</text>
+    >GutBiomeDB</text>
   `;
 
   const svg = `

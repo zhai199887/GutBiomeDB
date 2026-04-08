@@ -127,7 +127,7 @@ const AdminPage = () => {
   return (
     <div className={classes.page}>
       <div className={classes.nav}>
-        <Link to="/" className={classes.back}>← Back to Atlas</Link>
+        <Link to="/" className={classes.back}>← Back to Home</Link>
         <h1 className={classes.title}>Data Management</h1>
         <span className={classes.subtitle}>Upload metadata, validate format, track data versions</span>
       </div>

@@ -1,5 +1,5 @@
 """
-main.py – Gut Microbiome Atlas FastAPI backend
+main.py – GutBiomeDB FastAPI backend
 主后端：差异分析、筛选选项、数据统计 API
 """
 
@@ -71,10 +71,10 @@ if not ADMIN_TOKEN:
     logging.warning("ADMIN_TOKEN not set — admin endpoints will reject all requests")
 
 app = FastAPI(
-    title="Gut Microbiome Atlas API",
+    title="GutBiomeDB API",
     version="2.0.0",
     description="""
-# Gut Microbiome Atlas — RESTful API
+# GutBiomeDB — RESTful API
 
 A comprehensive analysis platform for the human gut microbiome, integrating **168,464 samples** across **4,680 genera**, **72 countries**, and **224 condition categories** (223 non-NC condition labels plus one NC category).
 
@@ -89,7 +89,7 @@ A comprehensive analysis platform for the human gut microbiome, integrating **16
 
 ## Citation
 If you use this API in your research, please cite:
-> Zhai J, Li Y, Liu J, Su X, Cui R, Zheng D, Sun Y, Yu J, Dai C. Gut Microbiome Atlas: a comprehensive platform for exploring human gut microbiome across diseases, geography, and lifespan.
+> Zhai J, Li Y, Liu J, Su X, Cui R, Zheng D, Sun Y, Yu J, Dai C. GutBiomeDB: An Integrated Human Gut Microbiome Database.
 
 ## Contact
 - Correspondence: cdai@cmu.edu.cn
@@ -2920,7 +2920,7 @@ import csv as csv_mod
 
 DOWNLOAD_FORMATS = {"csv": ",", "tsv": "\t", "json": None}
 DOWNLOAD_CITATION_NOTE = (
-    "Please cite Gut Microbiome Atlas and the original BioProject / repository sources when reusing these aggregated outputs."
+    "Please cite GutBiomeDB and the original BioProject / repository sources when reusing these aggregated outputs."
 )
 
 

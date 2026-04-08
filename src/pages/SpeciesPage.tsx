@@ -45,7 +45,7 @@ export default function SpeciesPage() {
 
   useEffect(() => {
     if (!genus) return;
-    document.title = `${genus} · ${locale === "zh" ? "菌属画像" : "Genus Profile"} · Gut Microbiome Atlas`;
+    document.title = `${genus} · ${locale === "zh" ? "菌属画像" : "Genus Profile"} · GutBiomeDB`;
   }, [genus, locale]);
 
   const statCards = useMemo(() => {

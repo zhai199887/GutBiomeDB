@@ -81,8 +81,8 @@ const ROUTE_TITLES = {
 } as const;
 
 const BASE_TITLES = {
-  en: "Gut Microbiome Atlas",
-  zh: "肠道微生物图谱",
+  en: "GutBiomeDB",
+  zh: "GutBiomeDB",
 } as const;
 
 const DocumentTitle = ({ children }: { children: ReactNode }) => {

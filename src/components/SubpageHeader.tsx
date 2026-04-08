@@ -28,7 +28,7 @@ const SubpageHeader = ({ title, subtitle }: SubpageHeaderProps) => {
       <div className={classes.topRow}>
         <div className={classes.brandBlock}>
           <Link to="/" className={classes.brand}>
-            Gut Microbiome Atlas
+            GutBiomeDB
           </Link>
           <p className={classes.subtitle}>{subtitle}</p>
         </div>

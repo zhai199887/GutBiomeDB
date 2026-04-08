@@ -39,7 +39,7 @@ interface OptionItem {
 
 const copy = {
   en: {
-    back: "Back to Atlas",
+    back: "Back to Home",
     title: "Download",
     subtitle:
       "Reference datasets and aggregated analysis outputs for reproducible reuse. Raw sample-level abundance data are not distributed through this page.",
@@ -47,7 +47,7 @@ const copy = {
       "All files exported here are aggregated statistics or analysis results generated from the main platform dataset. Use the original BioProject repositories for raw sequencing data.",
     sections: {
       referenceEyebrow: "Reference Datasets",
-      referenceTitle: "Core atlas tables",
+      referenceTitle: "Core database tables",
       referenceText:
         "Starter downloads for local analysis, cohort selection, and reproducible reporting.",
       analysisEyebrow: "Analysis Results",
@@ -61,7 +61,7 @@ const copy = {
     },
     cards: {
       summaryTitle: "Summary statistics",
-      summaryDesc: "Country, disease, age-group, and sex counts for the full atlas.",
+      summaryDesc: "Country, disease, age-group, and sex counts for the full database.",
       genusListTitle: "Genus list",
       genusListDesc: "Complete valid genus catalog for templates, validation, and batch workflows.",
       diseaseProfileTitle: "Disease profile",
