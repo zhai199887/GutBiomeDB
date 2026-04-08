@@ -4,6 +4,8 @@
  * theme colors, fonts, and stroke settings outside the live DOM.
  */
 
+import html2canvas from "html2canvas";
+
 interface Size {
   width: number;
   height: number;
@@ -220,9 +222,18 @@ const downloadBlob = (blob: Blob, filename: string) => {
   const anchor = document.createElement("a");
   anchor.href = url;
   anchor.download = filename;
+  anchor.style.display = "none";
+  document.body.appendChild(anchor);
   anchor.click();
-  URL.revokeObjectURL(url);
+  window.setTimeout(() => {
+    anchor.remove();
+    URL.revokeObjectURL(url);
+  }, 1000);
 };
+
+const canvasToBlob = (canvas: HTMLCanvasElement, type = "image/png") => new Promise<Blob | null>((resolve) => {
+  canvas.toBlob((blob) => resolve(blob), type);
+});
 
 const rasterizeSvgString = (svg: string, width: number, height: number, filename: string, scale = 2) => {
   const svgBlob = new Blob([svg], { type: "image/svg+xml;charset=utf-8" });
@@ -280,9 +291,24 @@ export function exportElementSVG(element: HTMLElement, filename: string, options
 }
 
 /** Export an arbitrary HTML container as a PNG file. */
-export function exportElementPNG(element: HTMLElement, filename: string, options: DomExportOptions = {}) {
-  const { svg, width, height, scale } = buildElementExportSvg(element, options);
-  rasterizeSvgString(svg, width, height, filename, scale);
+export async function exportElementPNG(element: HTMLElement, filename: string, options: DomExportOptions = {}) {
+  try {
+    const canvas = await html2canvas(element, {
+      backgroundColor: options.background ?? DOM_EXPORT_BACKGROUND,
+      scale: options.scale ?? 2,
+      useCORS: true,
+      allowTaint: false,
+      logging: false,
+    });
+    const blob = await canvasToBlob(canvas);
+    if (!blob) {
+      window.alert(exportErrorMessage());
+      return;
+    }
+    downloadBlob(blob, `${filename}.png`);
+  } catch {
+    window.alert(exportErrorMessage());
+  }
 }
 
 /** Find the nearest SVG element within or above a container. */
