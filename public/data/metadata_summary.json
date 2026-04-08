@@ -2,9 +2,9 @@
   "total_samples": 168464,
   "total_projects": 482,
   "total_genera": 4680,
-  "total_unique_diseases": 225,
-  "total_non_nc_condition_labels": 225,
-  "total_condition_categories": 226,
+  "total_unique_diseases": 223,
+  "total_non_nc_condition_labels": 223,
+  "total_condition_categories": 224,
   "total_unique_countries": 72,
   "age_counts": {
     "Adult": 66303,
@@ -801,8 +801,8 @@
       },
       "top_diseases": {
         "IBS": 265,
-        "No_Fecal occult blood positive": 265,
-        "without severe underlying bowel disease": 265
+        "metabolic syndrome with severe obesity": 260,
+        "Fecal occult blood positive,without severe underlying bowel disease": 235
       }
     },
     "BD": {
@@ -1298,7 +1298,7 @@
       "top_diseases": {
         "Chronic alcohol overconsumption": 33,
         "chickenpox": 8,
-        "skin_condition": 5
+        "seasonal_allergies": 5
       }
     },
     "EE": {
@@ -1747,13 +1747,13 @@
     "Very low birth weight preterm infants": 66
   },
   "healthy_control_counts": {
-    "NC": 78426
+    "NC": 78691
   },
   "disease_label_types": {
     "inform0": {
       "healthy_control": {
         "labels": 1,
-        "samples": 78426
+        "samples": 78691
       },
       "disease": {
         "labels": 206,
@@ -1767,11 +1767,11 @@
     "inform0_11": {
       "healthy_control": {
         "labels": 1,
-        "samples": 78426
+        "samples": 78691
       },
       "disease": {
-        "labels": 221,
-        "samples": 74042
+        "labels": 219,
+        "samples": 73512
       },
       "special_population": {
         "labels": 4,

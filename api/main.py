@@ -74,7 +74,7 @@ app = FastAPI(
     description="""
 # Gut Microbiome Atlas — RESTful API
 
-A comprehensive analysis platform for the human gut microbiome, integrating **168,464 samples** across **4,680 genera**, **66 countries**, and **218+ diseases**.
+A comprehensive analysis platform for the human gut microbiome, integrating **168,464 samples** across **4,680 genera**, **72 countries**, and **224 condition categories** (223 non-NC condition labels plus one NC category).
 
 ## Features
 - **Differential Analysis**: Wilcoxon rank-sum test, t-test, LEfSe (LDA effect size), PERMANOVA
@@ -262,6 +262,8 @@ def get_metadata() -> pd.DataFrame:
     else:
         df["country"] = "unknown"
 
+    _apply_control_group_remap(df, inform_cols)
+
     inform_all = df["inform-all"].fillna("").astype(str).str.strip()
     inform0 = df["inform0"].fillna("").astype(str).str.strip()
     fill_mask = inform_all.ne("") & inform0.eq("")
@@ -337,6 +339,10 @@ SPECIAL_POPULATION_LABELS = {
 }
 SPECIAL_POPULATION_LABELS_LOWER = {label.lower() for label in SPECIAL_POPULATION_LABELS}
 HEALTHY_CONTROL_ALIASES = {"nc", "healthy control", "helminth uninfected control"}
+CONTROL_GROUP_REMAP_LABELS = {
+    "No_Fecal occult blood positive,without severe underlying bowel disease",
+}
+CONTROL_GROUP_REMAP_LABELS_LOWER = {label.lower() for label in CONTROL_GROUP_REMAP_LABELS}
 EXCLUDED_DISEASE_ALIASES = {"dss colitis"}
 
 
@@ -363,11 +369,27 @@ def _normalize_inform_label(value: object) -> str:
     lower = label.lower()
     if lower in {"nan", "unknown"}:
         return ""
+    if lower in CONTROL_GROUP_REMAP_LABELS_LOWER:
+        return "NC"
     if lower in HEALTHY_CONTROL_ALIASES:
         return "NC"
     if lower in EXCLUDED_DISEASE_ALIASES:
         return ""
     return label
+
+
+def _apply_control_group_remap(df: pd.DataFrame, inform_cols: list[str]) -> None:
+    """Normalize known mixed-control rows to the canonical NC representation."""
+    if "inform-all" not in df.columns:
+        return
+    inform_all = df["inform-all"].fillna("").astype(str).str.strip()
+    control_mask = inform_all.str.lower().isin(CONTROL_GROUP_REMAP_LABELS_LOWER)
+    if not control_mask.any():
+        return
+    df.loc[control_mask, "inform-all"] = "NC"
+    for col in inform_cols:
+        if col in df.columns:
+            df.loc[control_mask, col] = ""
 
 
 def _label_kind(label: object) -> str:
@@ -466,10 +488,13 @@ METABOLISM_PSEUDOCOUNT = 1e-6
 
 
 def _strict_nc_mask(meta: pd.DataFrame, inform_cols: list[str] | None = None) -> pd.Series:
-    """Return strict healthy-control mask: inform0=NC and inform1-11 empty."""
+    """Return healthy-control mask using inform-all as the source-of-truth field."""
     columns = inform_cols or [f"inform{i}" for i in range(12)]
+    if "inform-all" in meta.columns:
+        inform_all = meta["inform-all"].fillna("").astype(str).str.strip().map(_normalize_inform_label)
+        return inform_all == "NC"
     if not columns or columns[0] not in meta.columns:
-        return pd.Series(False, index=meta.index)
+        return pd.Series(False, index=meta.index, dtype=bool)
 
     mask = meta[columns[0]].fillna("").astype(str).str.strip().str.lower() == "nc"
     for col in columns[1:]:
@@ -487,13 +512,16 @@ def _clean_text_series(series: pd.Series) -> pd.Series:
 
 
 def _iter_inform_labels(meta: pd.DataFrame, inform_cols: list[str] | None = None):
-    """Yield normalized labels from inform0-11 columns."""
+    """Yield normalized labels from inform0-11 while collapsing canonical NC rows."""
     columns = inform_cols or [f"inform{i}" for i in range(12)]
-    for col in columns:
-        if col not in meta.columns:
+    available_cols = [col for col in columns if col in meta.columns]
+    strict_nc = _strict_nc_mask(meta, available_cols)
+    for idx in meta.index:
+        if bool(strict_nc.loc[idx]):
+            yield "NC"
             continue
-        for raw_value in meta[col].fillna("").astype(str):
-            label = _normalize_inform_label(raw_value)
+        for col in available_cols:
+            label = _normalize_inform_label(meta.at[idx, col])
             if label:
                 yield label
 
@@ -507,20 +535,16 @@ def _non_nc_disease_mask(meta: pd.DataFrame, inform_cols: list[str] | None = Non
             continue
         values = meta[col].fillna("").astype(str).str.strip().map(_normalize_inform_label)
         mask |= (values != "") & (values.map(_label_kind) == "disease")
-    return mask
+    return mask & ~_strict_nc_mask(meta, columns)
 
 
 def _collect_project_diseases(meta: pd.DataFrame, inform_cols: list[str] | None = None) -> list[str]:
-    """Collect unique non-NC labels from inform0-11 columns."""
-    columns = inform_cols or [f"inform{i}" for i in range(12)]
-    diseases: set[str] = set()
-    for col in columns:
-        if col not in meta.columns:
-            continue
-        for value in meta[col].fillna("").astype(str).str.strip():
-            normalized = _normalize_inform_label(value)
-            if normalized and _label_kind(normalized) != "healthy_control":
-                diseases.add(normalized)
+    """Collect unique non-NC labels from inform columns after NC normalization."""
+    diseases = {
+        label
+        for label in _iter_inform_labels(meta, inform_cols)
+        if _label_kind(label) != "healthy_control"
+    }
     return sorted(diseases, key=lambda item: item.lower())
 
 

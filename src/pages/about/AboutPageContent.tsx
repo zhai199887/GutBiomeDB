@@ -102,7 +102,7 @@ const COPY: Record<"en" | "zh", Copy> = {
     teamAffiliations:
       "Primary affiliations include the Department of Gastroenterology, The First Hospital of China Medical University; The First Affiliated Hospital of Jinzhou Medical University; and Peking Union Medical College Hospital.",
     dataIntro:
-      "Gut Microbiome Atlas integrates processed human gut microbiome cohorts retrieved from public repositories and harmonizes them into a genus-level analysis layer for cross-study exploration, visualization, and hypothesis generation. The current release covers 225 non-NC condition labels plus one NC category, yielding 226 condition categories in total.",
+      "Gut Microbiome Atlas integrates processed human gut microbiome cohorts retrieved from public repositories and harmonizes them into a genus-level analysis layer for cross-study exploration, visualization, and hypothesis generation. The current release covers 223 non-NC condition labels plus one NC category, yielding 224 condition categories in total.",
     sourceLabel: "Data Sources",
     pipelineLabel: "Processing Pipeline",
     statsLabel: "Current Dataset Snapshot",
@@ -162,7 +162,7 @@ const COPY: Record<"en" | "zh", Copy> = {
     statsCards: [
       { key: "total_samples", label: "Samples", fallback: "168,464" },
       { key: "total_projects", label: "Projects", fallback: "482" },
-      { key: "total_condition_categories", label: "Condition categories", fallback: "226" },
+      { key: "total_condition_categories", label: "Condition categories", fallback: "224" },
       { key: "total_countries", label: "Countries", fallback: "72" },
       { key: "total_genera", label: "Genera", fallback: "4,680" },
       { key: "contact", label: "Contact", fallback: "cdai@cmu.edu.cn" },
@@ -188,7 +188,7 @@ const COPY: Record<"en" | "zh", Copy> = {
     teamAffiliations:
       "主要机构包括：中国医科大学附属第一医院消化内科、锦州医科大学附属第一医院以及北京协和医院。",
     dataIntro:
-      "Gut Microbiome Atlas 整合公开数据库中的人类肠道微生物组队列，并统一到 genus 层级分析框架中，用于跨研究浏览、可视化和假设生成。当前发布版本包含 225 个非 NC 条件标签，另加 1 个 NC 类别，共 226 个条件类别。",
+      "Gut Microbiome Atlas 整合公开数据库中的人类肠道微生物组队列，并统一到 genus 层级分析框架中，用于跨研究浏览、可视化和假设生成。当前发布版本包含 223 个非 NC 条件标签，另加 1 个 NC 类别，共 224 个条件类别。",
     sourceLabel: "数据来源",
     pipelineLabel: "处理流程",
     statsLabel: "当前数据快照",
@@ -248,7 +248,7 @@ const COPY: Record<"en" | "zh", Copy> = {
     statsCards: [
       { key: "total_samples", label: "样本数", fallback: "168,464" },
       { key: "total_projects", label: "项目数", fallback: "482" },
-      { key: "total_condition_categories", label: "条件类别", fallback: "226" },
+      { key: "total_condition_categories", label: "条件类别", fallback: "224" },
       { key: "total_countries", label: "国家数", fallback: "72" },
       { key: "total_genera", label: "菌属数", fallback: "4,680" },
       { key: "contact", label: "联系邮箱", fallback: "cdai@cmu.edu.cn" },

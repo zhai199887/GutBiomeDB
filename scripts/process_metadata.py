@@ -32,6 +32,10 @@ SPECIAL_POPULATION_LABELS = {
 }
 SPECIAL_POPULATION_LABELS_LOWER = {label.lower() for label in SPECIAL_POPULATION_LABELS}
 HEALTHY_CONTROL_ALIASES = {"nc", "healthy control", "helminth uninfected control"}
+CONTROL_GROUP_REMAP_LABELS = {
+    "No_Fecal occult blood positive,without severe underlying bowel disease",
+}
+CONTROL_GROUP_REMAP_LABELS_LOWER = {label.lower() for label in CONTROL_GROUP_REMAP_LABELS}
 EXCLUDED_DISEASE_ALIASES = {"dss colitis"}
 INFORM_COLS = [f"inform{i}" for i in range(12)]
 
@@ -64,6 +68,8 @@ def normalize_inform_label(value: object) -> str:
     lower = label.lower()
     if lower in {"nan", "unknown"}:
         return ""
+    if lower in CONTROL_GROUP_REMAP_LABELS_LOWER:
+        return "NC"
     if lower in HEALTHY_CONTROL_ALIASES:
         return "NC"
     if lower in EXCLUDED_DISEASE_ALIASES:
@@ -102,6 +108,37 @@ def count_unique_genera() -> int:
     return len(data_columns)
 
 
+def apply_control_group_remap(df: pd.DataFrame) -> None:
+    if "inform-all" not in df.columns:
+        return
+    inform_all = df["inform-all"].fillna("").astype(str).str.strip()
+    control_mask = inform_all.str.lower().isin(CONTROL_GROUP_REMAP_LABELS_LOWER)
+    if not control_mask.any():
+        return
+    df.loc[control_mask, "inform-all"] = "NC"
+    for col in INFORM_COLS:
+        if col in df.columns:
+            df.loc[control_mask, col] = ""
+
+
+def strict_nc_mask(df: pd.DataFrame) -> pd.Series:
+    if "inform-all" not in df.columns:
+        return pd.Series(False, index=df.index, dtype=bool)
+    inform_all = df["inform-all"].fillna("").astype(str).str.strip().map(normalize_inform_label)
+    return inform_all == "NC"
+
+
+def row_inform_labels(row: pd.Series) -> list[str]:
+    if normalize_inform_label(row.get("inform-all", "")) == "NC":
+        return ["NC"]
+    labels: list[str] = []
+    for col in INFORM_COLS:
+        label = normalize_inform_label(row.get(col, ""))
+        if label:
+            labels.append(label)
+    return labels
+
+
 def standardize_metadata(df: pd.DataFrame) -> pd.DataFrame:
     df = df.copy()
     df.columns = [str(col).strip() for col in df.columns]
@@ -129,6 +166,8 @@ def standardize_metadata(df: pd.DataFrame) -> pd.DataFrame:
             df[col] = ""
         df[col] = df[col].fillna("").astype(str).str.strip()
 
+    apply_control_group_remap(df)
+
     fill_mask = df["inform-all"].ne("") & df["inform0"].eq("")
     if fill_mask.any():
         df.loc[fill_mask, "inform0"] = df.loc[fill_mask, "inform-all"]
@@ -136,16 +175,14 @@ def standardize_metadata(df: pd.DataFrame) -> pd.DataFrame:
     for col in INFORM_COLS + ["inform-all"]:
         df[col] = df[col].map(normalize_inform_label)
 
-    df["disease"] = df["inform0"].where(df["inform0"] != "", "unknown")
+    df["disease"] = df["inform-all"].where(df["inform-all"] != "", "unknown")
     return df
 
 
 def build_union_counter(df: pd.DataFrame) -> Counter:
     counter: Counter = Counter()
-    for col in INFORM_COLS:
-        if col not in df.columns:
-            continue
-        counter.update(label for label in df[col].tolist() if label)
+    for _, row in df.iterrows():
+        counter.update(row_inform_labels(row))
     return counter
 
 
@@ -191,12 +228,10 @@ def build_country_stats(df: pd.DataFrame) -> dict[str, dict]:
         )
 
         disease_counts: Counter = Counter()
-        for col in INFORM_COLS:
-            if col not in sub.columns:
-                continue
-            for value in sub[col].tolist():
+        for _, row in sub.iterrows():
+            for value in row_inform_labels(row):
                 if label_kind(value) == "disease":
-                    disease_counts[normalize_inform_label(value)] += 1
+                    disease_counts[value] += 1
 
         country_stats[str(iso)] = {
             "total": total,
@@ -248,6 +283,11 @@ def main() -> None:
 
     inform0_counter = Counter(label for label in df["inform0"].tolist() if label)
     union_counter = build_union_counter(df)
+    unique_labels = set(union_counter)
+    non_nc_condition_labels = {
+        label for label in unique_labels if label_kind(label) != "healthy_control"
+    }
+    has_nc_category = any(label_kind(label) == "healthy_control" for label in unique_labels)
     standard_disease_counts = Counter({
         label: count for label, count in union_counter.items() if label_kind(label) == "disease"
     })
@@ -267,7 +307,10 @@ def main() -> None:
         "total_samples": int(len(df)),
         "total_projects": count_unique_projects(df),
         "total_genera": count_unique_genera(),
-        "total_unique_diseases": int(len(standard_disease_counts)),
+        "total_unique_diseases": int(len(non_nc_condition_labels)),
+        "total_non_nc_condition_labels": int(len(non_nc_condition_labels)),
+        "total_condition_categories": int(len(non_nc_condition_labels) + int(has_nc_category)),
+        "total_unique_countries": int(df.loc[df["country"] != "unknown", "country"].nunique()),
         "age_counts": age_counts,
         "sex_counts": sex_counts,
         "disease_counts": dict(sorted(standard_disease_counts.items(), key=lambda item: (-item[1], item[0].lower()))[:50]),
