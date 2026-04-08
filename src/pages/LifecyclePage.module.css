@@ -185,6 +185,10 @@
   min-height: 420px;
 }
 
+.exportSurface {
+  width: 100%;
+}
+
 .legend {
   display: flex;
   flex-wrap: wrap;

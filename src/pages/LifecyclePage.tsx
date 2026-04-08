@@ -12,7 +12,7 @@ import { API_BASE } from "@/util/apiBase";
 import { diseaseDisplayNameI18n, sortDiseaseItemsByName } from "@/util/diseaseNames";
 import { countryName, AGE_GROUP_ZH } from "@/util/countries";
 import { cachedFetch } from "@/util/apiCache";
-import { exportSVG, exportPNG } from "@/util/chartExport";
+import { exportElementPNG, exportElementSVG, exportPNG, exportSVG } from "@/util/chartExport";
 import { exportTable } from "@/util/export";
 import { phylumColor } from "@/util/phylumColors";
 
@@ -107,6 +107,7 @@ const LifecyclePage = () => {
   const [error, setError] = useState("");
 
   const singleSvgRef = useRef<SVGSVGElement>(null);
+  const singleFigureRef = useRef<HTMLDivElement>(null);
   const compareDiseaseSvgRef = useRef<SVGSVGElement>(null);
   const compareNcSvgRef = useRef<SVGSVGElement>(null);
 
@@ -179,22 +180,28 @@ const LifecyclePage = () => {
       .finally(() => setLoading(false));
   }, [canCompare, country, disease, locale, topN, viewMode]);
 
+  const lifecycleColorMap = useMemo(() => {
+    if (viewMode === "compare" && dualData) {
+      return buildLifecycleColorMap([dualData.disease_data, dualData.nc_data]);
+    }
+    return data ? buildLifecycleColorMap([data]) : {};
+  }, [data, dualData, viewMode]);
+  const legendData = viewMode === "compare" ? dualData?.disease_data : data;
+
   useEffect(() => {
     if (viewMode !== "area" || !singleSvgRef.current || !data || data.data.length === 0) return;
-    drawStackedArea(singleSvgRef.current, data, locale, isolatedGenus, ageLabel);
-  }, [ageLabel, data, isolatedGenus, locale, viewMode]);
+    drawStackedArea(singleSvgRef.current, data, locale, isolatedGenus, ageLabel, lifecycleColorMap);
+  }, [ageLabel, data, isolatedGenus, lifecycleColorMap, locale, viewMode]);
 
   useEffect(() => {
     if (viewMode !== "compare" || !dualData) return;
     if (compareDiseaseSvgRef.current && dualData.disease_data.data.length > 0) {
-      drawStackedArea(compareDiseaseSvgRef.current, dualData.disease_data, locale, isolatedGenus, ageLabel);
+      drawStackedArea(compareDiseaseSvgRef.current, dualData.disease_data, locale, isolatedGenus, ageLabel, lifecycleColorMap);
     }
     if (compareNcSvgRef.current && dualData.nc_data.data.length > 0) {
-      drawStackedArea(compareNcSvgRef.current, dualData.nc_data, locale, isolatedGenus, ageLabel);
+      drawStackedArea(compareNcSvgRef.current, dualData.nc_data, locale, isolatedGenus, ageLabel, lifecycleColorMap);
     }
-  }, [ageLabel, dualData, isolatedGenus, locale, viewMode]);
-
-  const legendData = viewMode === "compare" ? dualData?.disease_data : data;
+  }, [ageLabel, dualData, isolatedGenus, lifecycleColorMap, locale, viewMode]);
 
   const exportLifecycleTable = (payload: LifecycleData, fileName: string) => {
     exportTable(
@@ -208,7 +215,7 @@ const LifecyclePage = () => {
           simpson_sd: row.simpson_sd,
         };
         payload.genera.forEach((genus) => {
-          result[genus] = row[genus];
+          result[genus] = row[genus] ?? 0;
         });
         return result;
       }),
@@ -221,7 +228,7 @@ const LifecyclePage = () => {
       {payload.genera.map((genus) => {
         const active = isolatedGenus === genus;
         const dimmed = isolatedGenus != null && !active;
-        const swatch = genus === "Other" ? "#cbd5e1" : phylumColor(payload.phylum_map[genus] ?? "Unknown");
+        const swatch = lifecycleColorMap[genus] ?? (genus === "Other" ? "#cbd5e1" : phylumColor(payload.phylum_map[genus] ?? "Unknown"));
         return (
           <button
             key={genus}
@@ -383,12 +390,14 @@ const LifecyclePage = () => {
                   </div>
                   <div className={classes.actionRow}>
                     <button type="button" onClick={() => exportLifecycleTable(data, `lifecycle_${Date.now()}`)}>{t("export.csv")}</button>
-                    <button type="button" onClick={() => singleSvgRef.current && exportSVG(singleSvgRef.current, `lifecycle_${Date.now()}`)}>{t("export.svg")}</button>
-                    <button type="button" onClick={() => singleSvgRef.current && exportPNG(singleSvgRef.current, `lifecycle_${Date.now()}`)}>{t("export.png")}</button>
+                    <button type="button" onClick={() => singleFigureRef.current && exportElementSVG(singleFigureRef.current, `lifecycle_${Date.now()}`)}>{t("export.svg")}</button>
+                    <button type="button" onClick={() => singleFigureRef.current && exportElementPNG(singleFigureRef.current, `lifecycle_${Date.now()}`)}>{t("export.png")}</button>
                   </div>
                 </div>
-                <svg ref={singleSvgRef} className={classes.chart} />
-                {renderLegend(data)}
+                <div ref={singleFigureRef} className={classes.exportSurface}>
+                  <svg ref={singleSvgRef} className={classes.chart} />
+                  {renderLegend(data)}
+                </div>
               </div>
 
               <div className={classes.chartCard}>
@@ -513,12 +522,60 @@ const LifecyclePage = () => {
 
 export default LifecyclePage;
 
+const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
+
+const GENUS_COLOR_VARIANTS = [
+  { hue: 0, saturation: 0, lightness: -0.2 },
+  { hue: -12, saturation: 0.04, lightness: -0.08 },
+  { hue: 12, saturation: -0.03, lightness: 0.02 },
+  { hue: -24, saturation: 0.07, lightness: 0.12 },
+  { hue: 24, saturation: 0.02, lightness: -0.02 },
+  { hue: -34, saturation: -0.02, lightness: 0.18 },
+  { hue: 34, saturation: 0.05, lightness: -0.12 },
+  { hue: 42, saturation: -0.06, lightness: 0.08 },
+  { hue: -42, saturation: 0.05, lightness: -0.04 },
+];
+
+function buildLifecycleColorMap(payloads: LifecycleData[]): Record<string, string> {
+  const grouped = new Map<string, Set<string>>();
+
+  payloads.forEach((payload) => {
+    payload.genera.forEach((genus) => {
+      if (genus === "Other") return;
+      const phylum = payload.phylum_map[genus] ?? "Unknown";
+      if (!grouped.has(phylum)) {
+        grouped.set(phylum, new Set());
+      }
+      grouped.get(phylum)?.add(genus);
+    });
+  });
+
+  const colorMap: Record<string, string> = { Other: "#cbd5e1" };
+
+  grouped.forEach((generaSet, phylum) => {
+    const genera = [...generaSet].sort((left, right) => left.localeCompare(right));
+    const base = d3.hsl(phylumColor(phylum));
+
+    genera.forEach((genus, index) => {
+      const variant = GENUS_COLOR_VARIANTS[index % GENUS_COLOR_VARIANTS.length] ?? GENUS_COLOR_VARIANTS[0]!;
+      const cycle = Math.floor(index / GENUS_COLOR_VARIANTS.length);
+      const hue = (base.h + variant.hue + cycle * 7 + 360) % 360;
+      const saturation = clamp(base.s + variant.saturation - cycle * 0.03, 0.36, 0.95);
+      const lightness = clamp(base.l + variant.lightness + cycle * 0.04, 0.24, 0.78);
+      colorMap[genus] = d3.hsl(hue, saturation, lightness).formatHex();
+    });
+  });
+
+  return colorMap;
+}
+
 function drawStackedArea(
   svgEl: SVGSVGElement,
   lifecycle: LifecycleData,
   locale: string,
   isolatedGenus: string | null,
   ageLabel: (name: string) => string,
+  colorMap: Record<string, string>,
 ) {
   const svg = d3.select(svgEl);
   svg.selectAll("*").remove();
@@ -544,6 +601,10 @@ function drawStackedArea(
   const rows = lifecycle.data;
   const genera = lifecycle.genera;
   const ageGroups = rows.map((row) => row.age_group);
+  const firstAgeGroup = ageGroups[0];
+  if (!firstAgeGroup) {
+    return;
+  }
   const xScale = d3.scalePoint<string>()
     .domain(ageGroups)
     .range([0, innerWidth])
@@ -598,14 +659,14 @@ function drawStackedArea(
     const bestDist = Math.abs((xScale(best) ?? 0) - mouseX);
     const currentDist = Math.abs((xScale(current) ?? 0) - mouseX);
     return currentDist < bestDist ? current : best;
-  }, ageGroups[0]);
+  }, firstAgeGroup);
 
   chartRoot.selectAll(".layer")
     .data(series)
     .join("path")
     .attr("class", "layer")
     .attr("d", area)
-    .attr("fill", (layer) => layer.key === "Other" ? "#cbd5e1" : phylumColor(lifecycle.phylum_map[layer.key] ?? "Unknown"))
+    .attr("fill", (layer) => colorMap[layer.key] ?? (layer.key === "Other" ? "#cbd5e1" : phylumColor(lifecycle.phylum_map[layer.key] ?? "Unknown")))
     .attr("opacity", (layer) => {
       if (!isolatedGenus) return layer.key === "Other" ? 0.68 : 0.9;
       return isolatedGenus === layer.key ? 0.98 : 0.12;

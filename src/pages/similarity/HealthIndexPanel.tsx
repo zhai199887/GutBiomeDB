@@ -9,6 +9,7 @@ import * as d3 from "d3";
 import { useI18n } from "@/i18n";
 import { cachedFetch } from "@/util/apiCache";
 import { API_BASE } from "@/util/apiBase";
+import { exportElementPNG } from "@/util/chartExport";
 import { exportTable } from "@/util/export";
 
 import ContributionChart from "./ContributionChart";
@@ -105,9 +106,10 @@ function parseAbundanceText(text: string): Record<string, number> {
     const lower = trimmed.toLowerCase();
     if (lower.startsWith("genus") || lower.startsWith("taxon") || lower.startsWith("name")) continue;
     const parts = trimmed.split(/[,\t]+/);
-    if (parts.length < 2) continue;
-    const genus = parts[0].trim();
-    const value = parseFloat(parts[1].trim());
+    const genus = parts[0]?.trim();
+    const rawValue = parts[1]?.trim();
+    if (!genus || rawValue == null) continue;
+    const value = parseFloat(rawValue);
     if (genus && !Number.isNaN(value)) {
       result[genus] = value;
     }
@@ -225,6 +227,8 @@ const HealthIndexPanel = () => {
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const gaugeRef = useRef<SVGSVGElement>(null);
+  const summaryExportRef = useRef<HTMLDivElement>(null);
+  const contributionExportRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -367,13 +371,17 @@ const HealthIndexPanel = () => {
       .attr("font-weight", 700)
       .text("0");
 
+    const categoryKey = result.category === "good" || result.category === "moderate" || result.category === "attention"
+      ? result.category
+      : "attention";
+
     const categoryText = svg.append("text")
       .attr("x", centerX)
       .attr("y", centerY - 8)
       .attr("text-anchor", "middle")
       .attr("fill", result.category === "good" ? "#44cc88" : result.category === "moderate" ? "#ffb02e" : "#ff6666")
       .attr("font-size", 13)
-      .text(t(`healthIndex.category.${result.category}` as const));
+      .text(t(`healthIndex.category.${categoryKey}` as const));
 
     svg.append("text")
       .attr("x", 36)
@@ -451,6 +459,8 @@ const HealthIndexPanel = () => {
 
   const hasInput = !!file || pasteText.trim().length > 0;
   const population = refData?.population;
+  const exportSummaryLabel = locale === "zh" ? "下载 GMHI 结果图" : "Export GMHI summary";
+  const exportContributionLabel = locale === "zh" ? "下载菌群贡献图" : "Export genus contribution chart";
 
   return (
     <div className={classes.panel}>
@@ -601,49 +611,70 @@ const HealthIndexPanel = () => {
 
       {result && (
         <div className={classes.results}>
-          <div className={classes.percentileBanner}>
-            <span className={classes.percentileValue}>{result.population_percentile.toFixed(1)}%</span>
-            <span className={classes.percentileLabel}>{t("healthIndex.populationPct")}</span>
+          <div className={classes.resultToolbar}>
+            <button
+              className={classes.exportBtn}
+              type="button"
+              onClick={() => summaryExportRef.current && exportElementPNG(summaryExportRef.current, `gmhi_summary_${Date.now()}`)}
+            >
+              {exportSummaryLabel}
+            </button>
+            <button
+              className={classes.exportBtn}
+              type="button"
+              onClick={() => contributionExportRef.current && exportElementPNG(contributionExportRef.current, `gmhi_contribution_${Date.now()}`)}
+            >
+              {exportContributionLabel}
+            </button>
           </div>
 
-          <div className={classes.gaugeRow}>
-            <svg ref={gaugeRef} className={classes.gauge} />
+          <div ref={summaryExportRef} className={classes.exportCard}>
+            <div className={classes.percentileBanner}>
+              <span className={classes.percentileValue}>{result.population_percentile.toFixed(1)}%</span>
+              <span className={classes.percentileLabel}>{t("healthIndex.populationPct")}</span>
+            </div>
 
-            <div className={classes.resultMetrics}>
-              <div className={classes.metricCard}>
-                <span className={classes.metricValue}>{result.score.toFixed(1)}</span>
-                <span className={classes.metricLabel}>{t("healthIndex.score")}</span>
-              </div>
-              <div className={classes.metricCard}>
-                <span className={classes.metricValue}>{result.raw_score.toFixed(3)}</span>
-                <span className={classes.metricLabel}>{t("healthIndex.rawScore")}</span>
-              </div>
-              <div className={classes.metricCard}>
-                <span className={classes.metricValue}>{result.raw_score_weighted.toFixed(3)}</span>
-                <span className={classes.metricLabel}>{t("healthIndex.weightedScore")}</span>
-              </div>
-              <div className={classes.metricCard}>
-                <span className={classes.metricValue}>{result.health_genera_matched}</span>
-                <span className={classes.metricLabel}>{t("healthIndex.healthGenera")}</span>
-              </div>
-              <div className={classes.metricCard}>
-                <span className={classes.metricValue}>{result.disease_genera_matched}</span>
-                <span className={classes.metricLabel}>{t("healthIndex.diseaseGenera")}</span>
-              </div>
-              <div className={classes.metricCard}>
-                <span className={classes.metricValue}>{result.reference.n_nc_samples.toLocaleString()}</span>
-                <span className={classes.metricLabel}>{t("healthIndex.ncSamples")}</span>
+            <div className={classes.gaugeRow}>
+              <svg ref={gaugeRef} className={classes.gauge} />
+
+              <div className={classes.resultMetrics}>
+                <div className={classes.metricCard}>
+                  <span className={classes.metricValue}>{result.score.toFixed(1)}</span>
+                  <span className={classes.metricLabel}>{t("healthIndex.score")}</span>
+                </div>
+                <div className={classes.metricCard}>
+                  <span className={classes.metricValue}>{result.raw_score.toFixed(3)}</span>
+                  <span className={classes.metricLabel}>{t("healthIndex.rawScore")}</span>
+                </div>
+                <div className={classes.metricCard}>
+                  <span className={classes.metricValue}>{result.raw_score_weighted.toFixed(3)}</span>
+                  <span className={classes.metricLabel}>{t("healthIndex.weightedScore")}</span>
+                </div>
+                <div className={classes.metricCard}>
+                  <span className={classes.metricValue}>{result.health_genera_matched}</span>
+                  <span className={classes.metricLabel}>{t("healthIndex.healthGenera")}</span>
+                </div>
+                <div className={classes.metricCard}>
+                  <span className={classes.metricValue}>{result.disease_genera_matched}</span>
+                  <span className={classes.metricLabel}>{t("healthIndex.diseaseGenera")}</span>
+                </div>
+                <div className={classes.metricCard}>
+                  <span className={classes.metricValue}>{result.reference.n_nc_samples.toLocaleString()}</span>
+                  <span className={classes.metricLabel}>{t("healthIndex.ncSamples")}</span>
+                </div>
               </div>
             </div>
           </div>
 
-          <ContributionChart
-            title={t("healthIndex.contribution")}
-            positiveLabel={t("healthIndex.topHealthGenera")}
-            negativeLabel={t("healthIndex.topDiseaseGenera")}
-            health={result.health_genera_detail}
-            disease={result.disease_genera_detail}
-          />
+          <div ref={contributionExportRef}>
+            <ContributionChart
+              title={t("healthIndex.contribution")}
+              positiveLabel={t("healthIndex.topHealthGenera")}
+              negativeLabel={t("healthIndex.topDiseaseGenera")}
+              health={result.health_genera_detail}
+              disease={result.disease_genera_detail}
+            />
+          </div>
 
           <div className={classes.deviationSection}>
             <div className={classes.tableToolbar}>
