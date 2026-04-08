@@ -9,6 +9,7 @@ import json
 import math
 import re
 import tempfile
+import threading
 from datetime import datetime
 from functools import lru_cache
 from pathlib import Path
@@ -230,8 +231,12 @@ logging.info(f"Disease ontology loaded: {len(DISEASE_ONTOLOGY)} entries")
 
 # ── Data loading (cached) / 数据加载（缓存） ──────────────────────────────────
 
+_METADATA_LOCK = threading.Lock()
+_ABUNDANCE_LOCK = threading.Lock()
+
+
 @lru_cache(maxsize=1)
-def get_metadata() -> pd.DataFrame:
+def _load_metadata_cached() -> pd.DataFrame:
     """Load and clean metadata CSV. / 加载并清理元数据CSV"""
     logging.info(f"Loading metadata from {METADATA_PATH}...")
     df = _read_csv_with_fallbacks(METADATA_PATH, on_bad_lines="skip", low_memory=False)
@@ -296,8 +301,21 @@ def get_metadata() -> pd.DataFrame:
     return df
 
 
+def get_metadata() -> pd.DataFrame:
+    with _METADATA_LOCK:
+        return _load_metadata_cached()
+
+
+def _clear_metadata_cache() -> None:
+    with _METADATA_LOCK:
+        _load_metadata_cached.cache_clear()
+
+
+get_metadata.cache_clear = _clear_metadata_cache
+
+
 @lru_cache(maxsize=1)
-def get_abundance() -> pd.DataFrame:
+def _load_abundance_cached() -> pd.DataFrame:
     """Load abundance CSV (large ~1.5 GB). / 加载丰度CSV（约1.5GB大文件）"""
     logging.info(f"Loading abundance from {ABUNDANCE_PATH}...")
     # First column is sample_id (rownames from R)
@@ -305,6 +323,19 @@ def get_abundance() -> pd.DataFrame:
     df = pd.read_csv(ABUNDANCE_PATH, index_col=0, low_memory=False)
     logging.info(f"Abundance loaded: {df.shape}")
     return df
+
+
+def get_abundance() -> pd.DataFrame:
+    with _ABUNDANCE_LOCK:
+        return _load_abundance_cached()
+
+
+def _clear_abundance_cache() -> None:
+    with _ABUNDANCE_LOCK:
+        _load_abundance_cached.cache_clear()
+
+
+get_abundance.cache_clear = _clear_abundance_cache
 
 
 # ISO 3166-1 alpha-2 → country name mapping / ISO国家代码→国名映射

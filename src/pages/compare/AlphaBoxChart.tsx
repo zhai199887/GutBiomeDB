@@ -13,10 +13,10 @@ const PANELS = [
   { key: "chao1", titleEn: "Chao1", titleZh: "Chao1 丰富度" },
 ] as const;
 
-const formatP = (p: number | undefined, locale: string) => {
-  if (p == null || Number.isNaN(p)) return locale === "zh" ? "p 不可用" : "p unavailable";
-  if (p < 0.001) return locale === "zh" ? "p < 0.001" : "p < 0.001";
-  return `p = ${p.toFixed(3)}`;
+const formatP = (pValue: number | undefined, locale: string) => {
+  if (pValue == null || Number.isNaN(pValue)) return locale === "zh" ? "p 不可用" : "p unavailable";
+  if (pValue < 0.001) return "p < 0.001";
+  return `p = ${pValue.toFixed(3)}`;
 };
 
 const safeSeries = (values: unknown): number[] => {
@@ -38,9 +38,9 @@ const AlphaBoxChart = ({ result }: { result: DiffResult }) => {
     const svg = d3.select(svgRef.current);
     svg.selectAll("*").remove();
 
-    const width = 900;
-    const height = 380;
-    const margin = { top: 48, right: 20, bottom: 56, left: 56 };
+    const width = 920;
+    const height = 400;
+    const margin = { top: 52, right: 20, bottom: 60, left: 56 };
     const panelWidth = (width - margin.left - margin.right) / 3;
     const panelHeight = height - margin.top - margin.bottom;
     const noDataLabel = locale === "zh" ? "无数据" : "No data";
@@ -49,12 +49,11 @@ const AlphaBoxChart = ({ result }: { result: DiffResult }) => {
 
     const alphaGroupA = result.alpha_diversity?.group_a;
     const alphaGroupB = result.alpha_diversity?.group_b;
-    const values = PANELS.flatMap((panel) => [
-      ...safeSeries(alphaGroupA?.[panel.key]),
-      ...safeSeries(alphaGroupB?.[panel.key]),
-    ]);
+    const hasAnyValue = PANELS.some((panel) =>
+      safeSeries(alphaGroupA?.[panel.key]).length > 0 || safeSeries(alphaGroupB?.[panel.key]).length > 0,
+    );
 
-    if (!values.length) {
+    if (!hasAnyValue) {
       svg.attr("viewBox", "0 0 900 120");
       svg.append("text")
         .attr("x", 20)
@@ -65,63 +64,58 @@ const AlphaBoxChart = ({ result }: { result: DiffResult }) => {
       return;
     }
 
-    const y = d3.scaleLinear()
-      .domain([0, d3.max(values) ?? 1])
-      .nice()
-      .range([panelHeight, 0]);
-
     const drawBox = (
-      group: d3.Selection<SVGGElement, unknown, null, undefined>,
+      panelGroup: d3.Selection<SVGGElement, unknown, null, undefined>,
+      yScale: d3.ScaleLinear<number, number>,
       xCenter: number,
       points: number[],
       color: string,
     ) => {
       if (!points.length) return;
-      const sorted = [...points].sort((a, b) => a - b);
+      const sorted = [...points].sort((left, right) => left - right);
       const q1 = d3.quantile(sorted, 0.25) ?? 0;
-      const q2 = d3.quantile(sorted, 0.5) ?? 0;
+      const median = d3.quantile(sorted, 0.5) ?? 0;
       const q3 = d3.quantile(sorted, 0.75) ?? 0;
       const iqr = q3 - q1;
       const lower = Math.max(sorted[0] ?? 0, q1 - 1.5 * iqr);
       const upper = Math.min(sorted[sorted.length - 1] ?? 0, q3 + 1.5 * iqr);
       const boxWidth = 56;
 
-      group.append("line")
+      panelGroup.append("line")
         .attr("x1", xCenter)
         .attr("x2", xCenter)
-        .attr("y1", y(lower))
-        .attr("y2", y(upper))
+        .attr("y1", yScale(lower))
+        .attr("y2", yScale(upper))
         .attr("stroke", color)
         .attr("stroke-width", 1.4)
         .attr("stroke-dasharray", "3,3");
 
-      group.append("rect")
+      panelGroup.append("rect")
         .attr("x", xCenter - boxWidth / 2)
-        .attr("y", y(q3))
+        .attr("y", yScale(q3))
         .attr("width", boxWidth)
-        .attr("height", Math.max(1, y(q1) - y(q3)))
+        .attr("height", Math.max(1, yScale(q1) - yScale(q3)))
         .attr("rx", 4)
         .attr("fill", color)
         .attr("opacity", 0.24)
         .attr("stroke", color)
         .attr("stroke-width", 1.3);
 
-      group.append("line")
+      panelGroup.append("line")
         .attr("x1", xCenter - boxWidth / 2)
         .attr("x2", xCenter + boxWidth / 2)
-        .attr("y1", y(q2))
-        .attr("y2", y(q2))
+        .attr("y1", yScale(median))
+        .attr("y2", yScale(median))
         .attr("stroke", color)
         .attr("stroke-width", 2.2);
 
       const outliers = sorted.filter((value) => value < lower || value > upper);
-      group.append("g")
-        .attr("data-series", `${xCenter}`)
+      panelGroup.append("g")
         .selectAll("circle")
         .data(outliers)
         .join("circle")
         .attr("cx", (_, index) => xCenter + ((index % 3) - 1) * 4)
-        .attr("cy", (value) => y(value))
+        .attr("cy", (value) => yScale(value))
         .attr("r", 2.6)
         .attr("fill", color)
         .attr("opacity", 0.55);
@@ -131,25 +125,30 @@ const AlphaBoxChart = ({ result }: { result: DiffResult }) => {
       const panelGroup = svg.append("g")
         .attr("transform", `translate(${margin.left + panelIndex * panelWidth},${margin.top})`);
 
-      const xA = panelWidth * 0.3;
-      const xB = panelWidth * 0.7;
       const groupAValues = safeSeries(alphaGroupA?.[panel.key]);
       const groupBValues = safeSeries(alphaGroupB?.[panel.key]);
+      const panelValues = [...groupAValues, ...groupBValues];
+      const panelMax = Math.max(d3.max(panelValues) ?? 1, 1);
+      const yScale = d3.scaleLinear()
+        .domain([0, panelMax])
+        .nice()
+        .range([panelHeight, 0]);
 
-      if (panelIndex === 0) {
-        panelGroup.append("g").call(d3.axisLeft(y).ticks(5)).attr("font-size", 11);
-      }
+      const xA = panelWidth * 0.3;
+      const xB = panelWidth * 0.7;
+
+      panelGroup.append("g").call(d3.axisLeft(yScale).ticks(5)).attr("font-size", 11);
 
       if (groupAValues.length > 0) {
-        drawBox(panelGroup, xA, groupAValues, "var(--secondary)");
+        drawBox(panelGroup, yScale, xA, groupAValues, "var(--secondary)");
       }
       if (groupBValues.length > 0) {
-        drawBox(panelGroup, xB, groupBValues, "var(--primary)");
+        drawBox(panelGroup, yScale, xB, groupBValues, "var(--primary)");
       }
 
       panelGroup.append("text")
         .attr("x", panelWidth / 2)
-        .attr("y", -16)
+        .attr("y", -18)
         .attr("text-anchor", "middle")
         .attr("fill", "currentColor")
         .attr("font-size", 13)
@@ -158,17 +157,17 @@ const AlphaBoxChart = ({ result }: { result: DiffResult }) => {
 
       panelGroup.append("text")
         .attr("x", xA)
-        .attr("y", panelHeight + 24)
+        .attr("y", panelHeight + 26)
         .attr("text-anchor", "middle")
-        .attr("fill", "var(--secondary)")
+        .attr("fill", groupAValues.length > 0 ? "var(--secondary)" : "var(--light-gray)")
         .attr("font-size", 10)
         .text(groupAValues.length > 0 ? groupAName : noDataLabel);
 
       panelGroup.append("text")
         .attr("x", xB)
-        .attr("y", panelHeight + 24)
+        .attr("y", panelHeight + 26)
         .attr("text-anchor", "middle")
-        .attr("fill", "var(--primary)")
+        .attr("fill", groupBValues.length > 0 ? "var(--primary)" : "var(--light-gray)")
         .attr("font-size", 10)
         .text(groupBValues.length > 0 ? groupBName : noDataLabel);
 
@@ -178,6 +177,7 @@ const AlphaBoxChart = ({ result }: { result: DiffResult }) => {
         .attr("fill", "none")
         .attr("stroke", "var(--light-gray)")
         .attr("stroke-width", 1.1);
+
       panelGroup.append("text")
         .attr("x", panelWidth / 2)
         .attr("y", bracketY - 12)

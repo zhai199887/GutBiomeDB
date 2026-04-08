@@ -9,6 +9,7 @@ from scipy.spatial.distance import cdist
 
 PSEUDOCOUNT = 1e-6
 RANDOM_SEED = 42
+MAX_NEG_LOG10_P = 320.0
 
 
 def extract_genus(col_name: str) -> str:
@@ -114,6 +115,54 @@ def bh_correction(p_values: Sequence[float]) -> list[float]:
         adj = min(prev_adj, p_value * n / (n - rank))
         adjusted[orig_idx] = min(adj, 1.0)
         prev_adj = adj
+    return adjusted
+
+
+def _neg_log10_from_p_value(p_value: float) -> float:
+    p_value = float(np.nan_to_num(p_value, nan=1.0, posinf=1.0, neginf=1.0))
+    if p_value <= 0:
+        return MAX_NEG_LOG10_P
+    return min(MAX_NEG_LOG10_P, max(0.0, -math.log10(p_value)))
+
+
+def _stable_p_value(p_value: float, neg_log10_p: float) -> float:
+    p_value = float(np.nan_to_num(p_value, nan=1.0, posinf=1.0, neginf=1.0))
+    if 0 < p_value <= 1.0:
+        return p_value
+    return 10 ** (-min(MAX_NEG_LOG10_P, max(0.0, neg_log10_p)))
+
+
+def _wilcoxon_neg_log10_p(a: Sequence[float], b: Sequence[float], p_value: float) -> float:
+    if p_value > 0:
+        return _neg_log10_from_p_value(p_value)
+    try:
+        z_stat = float(stats.ranksums(a, b).statistic)
+        log10_p = math.log10(2.0) + stats.norm.logsf(abs(z_stat)) / math.log(10.0)
+        return min(MAX_NEG_LOG10_P, max(0.0, -float(log10_p)))
+    except Exception:
+        return MAX_NEG_LOG10_P
+
+
+def _adaptive_round_p_value(p_value: float) -> float:
+    if p_value >= 1e-4:
+        return round(p_value, 6)
+    return p_value
+
+
+def _bh_neg_log10(neg_log10_values: Sequence[float]) -> list[float]:
+    n = len(neg_log10_values)
+    if n == 0:
+        return []
+    indexed = sorted(enumerate(neg_log10_values), key=lambda item: item[1], reverse=True)
+    adjusted = [0.0] * n
+    prev_adj = 0.0
+    for pos in range(n - 1, -1, -1):
+        orig_idx, neg_log10_p = indexed[pos]
+        rank = pos + 1
+        scaled = max(0.0, neg_log10_p - math.log10(n / rank))
+        current = max(prev_adj, scaled)
+        adjusted[orig_idx] = min(MAX_NEG_LOG10_P, current)
+        prev_adj = current
     return adjusted
 
 
@@ -405,6 +454,7 @@ def run_compare_analysis(
     base_method = method if method in {"wilcoxon", "t-test"} else "wilcoxon"
     diff_results: list[dict] = []
     p_values: list[float] = []
+    neg_log10_p_values: list[float] = []
 
     for idx, taxon in enumerate(taxa):
         vals_a = rel_agg_a[:, idx]
@@ -418,12 +468,16 @@ def run_compare_analysis(
         if base_method == "wilcoxon":
             stat, p_value = _safe_mannwhitney(vals_a, vals_b)
             effect_size = float(1 - 2 * stat / (len(vals_a) * len(vals_b))) if len(vals_a) * len(vals_b) > 0 else 0.0
+            neg_log10_p = _wilcoxon_neg_log10_p(vals_a, vals_b, p_value)
         else:
             stat, p_value = _safe_ttest(vals_a, vals_b)
             pooled_std = float(np.std(np.concatenate([vals_a, vals_b]), ddof=0))
             effect_size = float((mean_a - mean_b) / pooled_std) if pooled_std > 0 else 0.0
+            neg_log10_p = _neg_log10_from_p_value(p_value)
 
-        p_values.append(float(p_value))
+        stable_p_value = _stable_p_value(p_value, neg_log10_p)
+        p_values.append(stable_p_value)
+        neg_log10_p_values.append(neg_log10_p)
         diff_results.append(
             {
                 "taxon": str(taxon),
@@ -434,16 +488,21 @@ def run_compare_analysis(
                 "prevalence_a": round(prevalence_a, 4),
                 "prevalence_b": round(prevalence_b, 4),
                 "log2fc": round(log2fc, 6),
-                "p_value": round(float(p_value), 8),
+                "p_value": _adaptive_round_p_value(stable_p_value),
+                "neg_log10_p": round(neg_log10_p, 4),
                 "adjusted_p": 1.0,
+                "neg_log10_adjusted_p": 0.0,
                 "effect_size": round(effect_size, 6),
                 "enriched_in": "A" if mean_a > mean_b else "B",
             }
         )
 
     adjusted = bh_correction(p_values)
+    adjusted_neg_log10 = _bh_neg_log10(neg_log10_p_values)
     for idx, row in enumerate(diff_results):
-        row["adjusted_p"] = round(float(adjusted[idx]), 8)
+        stable_adjusted_p = _stable_p_value(adjusted[idx], adjusted_neg_log10[idx])
+        row["adjusted_p"] = _adaptive_round_p_value(stable_adjusted_p)
+        row["neg_log10_adjusted_p"] = round(adjusted_neg_log10[idx], 4)
 
     diff_results.sort(key=lambda item: (item["adjusted_p"], -abs(item["effect_size"])))
 

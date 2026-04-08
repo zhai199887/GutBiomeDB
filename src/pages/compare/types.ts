@@ -27,7 +27,9 @@ export interface DiffTaxon {
   prevalence_b: number;
   log2fc: number;
   p_value: number;
+  neg_log10_p?: number;
   adjusted_p: number;
+  neg_log10_adjusted_p?: number;
   effect_size: number;
   enriched_in: "A" | "B";
 }
