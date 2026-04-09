@@ -13,70 +13,73 @@ import type { BetaMetric, BetaPoint, DiffResult } from "./types";
 // - sample covariance (n-1 denominator)
 // - covariance matrix transformed to pixel space before eigendecomposition
 //   so the angle and radii are correct even when x/y axes have different scales
-// Remove univariate outliers beyond iqrK * IQR on either axis before fitting the ellipse.
-// This prevents a few extreme points from inflating the covariance and producing a
-// visually misleading ellipse that extends far beyond the main data cloud.
-function iqrFilter(points: BetaPoint[], iqrK = 2.5): BetaPoint[] {
-  const sortedX = [...points].map((p) => p.x).sort((a, b) => a - b);
-  const sortedY = [...points].map((p) => p.y).sort((a, b) => a - b);
-  const q1x = d3.quantile(sortedX, 0.25) ?? 0;
-  const q3x = d3.quantile(sortedX, 0.75) ?? 0;
-  const q1y = d3.quantile(sortedY, 0.25) ?? 0;
-  const q3y = d3.quantile(sortedY, 0.75) ?? 0;
-  const loX = q1x - iqrK * (q3x - q1x);
-  const hiX = q3x + iqrK * (q3x - q1x);
-  const loY = q1y - iqrK * (q3y - q1y);
-  const hiY = q3y + iqrK * (q3y - q1y);
-  return points.filter((p) => p.x >= loX && p.x <= hiX && p.y >= loY && p.y <= hiY);
-}
-
-function computeEllipseParams(
+// Exact translation of the paper's conf_ellipse (gen_fig1b_pcoa.py, n_std=2.0):
+//   cov = np.cov(x, y)
+//   vals, vecs = np.linalg.eigh(cov)   → eigendecomposition in DATA space
+//   theta = arctan2(*vecs[:,0][::-1])  → angle of major eigenvector
+//   w, h = 2*n_std*sqrt(vals)          → full width/height = 2× semi-axis
+//   Ellipse(center, width=w, height=h, angle=theta)
+//
+// We generate points along the ellipse in data coordinates (64-gon), then
+// map each to pixel space via xScale/yScale — identical to matplotlib's transform.
+// All display points are shown; only the covariance fit uses IQR-trimmed core
+// so one or two extreme outlier samples don't inflate the ellipse shape.
+function ellipsePathFromPoints(
   points: BetaPoint[],
   xScale: d3.ScaleLinear<number, number>,
   yScale: d3.ScaleLinear<number, number>,
   nStd = 2.0,
-): { cx: number; cy: number; rx: number; ry: number; angle: number } | null {
-  // Use outlier-trimmed points for covariance (display all points, fit ellipse on core cloud)
-  const core = iqrFilter(points);
+): string | null {
+  if (points.length < 3) return null;
+
+  // IQR-trim core (matches paper's subsample which lacks extreme outlier NC samples)
+  const sortedX = [...points].map((p) => p.x).sort((a, b) => a - b);
+  const sortedY = [...points].map((p) => p.y).sort((a, b) => a - b);
+  const q1x = d3.quantile(sortedX, 0.25) ?? 0; const q3x = d3.quantile(sortedX, 0.75) ?? 0;
+  const q1y = d3.quantile(sortedY, 0.25) ?? 0; const q3y = d3.quantile(sortedY, 0.75) ?? 0;
+  const core = points.filter((p) =>
+    p.x >= q1x - 2.5 * (q3x - q1x) && p.x <= q3x + 2.5 * (q3x - q1x) &&
+    p.y >= q1y - 2.5 * (q3y - q1y) && p.y <= q3y + 2.5 * (q3y - q1y),
+  );
   if (core.length < 3) return null;
 
   const n = core.length;
-  const meanX = d3.mean(core, (p) => p.x) ?? 0;
-  const meanY = d3.mean(core, (p) => p.y) ?? 0;
-  const xs = core.map((p) => p.x - meanX);
-  const ys = core.map((p) => p.y - meanY);
+  const mx = d3.mean(core, (p) => p.x) ?? 0;
+  const my = d3.mean(core, (p) => p.y) ?? 0;
+  const dxs = core.map((p) => p.x - mx);
+  const dys = core.map((p) => p.y - my);
 
-  // Sample covariance with n-1 denominator (matches numpy.cov)
+  // Sample covariance (n-1 denominator) — matches numpy.cov
   const f = n / (n - 1);
-  const covXX = (d3.mean(xs.map((v) => v * v)) ?? 0) * f;
-  const covYY = (d3.mean(ys.map((v) => v * v)) ?? 0) * f;
-  const covXY = (d3.mean(xs.map((v, i) => v * ys[i]!)) ?? 0) * f;
+  const covXX = (d3.mean(dxs.map((v) => v * v)) ?? 0) * f;
+  const covYY = (d3.mean(dys.map((v) => v * v)) ?? 0) * f;
+  const covXY = (d3.mean(dxs.map((v, i) => v * dys[i]!)) ?? 0) * f;
 
-  // Pixels-per-unit for each axis (y-axis is inverted in SVG)
-  const xF = Math.abs(xScale(1) - xScale(0));
-  const yF = Math.abs(yScale(1) - yScale(0));
-
-  // Transform covariance to pixel space: T = diag(xF, -yF)
-  // C_pix = T @ C_data @ T^T  →  off-diagonal gets negated by y-flip
-  const pCovXX = xF * xF * covXX;
-  const pCovYY = yF * yF * covYY;
-  const pCovXY = -xF * yF * covXY;
-
-  // Eigendecomposition of 2×2 symmetric pixel covariance
-  const trace = pCovXX + pCovYY;
-  const det = pCovXX * pCovYY - pCovXY * pCovXY;
+  // Eigendecomposition in DATA space — same as np.linalg.eigh then descending sort
+  const trace = covXX + covYY;
+  const det = covXX * covYY - covXY * covXY;
   const gap = Math.sqrt(Math.max(0, trace * trace / 4 - det));
-  const lambda1 = trace / 2 + gap;
+  const lambda1 = trace / 2 + gap; // larger eigenvalue
   const lambda2 = trace / 2 - gap;
-  const angle = Math.atan2(lambda1 - pCovXX, pCovXY || 1e-9) * 180 / Math.PI;
 
-  return {
-    cx: xScale(meanX),
-    cy: yScale(meanY),
-    rx: Math.sqrt(Math.max(lambda1, 1e-9)) * nStd,
-    ry: Math.sqrt(Math.max(lambda2, 1e-9)) * nStd,
-    angle,
-  };
+  // Angle of major eigenvector = arctan2(v[1], v[0]) where v = [covXY, λ1-covXX]
+  // (same as paper: arctan2(*vecs[:,0][::-1]))
+  const theta = Math.atan2(lambda1 - covXX, covXY || 1e-9);
+
+  // Semi-axes in data space
+  const rx = nStd * Math.sqrt(Math.max(lambda1, 1e-9));
+  const ry = nStd * Math.sqrt(Math.max(lambda2, 1e-9));
+
+  // Parameterise ellipse in data space, project to pixel space via xScale/yScale
+  const N = 64;
+  const segs: string[] = [];
+  for (let i = 0; i <= N; i++) {
+    const t = (i / N) * 2 * Math.PI;
+    const dx = rx * Math.cos(t) * Math.cos(theta) - ry * Math.sin(t) * Math.sin(theta);
+    const dy = rx * Math.cos(t) * Math.sin(theta) + ry * Math.sin(t) * Math.cos(theta);
+    segs.push(`${i === 0 ? "M" : "L"} ${xScale(mx + dx)} ${yScale(my + dy)}`);
+  }
+  return segs.join(" ") + " Z";
 }
 
 const BetaPCoAChart = ({ result }: { result: DiffResult }) => {
@@ -126,27 +129,19 @@ const BetaPCoAChart = ({ result }: { result: DiffResult }) => {
     const x = d3.scaleLinear().domain(xDomain).nice().range([0, innerWidth]);
     const y = d3.scaleLinear().domain(yDomain).nice().range([innerHeight, 0]);
 
-    const ellipseA = computeEllipseParams(groupA, x, y);
-    if (ellipseA) {
-      g.append("ellipse")
-        .attr("cx", ellipseA.cx)
-        .attr("cy", ellipseA.cy)
-        .attr("rx", ellipseA.rx)
-        .attr("ry", ellipseA.ry)
-        .attr("transform", `rotate(${ellipseA.angle}, ${ellipseA.cx}, ${ellipseA.cy})`)
+    const pathA = ellipsePathFromPoints(groupA, x, y);
+    if (pathA) {
+      g.append("path")
+        .attr("d", pathA)
         .attr("fill", "rgba(34, 197, 94, 0.10)")
         .attr("stroke", "var(--secondary)")
         .attr("stroke-width", 1.2);
     }
 
-    const ellipseB = computeEllipseParams(groupB, x, y);
-    if (ellipseB) {
-      g.append("ellipse")
-        .attr("cx", ellipseB.cx)
-        .attr("cy", ellipseB.cy)
-        .attr("rx", ellipseB.rx)
-        .attr("ry", ellipseB.ry)
-        .attr("transform", `rotate(${ellipseB.angle}, ${ellipseB.cx}, ${ellipseB.cy})`)
+    const pathB = ellipsePathFromPoints(groupB, x, y);
+    if (pathB) {
+      g.append("path")
+        .attr("d", pathB)
         .attr("fill", "rgba(59, 130, 246, 0.10)")
         .attr("stroke", "var(--primary)")
         .attr("stroke-width", 1.2);
