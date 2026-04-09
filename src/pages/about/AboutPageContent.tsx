@@ -100,7 +100,7 @@ const COPY: Record<"en" | "zh", Copy> = {
     teamIntro:
       "The platform is maintained as a collaborative gut microbiome analysis resource anchored to the author group of the GutBiomeDB manuscript.",
     teamAffiliations:
-      "Primary affiliations include the Department of Gastroenterology, The First Hospital of China Medical University; The First Affiliated Hospital of Jinzhou Medical University; and Peking Union Medical College Hospital.",
+      "Primary affiliations include the Department of Gastroenterology, The First Hospital of China Medical University and The First Affiliated Hospital of Jinzhou Medical University.",
     dataIntro:
       "GutBiomeDB integrates processed human gut microbiome cohorts retrieved from public repositories and harmonizes them into a genus-level analysis layer for cross-study exploration, visualization, and hypothesis generation. The current release covers 223 non-NC condition labels plus one NC category, yielding 224 condition categories in total.",
     sourceLabel: "Data Sources",
@@ -186,7 +186,7 @@ const COPY: Record<"en" | "zh", Copy> = {
     teamIntro:
       "平台由 GutBiomeDB 稿件相关作者团队协作维护，用于支持肠道微生物组的队列级浏览、比较分析和结果复用。",
     teamAffiliations:
-      "主要机构包括：中国医科大学附属第一医院消化内科、锦州医科大学附属第一医院以及北京协和医院。",
+      "主要机构包括：中国医科大学附属第一医院消化内科和锦州医科大学附属第一医院。",
     dataIntro:
       "GutBiomeDB 整合公开数据库中的人类肠道微生物组队列，并统一到 genus 层级分析框架中，用于跨研究浏览、可视化和假设生成。当前发布版本包含 223 个非 NC 条件标签，另加 1 个 NC 类别，共 224 个条件类别。",
     sourceLabel: "数据来源",
@@ -265,18 +265,16 @@ const AUTHORS: Record<"en" | "zh", string[]> = {
     "Runze Cui",
     "Dianyu Zheng",
     "Yuhan Sun",
-    "Jingsheng Yu",
     "Cong Dai",
   ],
   zh: [
     "翟锦霞",
     "李迎杰",
-    "刘佳萌",
-    "苏欣怡",
+    "刘佳梦",
+    "苏心怡",
     "崔润泽",
-    "郑典钰",
-    "孙羽涵",
-    "于景晟",
+    "郑殿宇",
+    "孙羽晗",
     "戴聪",
   ],
 };
