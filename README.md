@@ -119,7 +119,7 @@ If you use GutBiomeDB in your research, please cite:
 ## Contact
 
 - Correspondence: cdai@cmu.edu.cn (Prof. Cong Dai, China Medical University)
-- GitHub Issues: [Report a bug](https://github.com/zhai199887/gut-microbiome-atlas/issues)
+- GitHub Issues: [Report a bug](https://github.com/zhai199887/GutBiomeDB/issues)
 
 ## License
 

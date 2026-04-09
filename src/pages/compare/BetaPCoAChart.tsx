@@ -8,34 +8,56 @@ import { useI18n } from "@/i18n";
 import classes from "../ComparePage.module.css";
 import type { BetaMetric, BetaPoint, DiffResult } from "./types";
 
-function ellipsePath(points: BetaPoint[], xScale: d3.ScaleLinear<number, number>, yScale: d3.ScaleLinear<number, number>) {
-  if (points.length < 3) return "";
+// Compute 2σ confidence ellipse parameters in pixel space.
+// Matches the paper's matplotlib conf_ellipse(n_std=2.0, np.cov) exactly:
+// - sample covariance (n-1 denominator)
+// - covariance matrix transformed to pixel space before eigendecomposition
+//   so the angle and radii are correct even when x/y axes have different scales
+function computeEllipseParams(
+  points: BetaPoint[],
+  xScale: d3.ScaleLinear<number, number>,
+  yScale: d3.ScaleLinear<number, number>,
+  nStd = 2.0,
+): { cx: number; cy: number; rx: number; ry: number; angle: number } | null {
+  if (points.length < 3) return null;
 
-  const meanX = d3.mean(points, (point) => point.x) ?? 0;
-  const meanY = d3.mean(points, (point) => point.y) ?? 0;
-  const xs = points.map((point) => point.x - meanX);
-  const ys = points.map((point) => point.y - meanY);
-  const covXX = d3.mean(xs.map((value) => value * value)) ?? 0;
-  const covYY = d3.mean(ys.map((value) => value * value)) ?? 0;
-  const covXY = d3.mean(xs.map((value, index) => value * ys[index]!)) ?? 0;
+  const n = points.length;
+  const meanX = d3.mean(points, (p) => p.x) ?? 0;
+  const meanY = d3.mean(points, (p) => p.y) ?? 0;
+  const xs = points.map((p) => p.x - meanX);
+  const ys = points.map((p) => p.y - meanY);
 
-  const trace = covXX + covYY;
-  const determinant = covXX * covYY - covXY * covXY;
-  const gap = Math.sqrt(Math.max(0, trace * trace / 4 - determinant));
+  // Sample covariance with n-1 denominator (matches numpy.cov)
+  const f = n / (n - 1);
+  const covXX = (d3.mean(xs.map((v) => v * v)) ?? 0) * f;
+  const covYY = (d3.mean(ys.map((v) => v * v)) ?? 0) * f;
+  const covXY = (d3.mean(xs.map((v, i) => v * ys[i]!)) ?? 0) * f;
+
+  // Pixels-per-unit for each axis (y-axis is inverted in SVG)
+  const xF = Math.abs(xScale(1) - xScale(0));
+  const yF = Math.abs(yScale(1) - yScale(0));
+
+  // Transform covariance to pixel space: T = diag(xF, -yF)
+  // C_pix = T @ C_data @ T^T  →  off-diagonal gets negated by y-flip
+  const pCovXX = xF * xF * covXX;
+  const pCovYY = yF * yF * covYY;
+  const pCovXY = -xF * yF * covXY;
+
+  // Eigendecomposition of 2×2 symmetric pixel covariance
+  const trace = pCovXX + pCovYY;
+  const det = pCovXX * pCovYY - pCovXY * pCovXY;
+  const gap = Math.sqrt(Math.max(0, trace * trace / 4 - det));
   const lambda1 = trace / 2 + gap;
   const lambda2 = trace / 2 - gap;
-  const angle = Math.atan2(lambda1 - covXX, covXY || 1e-9);
-  const scale = 2.4477;
-  const radiusX = Math.sqrt(Math.max(lambda1, 1e-9)) * scale;
-  const radiusY = Math.sqrt(Math.max(lambda2, 1e-9)) * scale;
+  const angle = Math.atan2(lambda1 - pCovXX, pCovXY || 1e-9) * 180 / Math.PI;
 
-  const centerX = xScale(meanX);
-  const centerY = yScale(meanY);
-  const scaledRadiusX = Math.abs(xScale(meanX + radiusX) - centerX);
-  const scaledRadiusY = Math.abs(yScale(meanY + radiusY) - centerY);
-  const angleDegrees = angle * 180 / Math.PI;
-
-  return `M ${centerX - scaledRadiusX} ${centerY} a ${scaledRadiusX} ${scaledRadiusY} ${angleDegrees} 1 0 ${scaledRadiusX * 2} 0 a ${scaledRadiusX} ${scaledRadiusY} ${angleDegrees} 1 0 ${-scaledRadiusX * 2} 0`;
+  return {
+    cx: xScale(meanX),
+    cy: yScale(meanY),
+    rx: Math.sqrt(Math.max(lambda1, 1e-9)) * nStd,
+    ry: Math.sqrt(Math.max(lambda2, 1e-9)) * nStd,
+    angle,
+  };
 }
 
 const BetaPCoAChart = ({ result }: { result: DiffResult }) => {
@@ -85,17 +107,31 @@ const BetaPCoAChart = ({ result }: { result: DiffResult }) => {
     const x = d3.scaleLinear().domain(xDomain).nice().range([0, innerWidth]);
     const y = d3.scaleLinear().domain(yDomain).nice().range([innerHeight, 0]);
 
-    g.append("path")
-      .attr("d", ellipsePath(groupA, x, y))
-      .attr("fill", "rgba(34, 197, 94, 0.10)")
-      .attr("stroke", "var(--secondary)")
-      .attr("stroke-width", 1.2);
+    const ellipseA = computeEllipseParams(groupA, x, y);
+    if (ellipseA) {
+      g.append("ellipse")
+        .attr("cx", ellipseA.cx)
+        .attr("cy", ellipseA.cy)
+        .attr("rx", ellipseA.rx)
+        .attr("ry", ellipseA.ry)
+        .attr("transform", `rotate(${ellipseA.angle}, ${ellipseA.cx}, ${ellipseA.cy})`)
+        .attr("fill", "rgba(34, 197, 94, 0.10)")
+        .attr("stroke", "var(--secondary)")
+        .attr("stroke-width", 1.2);
+    }
 
-    g.append("path")
-      .attr("d", ellipsePath(groupB, x, y))
-      .attr("fill", "rgba(59, 130, 246, 0.10)")
-      .attr("stroke", "var(--primary)")
-      .attr("stroke-width", 1.2);
+    const ellipseB = computeEllipseParams(groupB, x, y);
+    if (ellipseB) {
+      g.append("ellipse")
+        .attr("cx", ellipseB.cx)
+        .attr("cy", ellipseB.cy)
+        .attr("rx", ellipseB.rx)
+        .attr("ry", ellipseB.ry)
+        .attr("transform", `rotate(${ellipseB.angle}, ${ellipseB.cx}, ${ellipseB.cy})`)
+        .attr("fill", "rgba(59, 130, 246, 0.10)")
+        .attr("stroke", "var(--primary)")
+        .attr("stroke-width", 1.2);
+    }
 
     g.selectAll("circle")
       .data(coords)

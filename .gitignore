@@ -43,3 +43,6 @@ docs/
 api/__pycache__/
 api/analytics.jsonl
 public/favicon_refs/
+
+# Claude Code local settings (contains permission bypass - never commit)
+.claude/

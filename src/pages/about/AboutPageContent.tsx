@@ -21,7 +21,7 @@ const SOFTWARE_BIBTEX = `@software{gutbiomedb2026,
   title   = {GutBiomeDB},
   author  = {Zhai, Jinxia and Dai, Cong and collaborators},
   year    = {2026},
-  url     = {https://github.com/zhai199887/gut-microbiome-atlas},
+  url     = {https://github.com/zhai199887/GutBiomeDB},
   note    = {Research platform source code}
 }`;
 
@@ -127,7 +127,7 @@ const COPY: Record<"en" | "zh", Copy> = {
       "Reusable: methods, caveats, and licensing boundaries are documented so the derived database outputs can be reused responsibly.",
     ],
     relatedLinks: [
-      { label: "GitHub", url: "https://github.com/zhai199887/gut-microbiome-atlas", desc: "Source repository and issue context." },
+      { label: "GitHub", url: "https://github.com/zhai199887/GutBiomeDB", desc: "Source repository and issue context." },
       { label: "NCBI BioProject", url: "https://www.ncbi.nlm.nih.gov/bioproject", desc: "Primary accession registry for included cohorts." },
       { label: "NCBI SRA", url: "https://www.ncbi.nlm.nih.gov/sra", desc: "Raw sequencing archive for original submissions." },
       { label: "MGnify", url: "https://www.ebi.ac.uk/metagenomics/", desc: "Reference metagenomics resource for comparative context." },
@@ -213,7 +213,7 @@ const COPY: Record<"en" | "zh", Copy> = {
       "Reusable：平台明确写出方法、限制和许可边界，减少衍生结果被误用的风险。",
     ],
     relatedLinks: [
-      { label: "GitHub", url: "https://github.com/zhai199887/gut-microbiome-atlas", desc: "当前主仓库与源码入口。" },
+      { label: "GitHub", url: "https://github.com/zhai199887/GutBiomeDB", desc: "当前主仓库与源码入口。" },
       { label: "NCBI BioProject", url: "https://www.ncbi.nlm.nih.gov/bioproject", desc: "平台纳入队列的主要 accession 来源。" },
       { label: "NCBI SRA", url: "https://www.ncbi.nlm.nih.gov/sra", desc: "原始测序提交数据归档。" },
       { label: "MGnify", url: "https://www.ebi.ac.uk/metagenomics/", desc: "可用于外部比对的公共微生物组资源。" },

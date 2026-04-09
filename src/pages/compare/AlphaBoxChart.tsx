@@ -148,9 +148,6 @@ const AlphaBoxChart = ({ result }: { result: DiffResult }) => {
 
       panelGroup.append("g").call(d3.axisLeft(yScale).ticks(5)).attr("font-size", 11);
 
-      const statsA = alphaGroupA?.stats?.[panel.key as keyof typeof alphaGroupA.stats];
-      const statsB = alphaGroupB?.stats?.[panel.key as keyof typeof alphaGroupB.stats];
-
       if (groupAValues.length > 0 || statsA) {
         drawBox(panelGroup, yScale, xA, groupAValues, "var(--secondary)", statsA);
       }
