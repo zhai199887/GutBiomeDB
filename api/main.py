@@ -162,23 +162,63 @@ def warmup_data():
     import threading
 
     def _warmup_endpoints():
+        import asyncio
         import time
         time.sleep(2)  # wait for server to be ready
         import urllib.request
-        endpoints = [
-            "http://127.0.0.1:8000/api/filter-options",
-            "http://127.0.0.1:8000/api/data-stats",
-            "http://127.0.0.1:8000/api/disease-list",
-            "http://127.0.0.1:8000/api/network?top_diseases=12&top_genera=15",
-            "http://127.0.0.1:8000/api/disease-profile?disease=NC",
-            "http://127.0.0.1:8000/api/health-index/reference",
+        lightweight_requests = [
+            {"url": "http://127.0.0.1:8000/api/filter-options"},
+            {"url": "http://127.0.0.1:8000/api/data-stats"},
+            {"url": "http://127.0.0.1:8000/api/disease-list"},
+            {"url": "http://127.0.0.1:8000/api/health-index/reference"},
         ]
-        for url in endpoints:
+        for spec in lightweight_requests:
+            url = spec["url"]
             try:
-                urllib.request.urlopen(url, timeout=120)
-                logging.info(f"Warmup OK: {url.split('/')[-1].split('?')[0]}")
+                data = spec.get("data")
+                payload = None if data is None else json.dumps(data).encode("utf-8")
+                request = urllib.request.Request(
+                    url,
+                    data=payload,
+                    method=spec.get("method", "GET"),
+                    headers=spec.get("headers", {}),
+                )
+                urllib.request.urlopen(request, timeout=180)
+                logging.info(f"Warmup OK: {request.method} {url.split('/api/')[-1]}")
             except Exception as e:
                 logging.warning(f"Warmup failed: {url} -> {e}")
+
+        direct_warmups = [
+            ("disease-profile NC", lambda: getattr(disease_profile, "__wrapped__", disease_profile)(None, "NC", 40)),
+            ("lifecycle global", lambda: getattr(lifecycle_atlas, "__wrapped__", lifecycle_atlas)(None, "", "", 10)),
+            ("lifecycle compare IBD", lambda: getattr(lifecycle_compare, "__wrapped__", lifecycle_compare)(None, "IBD", "", 10)),
+            ("metabolism overview", lambda: getattr(metabolism_overview, "__wrapped__", metabolism_overview)(None)),
+            ("metabolism category scfa_producers", lambda: getattr(metabolism_category_profile, "__wrapped__", metabolism_category_profile)(None, "scfa_producers")),
+            ("biomarker discovery IBD", lambda: getattr(biomarker_discovery, "__wrapped__", biomarker_discovery)(None, "IBD", 2.0, 0.05)),
+            ("lollipop IBD", lambda: getattr(lollipop_data, "__wrapped__", lollipop_data)(None, "IBD", 40)),
+            (
+                "cross-study CD",
+                lambda: asyncio.run(
+                    getattr(cross_study_analysis, "__wrapped__", cross_study_analysis)(
+                        None,
+                        CrossStudyRequest(
+                            project_ids=["PRJNA414072", "PRJNA237362", "PRJNA398187", "PRJNA431126"],
+                            disease="CD",
+                            method="wilcoxon",
+                            taxonomy_level="genus",
+                            p_threshold=0.05,
+                            min_studies=2,
+                        ),
+                    )
+                ),
+            ),
+        ]
+        for label, func in direct_warmups:
+            try:
+                func()
+                logging.info(f"Warmup OK: direct {label}")
+            except Exception as e:
+                logging.warning(f"Warmup failed: direct {label} -> {e}")
 
     def _preload_data():
         # Avoid blocking startup on the full abundance matrix so health checks
@@ -4347,6 +4387,20 @@ async def cross_study_analysis(request: Request, req: CrossStudyRequest):
     """跨研究元分析：多队列一致性标志物发现"""
     if len(req.project_ids) < 2:
         raise HTTPException(400, "At least 2 projects required")
+    cache_key = "cross_study:" + json.dumps(
+        {
+            "project_ids": sorted(str(project_id).strip() for project_id in req.project_ids),
+            "disease": req.disease.strip(),
+            "method": req.method,
+            "taxonomy_level": req.taxonomy_level,
+            "p_threshold": req.p_threshold,
+            "min_studies": req.min_studies,
+        },
+        sort_keys=True,
+    )
+    cached = get_cached(cache_key)
+    if cached:
+        return cached
     meta = get_metadata()
     abund = get_abundance()
     abund_idx = set(abund.index)
@@ -4533,7 +4587,7 @@ async def cross_study_analysis(request: Request, req: CrossStudyRequest):
     consensus_markers.sort(key=lambda x: (x["adjusted_meta_p"], x["meta_p"]))
     significant_markers = [m for m in consensus_markers if m["adjusted_meta_p"] < req.p_threshold]
 
-    return {
+    result = {
         "disease": req.disease,
         "method": req.method,
         "taxonomy_level": req.taxonomy_level,
@@ -4551,6 +4605,8 @@ async def cross_study_analysis(request: Request, req: CrossStudyRequest):
         "total_significant": len(significant_markers),
         "all_markers": consensus_markers[:500],
     }
+    set_cached(cache_key, result)
+    return result
 
 
 # ── Health Index / 微生物组健康指数 ──────────────────────────────────────────
