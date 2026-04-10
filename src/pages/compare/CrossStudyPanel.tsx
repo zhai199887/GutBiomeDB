@@ -378,8 +378,9 @@ const ForestView = ({
   const max = Math.max(...markers.map((marker) => marker.ci_high), 2);
   const scale = (value: number) => 260 + ((value - min) / Math.max(max - min, 1e-6)) * 450;
 
+  const legendY = height - 14;
   return (
-    <svg ref={svgRef} className="compare-chart" viewBox={`0 0 ${width} ${height}`} style={{ width: "100%", maxWidth: 860 }}>
+    <svg ref={svgRef} className="compare-chart" viewBox={`0 0 ${width} ${height + 28}`} style={{ width: "100%", maxWidth: 860 }}>
       <line x1={scale(0)} x2={scale(0)} y1={48} y2={height - 28} stroke="#6b7280" strokeDasharray="4 4" />
       {markers.map((marker, index) => {
         const y = 66 + index * rowHeight;
@@ -400,6 +401,14 @@ const ForestView = ({
       <text x={width / 2} y={22} textAnchor="middle" fill="currentColor" fontSize="13">
         {locale === "zh" ? "跨研究效应森林图" : "Cross-study forest plot"}
       </text>
+      {/* Legend */}
+      <circle cx={196} cy={legendY} r={5} fill="#22c55e" />
+      <text x={204} y={legendY + 4} fill="#94a3b8" fontSize="9">{locale === "zh" ? "疾病富集" : "Disease-enriched"}</text>
+      <circle cx={316} cy={legendY} r={5} fill="#3b82f6" />
+      <text x={324} y={legendY + 4} fill="#94a3b8" fontSize="9">{locale === "zh" ? "对照富集" : "Control-enriched"}</text>
+      <circle cx={432} cy={legendY} r={5} fill="#94a3b8" />
+      <text x={440} y={legendY + 4} fill="#94a3b8" fontSize="9">{locale === "zh" ? "方向不一致" : "Inconsistent direction"}</text>
+      <text x={590} y={legendY + 4} fill="#64748b" fontSize="9">{locale === "zh" ? "圆圈大小 = 显著研究数" : "Circle size = no. significant studies"}</text>
     </svg>
   );
 };
@@ -510,8 +519,9 @@ const ConsistencyView = ({
 }) => {
   const width = 760;
   const height = 120 + markers.length * 26;
+  const legendY = height + 10;
   return (
-    <svg ref={svgRef} className="compare-chart" viewBox={`0 0 ${width} ${height}`} style={{ width: "100%", maxWidth: 760 }}>
+    <svg ref={svgRef} className="compare-chart" viewBox={`0 0 ${width} ${legendY + 20}`} style={{ width: "100%", maxWidth: 760 }}>
       <text x={width / 2} y={24} textAnchor="middle" fill="currentColor" fontSize="13">
         {locale === "zh" ? "跨研究一致性" : "Cross-study consistency"}
       </text>
@@ -532,6 +542,14 @@ const ConsistencyView = ({
           </g>
         );
       })}
+      {/* Legend */}
+      <rect x={155} cy={legendY} y={legendY} width={14} height={10} rx={3} fill="#22c55e" opacity="0.85" />
+      <text x={172} y={legendY + 9} fill="#94a3b8" fontSize="9">{locale === "zh" ? "疾病富集" : "Disease-enriched"}</text>
+      <rect x={276} y={legendY} width={14} height={10} rx={3} fill="#3b82f6" opacity="0.85" />
+      <text x={293} y={legendY + 9} fill="#94a3b8" fontSize="9">{locale === "zh" ? "对照富集" : "Control-enriched"}</text>
+      <rect x={397} y={legendY} width={14} height={10} rx={3} fill="#94a3b8" opacity="0.85" />
+      <text x={414} y={legendY + 9} fill="#94a3b8" fontSize="9">{locale === "zh" ? "方向不一致" : "Inconsistent"}</text>
+      <text x={490} y={legendY + 9} fill="#64748b" fontSize="9">{locale === "zh" ? "条长 = 一致性得分；右侧 I² = 异质性" : "Bar length = consistency score; I² = heterogeneity"}</text>
     </svg>
   );
 };
@@ -553,8 +571,9 @@ const BubbleView = ({
   const max = Math.max(...markers.map((marker) => marker.meta_log2fc), 2);
   const scale = (value: number) => 260 + ((value - min) / Math.max(max - min, 1e-6)) * 480;
 
+  const legendY = height + 8;
   return (
-    <svg ref={svgRef} className="compare-chart" viewBox={`0 0 ${width} ${height}`} style={{ width: "100%", maxWidth: 860 }}>
+    <svg ref={svgRef} className="compare-chart" viewBox={`0 0 ${width} ${legendY + 30}`} style={{ width: "100%", maxWidth: 860 }}>
       <text x={width / 2} y={24} textAnchor="middle" fill="currentColor" fontSize="13">
         {locale === "zh" ? "效应值与样本规模气泡图" : "Effect-size bubble view"}
       </text>
@@ -582,6 +601,14 @@ const BubbleView = ({
           </g>
         );
       })}
+      {/* Legend */}
+      <circle cx={212} cy={legendY + 5} r={6} fill="#22c55e" opacity="0.9" />
+      <text x={221} y={legendY + 9} fill="#94a3b8" fontSize="9">{locale === "zh" ? "疾病富集" : "Disease-enriched"}</text>
+      <circle cx={330} cy={legendY + 5} r={6} fill="#3b82f6" opacity="0.9" />
+      <text x={339} y={legendY + 9} fill="#94a3b8" fontSize="9">{locale === "zh" ? "对照富集" : "Control-enriched"}</text>
+      <circle cx={448} cy={legendY + 5} r={6} fill="#94a3b8" opacity="0.9" />
+      <text x={457} y={legendY + 9} fill="#94a3b8" fontSize="9">{locale === "zh" ? "方向不一致" : "Inconsistent"}</text>
+      <text x={534} y={legendY + 9} fill="#64748b" fontSize="9">{locale === "zh" ? "气泡大小 = 总样本量" : "Bubble size = total sample size"}</text>
     </svg>
   );
 };
