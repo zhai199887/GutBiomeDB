@@ -292,6 +292,13 @@ const LifecyclePage = () => {
       .filter((item) => item.significant)
       .sort((a, b) => a.adjusted_p - b.adjusted_p);
 
+    const spearmanMap: Record<string, LifecycleSpearman> = {};
+    if (payload.spearman_results) {
+      for (const sp of payload.spearman_results) {
+        spearmanMap[sp.genus] = sp;
+      }
+    }
+
     return (
       <div className={classes.chartCard}>
         <div className={classes.cardHeader}>
@@ -307,20 +314,24 @@ const LifecyclePage = () => {
           </div>
         ) : (
           <div className={classes.sigChips}>
-            {rows.map((row) => (
-              <button
-                key={row.genus}
-                type="button"
-                className={classes.sigChip}
-                onClick={() => setIsolatedGenus((prev) => (prev === row.genus ? null : row.genus))}
-                title={`H=${row.kruskal_h.toFixed(2)}, adj.p=${fmtP(row.adjusted_p)}${row.eta_squared != null ? `, η²=${row.eta_squared.toFixed(3)}` : ""}`}
-              >
-                <span className={classes.sigChipName}>{row.genus}</span>
-                <span className={classes.sigChipMeta}>
-                  H={row.kruskal_h.toFixed(1)}, adj.p={fmtP(row.adjusted_p)}{row.eta_squared != null ? `, η²=${row.eta_squared.toFixed(3)}` : ""}
-                </span>
-              </button>
-            ))}
+            {rows.map((row) => {
+              const sp = spearmanMap[row.genus];
+              const rhoStr = sp ? `, ρ=${sp.rho > 0 ? "+" : ""}${sp.rho.toFixed(2)}` : "";
+              return (
+                <button
+                  key={row.genus}
+                  type="button"
+                  className={classes.sigChip}
+                  onClick={() => setIsolatedGenus((prev) => (prev === row.genus ? null : row.genus))}
+                  title={`H=${row.kruskal_h.toFixed(2)}, adj.p=${fmtP(row.adjusted_p)}${row.eta_squared != null ? `, η²=${row.eta_squared.toFixed(3)}` : ""}${rhoStr}`}
+                >
+                  <span className={classes.sigChipName}>{row.genus}</span>
+                  <span className={classes.sigChipMeta}>
+                    H={row.kruskal_h.toFixed(1)}, η²={row.eta_squared != null ? row.eta_squared.toFixed(3) : "–"}{rhoStr}, p={fmtP(row.adjusted_p)}
+                  </span>
+                </button>
+              );
+            })}
           </div>
         )}
       </div>
@@ -417,7 +428,7 @@ const LifecyclePage = () => {
               <div className={classes.summaryCard}>
                 <span className={classes.summaryLabel}>PERMANOVA R²</span>
                 <strong>{legendData.permanova.r_squared.toFixed(3)}</strong>
-                <span className={classes.summarySubtext}>P = {legendData.permanova.p_value <= 0.001 ? "< 0.001" : legendData.permanova.p_value.toFixed(3)}</span>
+                <span className={classes.summarySubtext}>P{legendData.permanova.p_value <= 0.001 ? " < 0.001" : ` = ${legendData.permanova.p_value.toFixed(3)}`}, n={legendData.permanova.n_samples_used.toLocaleString()}</span>
               </div>
             ) : (
               <div className={classes.summaryCard}>
@@ -425,6 +436,16 @@ const LifecyclePage = () => {
                 <strong>{viewMode === "compare" ? t("lifecycle.modeCompare") : t("lifecycle.modeNormal")}</strong>
               </div>
             )}
+            {legendData.alpha_diversity_stats ? (() => {
+              const a = legendData.alpha_diversity_stats!;
+              return (
+                <div className={classes.summaryCard}>
+                  <span className={classes.summaryLabel}>{locale === "zh" ? "Shannon 年龄趋势" : "Shannon age trend"}</span>
+                  <strong>ρ = {a.shannon_spearman_rho > 0 ? "+" : ""}{a.shannon_spearman_rho.toFixed(3)}</strong>
+                  <span className={classes.summarySubtext}>η²={a.shannon_eta_squared.toFixed(3)}, P{a.shannon_spearman_p < 0.001 ? " < 0.001" : ` = ${a.shannon_spearman_p.toFixed(3)}`}</span>
+                </div>
+              );
+            })() : null}
           </div>
 
           {viewMode === "area" && data ? (
@@ -454,6 +475,19 @@ const LifecyclePage = () => {
                   <div>
                     <h3>{t("lifecycle.alphaDiversity")}</h3>
                     <p>{locale === "zh" ? "按年龄段展示 Shannon / Simpson 均值与标准差。" : "Age-group mean diversity with one-standard-deviation error bars."}</p>
+                    {data?.alpha_diversity_stats ? (() => {
+                      const a = data.alpha_diversity_stats!;
+                      const isSh = diversityMetric === "shannon";
+                      const h = isSh ? a.shannon_kw_h : a.simpson_kw_h;
+                      const eta = isSh ? a.shannon_eta_squared : a.simpson_eta_squared;
+                      const rho = isSh ? a.shannon_spearman_rho : a.simpson_spearman_rho;
+                      const sp = isSh ? a.shannon_spearman_p : a.simpson_spearman_p;
+                      return (
+                        <p style={{ fontSize: "0.78rem", color: "#93c5fd", marginTop: "0.3rem" }}>
+                          Kruskal–Wallis H={h.toFixed(1)}, η²={eta.toFixed(3)} · Spearman ρ={rho > 0 ? "+" : ""}{rho.toFixed(3)}, P{sp < 0.001 ? " < 0.001" : ` = ${sp.toFixed(3)}`}
+                        </p>
+                      );
+                    })() : null}
                   </div>
                   <div className={classes.metricToggle}>
                     <button
