@@ -4023,7 +4023,7 @@ def _lifecycle_internal(
 ) -> dict:
     """Compute lifecycle atlas data with optional fixed genera for compare mode."""
     fixed_part = ",".join(fixed_genera or [])
-    cache_key = f"lifecycle:v7:{disease}:{country}:{top_genera}:{fixed_part}"
+    cache_key = f"lifecycle:v8:{disease}:{country}:{top_genera}:{fixed_part}"
     if use_cache:
         cached = get_cached(cache_key)
         if cached:
@@ -4195,33 +4195,25 @@ def _lifecycle_internal(
             df_w = n_perm - k_perm
             f_obs = (ss_between / df_a) / (ss_within / df_w) if ss_within > 0 and df_w > 0 else 0.0
             r_sq = ss_between / ss_total
-            # Permutation test (vectorized inner loop)
+            # Permutation test — fully vectorized via matrix multiply
             n_permutations = 999
-            # Pre-encode group labels as integer array for fast indexing
-            unique_groups = list(age_groups_present)
-            group_sizes = np.array([int((labels_arr == ag).sum()) for ag in unique_groups])
             label_ints = np.zeros(n_perm, dtype=np.int32)
-            for gi, ag in enumerate(unique_groups):
+            for gi, ag in enumerate(age_groups_present):
                 label_ints[labels_arr == ag] = gi
-
-            def _ss_within_fast(lab_ints: np.ndarray) -> float:
-                sw = 0.0
-                for gi in range(len(unique_groups)):
-                    idx = np.where(lab_ints == gi)[0]
-                    ni = len(idx)
-                    if ni < 2:
-                        continue
-                    sw += float(D2[np.ix_(idx, idx)].sum()) / (2.0 * ni)
-                return sw
-
-            f_count = 0
-            for _ in range(n_permutations):
-                perm_ints = rng.permutation(label_ints)
-                ss_w_perm = _ss_within_fast(perm_ints)
-                ss_b_perm = ss_total - ss_w_perm
-                f_perm = (ss_b_perm / df_a) / (ss_w_perm / df_w) if ss_w_perm > 0 else 0.0
-                if f_perm >= f_obs:
-                    f_count += 1
+            # Generate all permuted label vectors at once: (n_samples, n_perms)
+            all_perms = np.column_stack([rng.permutation(label_ints) for _ in range(n_permutations)])
+            # Compute SS_within for all permutations using V^T D2 V trick
+            ss_w_all = np.zeros(n_permutations)
+            for gi in range(k_perm):
+                V = (all_perms == gi).astype(np.float64)      # (n_samples, n_perms)
+                n_g_all = V.sum(axis=0)                        # group size per perm
+                DV = D2 @ V                                    # (n_samples, n_perms) — BLAS matmul
+                within_sum = (V * DV).sum(axis=0)              # sum_{i,j in g} D2[i,j]
+                valid = n_g_all >= 2
+                ss_w_all[valid] += within_sum[valid] / (2.0 * n_g_all[valid])
+            ss_b_all = ss_total - ss_w_all
+            f_all = np.where(ss_w_all > 0, (ss_b_all / df_a) / (ss_w_all / df_w), 0.0)
+            f_count = int(np.sum(f_all >= f_obs))
             p_perm = (f_count + 1) / (n_permutations + 1)
             permanova_result = {
                 "r_squared": round(r_sq, 4),
