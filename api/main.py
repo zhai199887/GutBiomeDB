@@ -4023,7 +4023,7 @@ def _lifecycle_internal(
 ) -> dict:
     """Compute lifecycle atlas data with optional fixed genera for compare mode."""
     fixed_part = ",".join(fixed_genera or [])
-    cache_key = f"lifecycle:v5:{disease}:{country}:{top_genera}:{fixed_part}"
+    cache_key = f"lifecycle:v6:{disease}:{country}:{top_genera}:{fixed_part}"
     if use_cache:
         cached = get_cached(cache_key)
         if cached:
@@ -4149,11 +4149,12 @@ def _lifecycle_internal(
         spearman_results = sp_rows
 
     # ── PERMANOVA (Bray-Curtis, subsampled, 999 permutations) ──
+    # Uses top N genera only + row-normalization, matching gen_fig1f_lifecycle.py
     permanova_result: dict = {}
     if len(age_groups_present) >= 3 and known_age_count >= 30:
         try:
             max_per_group = 500
-            rng = np.random.RandomState(42)
+            rng = np.random.default_rng(42)
             sub_indices: list[int] = []
             sub_labels: list[str] = []
             for ag in age_groups_present:
@@ -4161,28 +4162,39 @@ def _lifecycle_internal(
                 if len(ag_idx) > max_per_group:
                     chosen = rng.choice(ag_idx, max_per_group, replace=False)
                 else:
-                    chosen = ag_idx
+                    chosen = np.asarray(ag_idx)
                 sub_indices.extend(chosen.tolist())
                 sub_labels.extend([ag] * len(chosen))
-            sub_matrix = genus_rel[sub_indices]
+            # Use only top genera columns (matching the figure script)
+            top_col_indices = [genus_to_col[g] for g in top_genus_names if g in genus_to_col]
+            sub_matrix = genus_rel[sub_indices][:, top_col_indices].astype(np.float64)
+            # Row-normalize to sum=1 before Bray-Curtis (matching script)
+            row_sums = sub_matrix.sum(axis=1, keepdims=True)
+            row_sums[row_sums == 0] = 1.0
+            sub_matrix = sub_matrix / row_sums
             dist_mat = cdist(sub_matrix, sub_matrix, metric="braycurtis")
+            dist_mat = np.nan_to_num(dist_mat, nan=0.0, posinf=1.0, neginf=0.0)
+            np.fill_diagonal(dist_mat, 0.0)
             n_perm = len(sub_indices)
             k_perm = len(age_groups_present)
-            labels_arr = np.array(sub_labels)
-            # SS_total
-            grand_mean_dist = dist_mat.mean()
-            ss_total = 0.5 * np.sum(dist_mat ** 2) / n_perm
-            # SS_within
+            labels_arr = np.array(sub_labels, dtype=object)
+            D2 = dist_mat ** 2
+            ss_total = float(np.sum(D2)) / (2.0 * n_perm)
+            if ss_total <= 0.0 or np.isnan(ss_total):
+                raise ValueError("SS_total is zero or NaN")
             ss_within = 0.0
             for ag in age_groups_present:
                 mask_ag = labels_arr == ag
-                if mask_ag.sum() < 2:
+                n_g = mask_ag.sum()
+                if n_g < 2:
                     continue
-                sub_dist = dist_mat[np.ix_(mask_ag, mask_ag)]
-                ss_within += 0.5 * np.sum(sub_dist ** 2) / mask_ag.sum()
+                sub_D2 = D2[np.ix_(mask_ag, mask_ag)]
+                ss_within += float(np.sum(sub_D2)) / (2.0 * n_g)
             ss_between = ss_total - ss_within
-            f_obs = (ss_between / (k_perm - 1)) / (ss_within / (n_perm - k_perm)) if ss_within > 0 else 0.0
-            r_sq = ss_between / ss_total if ss_total > 0 else 0.0
+            df_a = k_perm - 1
+            df_w = n_perm - k_perm
+            f_obs = (ss_between / df_a) / (ss_within / df_w) if ss_within > 0 and df_w > 0 else 0.0
+            r_sq = ss_between / ss_total
             # Permutation test
             n_permutations = 999
             f_count = 0
@@ -4191,11 +4203,12 @@ def _lifecycle_internal(
                 ss_w_perm = 0.0
                 for ag in age_groups_present:
                     m = perm_labels == ag
-                    if m.sum() < 2:
+                    n_g = m.sum()
+                    if n_g < 2:
                         continue
-                    ss_w_perm += 0.5 * np.sum(dist_mat[np.ix_(m, m)] ** 2) / m.sum()
+                    ss_w_perm += float(np.sum(D2[np.ix_(m, m)])) / (2.0 * n_g)
                 ss_b_perm = ss_total - ss_w_perm
-                f_perm = (ss_b_perm / (k_perm - 1)) / (ss_w_perm / (n_perm - k_perm)) if ss_w_perm > 0 else 0.0
+                f_perm = (ss_b_perm / df_a) / (ss_w_perm / df_w) if ss_w_perm > 0 else 0.0
                 if f_perm >= f_obs:
                     f_count += 1
             p_perm = (f_count + 1) / (n_permutations + 1)
@@ -4206,8 +4219,8 @@ def _lifecycle_internal(
                 "n_permutations": n_permutations,
                 "n_samples_used": n_perm,
                 "n_groups": k_perm,
-                "df_between": k_perm - 1,
-                "df_within": n_perm - k_perm,
+                "df_between": df_a,
+                "df_within": df_w,
             }
         except Exception:
             permanova_result = {}
