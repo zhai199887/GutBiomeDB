@@ -88,7 +88,7 @@ A comprehensive analysis platform for the human gut microbiome, integrating **16
 - **Disease Biomarker Discovery**: Wilcoxon + BH FDR correction + LDA effect size estimation
 - **Co-occurrence Network**: Spearman correlation-based microbial interaction networks
 - **Sample Similarity Search**: Bray-Curtis / Jaccard distance-based sample matching
-- **Lifecycle Atlas**: Age-stratified microbiome composition across 8 life stages
+- **Lifecycle Atlas**: Age-stratified microbiome composition across 7 named life stages (Infant to Centenarian) plus Unknown
 - **Data Export**: CSV/JSON/TSV download for all analysis results
 
 ## Citation
@@ -4130,7 +4130,7 @@ def _lifecycle_internal(
 
 @app.get("/api/lifecycle",
          summary="Lifecycle microbiome atlas",
-         description="Genus-level composition across 8 life stages from Infant to Centenarian.")
+         description="Genus-level composition across 7 named life stages (Infant to Centenarian) plus Unknown.")
 @limiter.limit("60/minute")
 def lifecycle_atlas(
     request: Request,
@@ -4139,8 +4139,8 @@ def lifecycle_atlas(
     top_genera: int = 15,
 ):
     """
-    Return genus composition across 8 life stages.
-    返回 8 个生命阶段的属级组成
+    Return genus composition across 7 named life stages (Infant–Centenarian) plus Unknown.
+    返回 7 个命名生命阶段（婴儿–百岁老人）加 Unknown 的属级组成
     """
     return _lifecycle_internal(disease=disease, country=country, top_genera=top_genera, use_cache=True)
 
