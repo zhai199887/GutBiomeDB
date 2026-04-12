@@ -4023,7 +4023,7 @@ def _lifecycle_internal(
 ) -> dict:
     """Compute lifecycle atlas data with optional fixed genera for compare mode."""
     fixed_part = ",".join(fixed_genera or [])
-    cache_key = f"lifecycle:v8:{disease}:{country}:{top_genera}:{fixed_part}"
+    cache_key = f"lifecycle:v9:{disease}:{country}:{top_genera}:{fixed_part}"
     if use_cache:
         cached = get_cached(cache_key)
         if cached:
@@ -4195,25 +4195,29 @@ def _lifecycle_internal(
             df_w = n_perm - k_perm
             f_obs = (ss_between / df_a) / (ss_within / df_w) if ss_within > 0 and df_w > 0 else 0.0
             r_sq = ss_between / ss_total
-            # Permutation test — fully vectorized via matrix multiply
+            # Permutation test — batched matrix multiply (memory-safe)
             n_permutations = 999
+            batch_size = 100
             label_ints = np.zeros(n_perm, dtype=np.int32)
             for gi, ag in enumerate(age_groups_present):
                 label_ints[labels_arr == ag] = gi
-            # Generate all permuted label vectors at once: (n_samples, n_perms)
-            all_perms = np.column_stack([rng.permutation(label_ints) for _ in range(n_permutations)])
-            # Compute SS_within for all permutations using V^T D2 V trick
-            ss_w_all = np.zeros(n_permutations)
-            for gi in range(k_perm):
-                V = (all_perms == gi).astype(np.float64)      # (n_samples, n_perms)
-                n_g_all = V.sum(axis=0)                        # group size per perm
-                DV = D2 @ V                                    # (n_samples, n_perms) — BLAS matmul
-                within_sum = (V * DV).sum(axis=0)              # sum_{i,j in g} D2[i,j]
-                valid = n_g_all >= 2
-                ss_w_all[valid] += within_sum[valid] / (2.0 * n_g_all[valid])
-            ss_b_all = ss_total - ss_w_all
-            f_all = np.where(ss_w_all > 0, (ss_b_all / df_a) / (ss_w_all / df_w), 0.0)
-            f_count = int(np.sum(f_all >= f_obs))
+            f_count = 0
+            perms_done = 0
+            while perms_done < n_permutations:
+                bs = min(batch_size, n_permutations - perms_done)
+                batch_perms = np.column_stack([rng.permutation(label_ints) for _ in range(bs)])
+                ss_w_batch = np.zeros(bs)
+                for gi in range(k_perm):
+                    V = (batch_perms == gi).astype(np.float64)
+                    n_g_b = V.sum(axis=0)
+                    DV = D2 @ V
+                    ws = (V * DV).sum(axis=0)
+                    valid = n_g_b >= 2
+                    ss_w_batch[valid] += ws[valid] / (2.0 * n_g_b[valid])
+                ss_b_batch = ss_total - ss_w_batch
+                f_batch = np.where(ss_w_batch > 0, (ss_b_batch / df_a) / (ss_w_batch / df_w), 0.0)
+                f_count += int(np.sum(f_batch >= f_obs))
+                perms_done += bs
             p_perm = (f_count + 1) / (n_permutations + 1)
             permanova_result = {
                 "r_squared": round(r_sq, 4),
