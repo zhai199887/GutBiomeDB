@@ -5074,6 +5074,13 @@ def _compute_health_disease_genera() -> dict:
     for r in pooled_results:
         if r["adjusted_p"] >= 0.05 or abs(r["log2fc"]) < 0.5:
             continue
+        # Gupta 2020 prevalence/abundance floor: drop genera that are too rare
+        # to be biologically meaningful (environmental/extremophile taxa).
+        # Gupta used mean rel. abund. ≥ 0.01 % in either group; we tighten to
+        # ≥ 0.1 % (1e-3 fraction) so the marker set is dominated by real gut
+        # commensals (Faecalibacterium, Bacteroides, Roseburia, …).
+        if max(r["mean_nc"], r["mean_disease"]) < 1e-3:
+            continue
         re_row = re_lookup.get(r["genus"])
         # Replication of Gupta 2020: STRICTLY require random-effects meta-analysis
         # evidence with pooled |Hedges' g| ≥ 0.2 (Cohen "small" threshold).
