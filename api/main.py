@@ -4991,7 +4991,7 @@ def _compute_health_disease_genera() -> dict:
     health_genera = []
     disease_genera = []
     for row in all_results:
-        if row["adjusted_p"] >= 0.05 or abs(row["hedges_g"]) < 0.2:
+        if row["adjusted_p"] >= 0.05 or row["k_studies"] < 5 or abs(row["hedges_g"]) < 0.05:
             continue
         genus = row["genus"]
         m_nc = mean_nc_map.get(genus, 0.0)
