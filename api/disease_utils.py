@@ -32,7 +32,7 @@ INVALID_GENERA = {
 INFORM_COLS = [f"inform{i}" for i in range(12)]
 HEALTHY_CONTROL_ALIASES = {"nc", "healthy control", "helminth uninfected control"}
 CONTROL_GROUP_REMAP_LABELS = {
-    "No_Fecal occult blood positive,without severe underlying bowel disease",
+    "Fecal occult blood positive;without severe underlying bowel disease",
 }
 CONTROL_GROUP_REMAP_LABELS_LOWER = {label.lower() for label in CONTROL_GROUP_REMAP_LABELS}
 EXCLUDED_DISEASE_ALIASES = {"dss colitis"}
