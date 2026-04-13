@@ -2,19 +2,21 @@
   "total_samples": 168464,
   "total_projects": 482,
   "total_genera": 4680,
-  "total_unique_diseases": 223,
-  "total_non_nc_condition_labels": 223,
-  "total_condition_categories": 224,
+  "total_unique_diseases": 224,
+  "total_non_nc_condition_labels": 224,
+  "total_condition_categories": 225,
   "total_unique_countries": 72,
   "age_counts": {
     "Adult": 66303,
     "Unknown": 37965,
-    "Infant": 36518,
+    "Infant": 36083,
     "Child": 15841,
     "Older_Adult": 7739,
     "Adolescent": 2070,
     "Oldest_Old": 1616,
-    "Centenarian": 412
+    "Centenarian": 412,
+    "NC": 230,
+    "Necrotizing enterocolitis": 205
   },
   "sex_counts": {
     "unknown": 93826,
@@ -27,8 +29,8 @@
     "chickenpox": 3651,
     "UC": 3051,
     "obesity": 2623,
-    "c_difficile_infection": 2580,
-    "CD": 2371,
+    "c_difficile_infection": 2574,
+    "CD": 2173,
     "colorectal_cancer": 1719,
     "HIV": 1659,
     "Non-CDI diarrhea control": 1516,
@@ -233,7 +235,17 @@
     {
       "age_group": "Infant",
       "sex": "unknown",
-      "count": 21637
+      "count": 21202
+    },
+    {
+      "age_group": "NC",
+      "sex": "unknown",
+      "count": 230
+    },
+    {
+      "age_group": "Necrotizing enterocolitis",
+      "sex": "unknown",
+      "count": 205
     },
     {
       "age_group": "Older_Adult",
@@ -440,7 +452,7 @@
     {
       "age_group": "Child",
       "disease": "CD",
-      "count": 537
+      "count": 369
     },
     {
       "age_group": "Child",
@@ -486,11 +498,6 @@
       "age_group": "Child",
       "disease": "skin_condition",
       "count": 21
-    },
-    {
-      "age_group": "Infant",
-      "disease": "CD",
-      "count": 30
     },
     {
       "age_group": "Infant",
@@ -695,7 +702,7 @@
     {
       "age_group": "Unknown",
       "disease": "c_difficile_infection",
-      "count": 834
+      "count": 828
     },
     {
       "age_group": "Unknown",
@@ -802,7 +809,7 @@
       "top_diseases": {
         "IBS": 265,
         "metabolic syndrome with severe obesity": 260,
-        "Fecal occult blood positive,without severe underlying bowel disease": 235
+        "Fecal occult blood positive;without severe underlying bowel disease": 235
       }
     },
     "BD": {
@@ -1049,7 +1056,7 @@
         "Adult": 145
       },
       "top_diseases": {
-        "CD": 198,
+        "celiac": 198,
         "HIV": 122,
         "chickenpox": 11
       }
@@ -1176,7 +1183,7 @@
       "top_diseases": {
         "c_difficile_infection": 200,
         "Narcolepsy": 35,
-        "Antibiotic-associated diarrhea": 22
+        "Antibiotic-associated diarrhea": 17
       }
     },
     "IL": {
@@ -1403,8 +1410,8 @@
       },
       "top_ages": {},
       "top_diseases": {
-        "c_difficile_infection": 12,
-        "Antibiotic-associated diarrhea": 11
+        "Antibiotic-associated diarrhea": 9,
+        "c_difficile_infection": 9
       }
     },
     "MZ": {
@@ -1500,8 +1507,8 @@
       },
       "top_diseases": {
         "NAFLD": 62,
-        "Antibiotic-associated diarrhea": 20,
-        "c_difficile_infection": 3
+        "Antibiotic-associated diarrhea": 17,
+        "c_difficile_infection": 2
       }
     },
     "KE": {
@@ -1747,17 +1754,17 @@
     "Very low birth weight preterm infants": 66
   },
   "healthy_control_counts": {
-    "NC": 78691
+    "NC": 82106
   },
   "disease_label_types": {
     "inform0": {
       "healthy_control": {
         "labels": 1,
-        "samples": 78426
+        "samples": 82106
       },
       "disease": {
-        "labels": 206,
-        "samples": 65304
+        "labels": 207,
+        "samples": 65275
       },
       "special_population": {
         "labels": 4,
@@ -1767,11 +1774,11 @@
     "inform0_11": {
       "healthy_control": {
         "labels": 1,
-        "samples": 78691
+        "samples": 82106
       },
       "disease": {
-        "labels": 219,
-        "samples": 73512
+        "labels": 220,
+        "samples": 73483
       },
       "special_population": {
         "labels": 4,
