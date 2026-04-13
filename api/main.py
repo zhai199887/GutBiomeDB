@@ -5163,6 +5163,18 @@ def _compute_health_disease_genera() -> dict:
             cols.append(v)
         return np.column_stack(cols) if cols else np.zeros((mat_nc_p.shape[0], 0))
 
+    def _marker_matrix_pct_dis(genera_list):
+        """Same but on disease pool."""
+        cols = []
+        for g in genera_list:
+            cidx = genus_to_cols.get(g["genus"], [])
+            if not cidx:
+                cols.append(np.zeros(mat_dis_p.shape[0]))
+                continue
+            v = mat_dis_p[:, cidx].sum(axis=1) if len(cidx) > 1 else mat_dis_p[:, cidx[0]]
+            cols.append(v)
+        return np.column_stack(cols) if cols else np.zeros((mat_dis_p.shape[0], 0))
+
     h_mat = _marker_matrix_pct(health_genera)
     d_mat = _marker_matrix_pct(disease_genera)
     if h_mat.shape[1] > 0:
@@ -5177,6 +5189,14 @@ def _compute_health_disease_genera() -> dict:
         R_MN_prime = 1.0
     R_MH_prime = max(R_MH_prime, 1.0)
     R_MN_prime = max(R_MN_prime, 1.0)
+
+    # Expose marker matrices for downstream paper-figure scripts (not used by API)
+    globals()["_LAST_MARKER_MATRICES"] = {
+        "h_mat_nc": h_mat,
+        "d_mat_nc": d_mat,
+        "h_mat_dis": _marker_matrix_pct_dis(health_genera) if health_genera else np.zeros((mat_dis_p.shape[0], 0)),
+        "d_mat_dis": _marker_matrix_pct_dis(disease_genera) if disease_genera else np.zeros((mat_dis_p.shape[0], 0)),
+    }
 
     return {
         "health_genera": health_genera,
