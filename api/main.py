@@ -4874,8 +4874,6 @@ def _compute_health_disease_genera() -> dict:
         tot_dis = raw_dis.sum(axis=1, keepdims=True); tot_dis[tot_dis == 0] = 1
         mat_nc = raw_nc / tot_nc * 100
         mat_dis = raw_dis / tot_dis * 100
-        log_nc = np.log(mat_nc + pseudo)
-        log_dis = np.log(mat_dis + pseudo)
         n1, n2 = len(nc_keys), len(dis_keys)
         nc_pool_keys.extend(nc_keys)
 
@@ -4883,8 +4881,8 @@ def _compute_health_disease_genera() -> dict:
             cidx = genus_to_cols[genus]
             if not cidx:
                 continue
-            v_nc = log_nc[:, cidx].sum(axis=1) if len(cidx) > 1 else log_nc[:, cidx[0]]
-            v_dis = log_dis[:, cidx].sum(axis=1) if len(cidx) > 1 else log_dis[:, cidx[0]]
+            v_nc = mat_nc[:, cidx].sum(axis=1) if len(cidx) > 1 else mat_nc[:, cidx[0]]
+            v_dis = mat_dis[:, cidx].sum(axis=1) if len(cidx) > 1 else mat_dis[:, cidx[0]]
             m1, m2 = float(v_nc.mean()), float(v_dis.mean())
             s1, s2 = float(v_nc.std(ddof=1)), float(v_dis.std(ddof=1))
             if s1 + s2 < 1e-9:
