@@ -5104,8 +5104,11 @@ def _compute_health_disease_genera() -> dict:
     for r in pooled_results:
         if r["adjusted_p"] >= 0.05 or abs(r["log2fc"]) < 0.5:
             continue
-        # Gupta-inspired minimum mean abundance floor (0.01 % in either pool)
-        if max(r["mean_nc"], r["mean_disease"]) < 1e-2:
+        # Require biologically meaningful abundance + prevalence (drops rare/environmental taxa)
+        if max(r["mean_nc"], r["mean_disease"]) < 5e-2:
+            continue
+        _ph_tmp, _pnh_tmp = prevalence_map.get(r["genus"], (0.0, 0.0))
+        if max(_ph_tmp, _pnh_tmp) < 20.0:
             continue
         re_row = re_lookup_weights.get(r["genus"])
         hg = float(re_row["hedges_g"]) if re_row is not None else None
