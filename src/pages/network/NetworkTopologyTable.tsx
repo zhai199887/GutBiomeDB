@@ -23,7 +23,7 @@ const NetworkTopologyTable = ({ nodes }: { nodes: CoNode[] }) => {
     <div className={styles.tableCard}>
       <div className={styles.tableHead}>
         <div>
-          <h3 className={styles.cardTitle}>{locale === "zh" ? "枢纽分类群 Top 10" : "Top 10 hub taxa"}</h3>
+          <h3 className={styles.cardTitle}>{locale === "zh" ? "枢纽属 Top 10" : "Top 10 hub genera"}</h3>
           <p className={styles.cardSubtle}>
             {locale === "zh" ? "按度和介数中心性排序" : "Ranked by degree then betweenness"}
           </p>

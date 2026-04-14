@@ -23,6 +23,10 @@ const DiffBarChart = ({ result }: { result: DiffResult }) => {
       .slice(0, 30)
       .sort((a, b) => a.log2fc - b.log2fc);
 
+    const lvl = (result.summary?.taxonomy_level || "genus").toLowerCase();
+    const unitEn = lvl === "phylum" ? "phyla" : lvl === "family" ? "families" : "genera";
+    const unitZh = lvl === "phylum" ? "差异门" : lvl === "family" ? "差异科" : "差异属";
+
     if (!data.length) {
       svg.attr("viewBox", "0 0 720 120");
       svg.append("text")
@@ -30,7 +34,7 @@ const DiffBarChart = ({ result }: { result: DiffResult }) => {
         .attr("y", 60)
         .attr("fill", "currentColor")
         .attr("font-size", 14)
-        .text(locale === "zh" ? "没有可展示的差异分类单元" : "No taxa available for display");
+        .text(locale === "zh" ? `没有可展示的${unitZh}` : `No ${unitEn} available for display`);
       return;
     }
 
@@ -106,7 +110,7 @@ const DiffBarChart = ({ result }: { result: DiffResult }) => {
       .attr("text-anchor", "middle")
       .attr("fill", "var(--light-gray)")
       .attr("font-size", 12)
-      .text(locale === "zh" ? "Top 30 差异分类单元，按门着色" : "Top 30 differential taxa, colored by phylum");
+      .text(locale === "zh" ? `Top 30 ${unitZh}，按门着色` : `Top 30 differential ${unitEn}, colored by phylum`);
 
     const legend = Array.from(new Set(data.map((d) => d.phylum))).slice(0, 6);
     legend.forEach((phylum, index) => {

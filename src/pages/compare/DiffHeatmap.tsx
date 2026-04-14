@@ -21,6 +21,9 @@ const zScore = (values: number[]) => {
 const DiffHeatmap = ({ result }: { result: DiffResult }) => {
   const { locale } = useI18n();
   const top = result.diff_taxa.slice(0, 24);
+  const lvl = (result.summary?.taxonomy_level || "genus").toLowerCase();
+  const unitEn = lvl === "phylum" ? "phyla" : lvl === "family" ? "families" : "genera";
+  const unitZh = lvl === "phylum" ? "差异门" : lvl === "family" ? "差异科" : "差异属";
 
   const matrix = useMemo(() => {
     const meanA = zScore(top.map((row) => row.mean_a));
@@ -59,7 +62,7 @@ const DiffHeatmap = ({ result }: { result: DiffResult }) => {
         {locale === "zh" ? "差异热图" : "Differential Heatmap"}
       </text>
       <text x={width / 2} y={44} textAnchor="middle" fill="var(--light-gray)" fontSize="11">
-        {locale === "zh" ? "对 Top 24 差异分类单元做列内标准化" : "Column-wise standardized values for the top 24 differential taxa"}
+        {locale === "zh" ? `对 Top 24 ${unitZh}做列内标准化` : `Column-wise standardized values for the top 24 differential ${unitEn}`}
       </text>
       <text x={760} y={28} fill="var(--light-gray)" fontSize="10">
         {locale === "zh" ? "标准化值" : "Standardized value"}
