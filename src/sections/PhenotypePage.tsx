@@ -259,8 +259,8 @@ const PhenotypePage = () => {
           </div>
           <div style={{ fontSize: "0.8rem", opacity: 0.7 }}>
             {locale === "zh"
-              ? "支持性别、年龄、疾病维度；Mann-Whitney U + BH-FDR；返回全部显著分类群"
-              : "Supports sex, age, disease dimensions · Mann-Whitney U + BH-FDR · Returns all significant taxa"}
+              ? "支持性别、年龄、疾病维度；Mann-Whitney U + BH-FDR；返回全部显著属"
+              : "Supports sex, age, disease dimensions · Mann-Whitney U + BH-FDR · Returns all significant genera"}
           </div>
         </div>
       )}

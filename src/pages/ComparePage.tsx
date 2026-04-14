@@ -154,7 +154,7 @@ const ComparePage = () => {
     if (!result) return;
     exportTable(
       result.diff_taxa.map((taxon) => ({
-        Taxon: taxon.taxon,
+        Genus: taxon.taxon,
         Phylum: taxon.phylum,
         Mean_A_Percent: taxon.mean_a,
         Mean_B_Percent: taxon.mean_b,

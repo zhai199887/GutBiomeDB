@@ -80,7 +80,7 @@ const BiomarkerPanel = ({ disease }: Props) => {
     if (filteredMarkers.length === 0) return;
     exportTable(
       filteredMarkers.map((marker) => ({
-        Taxon: marker.taxon,
+        Genus: marker.taxon,
         Phylum: marker.phylum,
         Log2FC: marker.log2fc,
         LDA: marker.lda_score,

@@ -158,7 +158,7 @@ const CrossStudyPanel = ({ taxonomyLevel }: { taxonomyLevel: TaxonomyLevel }) =>
     if (!result) return;
     exportTable(
       result.consensus_markers.map((marker) => ({
-        Taxon: marker.taxon,
+        Genus: marker.taxon,
         Meta_log2FC: marker.meta_log2fc,
         Meta_SE: marker.meta_se,
         Meta_P: marker.meta_p,

@@ -114,7 +114,7 @@ const LollipopPanel = ({ disease }: Props) => {
       {error && <div className={classes.errorMsg}>{error}</div>}
 
       {!loading && !error && filteredData.length === 0 && (
-        <div className={classes.emptyPlot}>{locale === "zh" ? "当前过滤条件下没有结果" : "No taxa under current filters"}</div>
+        <div className={classes.emptyPlot}>{locale === "zh" ? "当前过滤条件下没有结果" : "No genera under current filters"}</div>
       )}
 
       {filteredData.length > 0 && (
