@@ -46,7 +46,15 @@ const TimelineChart = ({ timeline }: { timeline: ProjectTimelinePoint[] }) => {
         {sampleY.ticks(4).map((tick) => (
           <g key={`sample-${tick}`} transform={`translate(0,${sampleY(tick)})`}>
             <line x1={0} x2={innerWidth} stroke="#1f2937" strokeDasharray="3 4" />
-            <text x={-10} y={4} textAnchor="end" fill="#94a3b8" fontSize="10">
+            <text x={-10} y={4} textAnchor="end" fill="#22c55e" fontSize="10">
+              {tick.toLocaleString("en-US")}
+            </text>
+          </g>
+        ))}
+
+        {projectY.ticks(4).map((tick) => (
+          <g key={`proj-${tick}`} transform={`translate(${innerWidth},${projectY(tick)})`}>
+            <text x={10} y={4} textAnchor="start" fill="#60a5fa" fontSize="10">
               {tick.toLocaleString("en-US")}
             </text>
           </g>
