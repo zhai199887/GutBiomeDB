@@ -96,6 +96,12 @@ const Overview = () => {
             desc: t("feature.studies.desc"),
             color: "#33d17a",
           },
+          {
+            to: "/metabolism",
+            title: t("feature.metabolism.title"),
+            desc: t("feature.metabolism.desc"),
+            color: "#8d8cff",
+          },
         ],
       },
       {
@@ -112,12 +118,6 @@ const Overview = () => {
             title: t("feature.network.title"),
             desc: t("feature.network.desc"),
             color: "#43d6c5",
-          },
-          {
-            to: "/metabolism",
-            title: t("feature.metabolism.title"),
-            desc: t("feature.metabolism.desc"),
-            color: "#8d8cff",
           },
           {
             to: "/lifecycle",
