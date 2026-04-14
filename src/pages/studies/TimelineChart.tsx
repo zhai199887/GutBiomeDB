@@ -77,9 +77,12 @@ const TimelineChart = ({ timeline }: { timeline: ProjectTimelinePoint[] }) => {
           );
         })}
 
-        <text x={0} y={-2} fill="#22c55e" fontSize="11">
+        <rect x={0} y={-11} width={14} height={8} fill="rgba(34, 197, 94, 0.25)" stroke="#22c55e" strokeWidth={1.2} />
+        <text x={18} y={-2} fill="#22c55e" fontSize="11">
           {locale === "zh" ? "样本数" : "Samples"}
         </text>
+        <line x1={innerWidth - 70} x2={innerWidth - 56} y1={-7} y2={-7} stroke="#60a5fa" strokeWidth={2.2} />
+        <circle cx={innerWidth - 63} cy={-7} r={3} fill="#60a5fa" />
         <text x={innerWidth} y={-2} textAnchor="end" fill="#60a5fa" fontSize="11">
           {locale === "zh" ? "项目数" : "Projects"}
         </text>
