@@ -772,7 +772,7 @@ const zh: Record<keyof typeof en, string> = {
   // Header
   "header.title": "GutBiomeDB",
   "header.kicker": "证据驱动的肠道微生物工作台",
-  "header.subtitle": "An Integrated Human Gut Microbiome Database",
+  "header.subtitle": "整合型人类肠道微生物数据库",
   "header.quickAccess": "平台导航",
   "header.panelTitle": "选择一个工作空间",
   "header.panelCopy": "",
