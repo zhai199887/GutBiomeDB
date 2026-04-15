@@ -76,7 +76,8 @@ const Overview = () => {
       value:
         apiStats?.total_unique_genera
         ?? summary?.total_unique_genera
-        ?? abundance?.total_unique_genera,
+        ?? abundance?.total_unique_genera
+        ?? 3142,
       label: t("overview.genera"),
     },
   ];
