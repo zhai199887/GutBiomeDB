@@ -347,7 +347,6 @@ const MetabolismPage = () => {
                 <span className={classes.catName}>
                   {locale === "zh" ? category.name_zh : category.name_en}
                 </span>
-                {locale === "en" && <span className={classes.catZh}>{category.name_zh}</span>}
                 <span className={classes.catCount}>
                   {(category.genus_exact_names?.length ?? category.taxa.length)} {t("metabolism.genera")}
                 </span>
@@ -659,7 +658,6 @@ const CategoryDetail = ({
           <h2 className={classes.detailName}>
             {locale === "zh" ? category.name_zh : category.name_en}
           </h2>
-          {locale === "en" && <p className={classes.detailZh}>{category.name_zh}</p>}
         </div>
       </div>
 
