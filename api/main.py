@@ -5678,6 +5678,11 @@ def _load_gbhi_universal() -> tuple[dict, list[str], dict[str, int]]:
         _key = "genus_columns" if "genus_columns" in c else "genera"
         _GBHI_GENERA = [str(x) for x in c[_key]]
         _GBHI_GENUS_INDEX = {g.lower(): i for i, g in enumerate(_GBHI_GENERA)}
+        # Also add short genus name (last segment after last dot) for user input matching
+        for i, g in enumerate(_GBHI_GENERA):
+            short = g.rsplit(".", 1)[-1].lower()
+            if short and short not in _GBHI_GENUS_INDEX:
+                _GBHI_GENUS_INDEX[short] = i
         blob = _GBHI_UNIVERSAL_BLOB
         if blob.get("n_genus") != len(_GBHI_GENERA):
             logging.warning(
