@@ -1,7 +1,7 @@
-{
+﻿{
   "rewrites": [
-    { "source": "/api", "destination": "https://46a4140a.r20.vip.cpolar.cn/api" },
-    { "source": "/api/(.*)", "destination": "https://46a4140a.r20.vip.cpolar.cn/api/$1" },
+    { "source": "/api", "destination": "https://32c774a.r12.cpolar.top" },
+    { "source": "/api/(.*)", "destination": "https://32c774a.r12.cpolar.top" },
     { "source": "/((?!api(?:/|$)|data(?:/|$)|assets(?:/|$)|favicon\\.ico$).*)", "destination": "/index.html" }
   ],
   "headers": [
