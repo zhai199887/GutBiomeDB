@@ -242,8 +242,8 @@ def warmup_data():
         logging.info("Phenotype warmups completed (sequential)")
 
         # 疾病浏览器预热：串行执行，预热高频疾病的 profile + studies
-        _top_diseases = ["IBD", "CD", "UC", "obesity", "colorectal cancer",
-                         "T2D", "liver cirrhosis", "adenoma", "IBS"]
+        _top_diseases = ["IBD", "CD", "UC", "obesity", "colorectal_cancer",
+                         "Type 2 diabetes", "compensated cirrhosis", "adenoma", "IBS"]
         disease_warmups = []
         for _d in _top_diseases:
             disease_warmups.append(
