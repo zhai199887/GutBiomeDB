@@ -1,22 +1,22 @@
 # convert_rds_to_csv.R
-# Convert unfiltered.rds to CSV for Python API use
-# 将丰度矩阵RDS转换为CSV格式
-# Note: large file ~1GB, but no extra R packages needed
-# 注意：文件较大约1GB，但不需要额外R包
+# Convert the Abdill et al. (2025) abundance matrix from RDS to CSV format.
+# Usage: Rscript convert_rds_to_csv.R <input.rds> <output.csv>
+# Note: output file is ~1 GB; no additional R packages required.
 
-cat("Loading unfiltered.rds...\n")
-abund <- readRDS("D:/R代码/unfiltered.rds")
+args <- commandArgs(trailingOnly = TRUE)
+input_path  <- if (length(args) >= 1) args[1] else stop("Usage: Rscript convert_rds_to_csv.R <input.rds> <output.csv>")
+output_path <- if (length(args) >= 2) args[2] else sub("\\.rds$", ".csv", input_path)
+
+cat("Loading", input_path, "...\n")
+abund <- readRDS(input_path)
 cat(sprintf("Dimensions: %d x %d\n", nrow(abund), ncol(abund)))
 
-# Add sample_id from rownames
-# 从行名提取sample_id
+# Extract sample_id from row names
 sample_ids <- rownames(abund)
 
-output_path <- "D:/R代码/unfiltered_abundance.csv"
 cat(sprintf("Writing to %s (this may take a few minutes)...\n", output_path))
 
-# Write CSV with sample_id as first column
-# 写CSV，sample_id作为第一列
+# Write CSV with sample_id as the first column
 write.csv(abund, file = output_path, row.names = TRUE)
 
 cat("Done! File size: ")

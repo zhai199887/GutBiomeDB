@@ -109,7 +109,7 @@
   text-decoration: underline;
 }
 
-/* Quick genus picker / 常用菌属选择器 */
+/* Quick genus picker */
 .quickPicker {
   display: flex;
   align-items: center;
@@ -156,7 +156,7 @@
   font-size: 0.95rem;
 }
 
-/* Profile container / 画像容器 */
+/* Profile container */
 .profileContainer {
   margin-top: 1.5rem;
   width: 100%;
@@ -207,7 +207,7 @@
   letter-spacing: 0.05em;
 }
 
-/* Charts grid / 图表网格 */
+/* Charts grid */
 .chartsGrid {
   display: grid;
   grid-template-columns: 1fr;
@@ -235,7 +235,7 @@
   min-height: 440px;
 }
 
-/* Sex table / 性别分布表 */
+/* Sex distribution table */
 .sexTable {
   width: 100%;
   border-collapse: collapse;

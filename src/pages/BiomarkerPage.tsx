@@ -1,6 +1,6 @@
 /**
  * BiomarkerPage.tsx — Disease Biomarker Discovery
- * 疾病标志物发现：Wilcoxon + BH FDR + LDA + 森林图
+ * Wilcoxon + BH-FDR + LDA + forest plot
  */
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
@@ -182,7 +182,7 @@ const BiomarkerPage = () => {
 
 export default BiomarkerPage;
 
-// ── Forest Plot / 森林图 ──────────────────────────────────────────────────────
+// ── Forest Plot ──────────────────────────────────────────────────────────────
 
 function drawForestPlot(svgEl: SVGSVGElement, markers: Marker[]) {
   const svg = d3.select(svgEl);
@@ -253,7 +253,7 @@ function drawForestPlot(svgEl: SVGSVGElement, markers: Marker[]) {
     .text("Mean Difference (Disease − Control)");
 }
 
-// ── LDA Effect Size Bar Chart / LDA 效应值柱状图 ──────────────────────────────
+// ── LDA Effect Size Bar Chart ─────────────────────────────────────────────────
 
 function drawLDAChart(svgEl: SVGSVGElement, markers: Marker[]) {
   const svg = d3.select(svgEl);

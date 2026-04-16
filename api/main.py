@@ -1,6 +1,5 @@
 """
 main.py – GutBiomeDB FastAPI backend
-主后端：差异分析、筛选选项、数据统计 API
 """
 
 import logging
@@ -50,10 +49,10 @@ from disease_utils import (
     matched_disease_control,
 )
 
-# Configure logging / 配置日志
+# Configure logging
 logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 
-# ── Load environment variables / 加载环境变量 ─────────────────────────────────
+# ── Load environment variables ─────────────────────────────────────────────────
 load_dotenv(Path(__file__).parent.parent / ".env.local", override=True)
 load_dotenv(Path(__file__).parent.parent / ".env", override=False)
 
@@ -61,12 +60,11 @@ METADATA_PATH = os.getenv("METADATA_PATH", "")  # set via .env.local
 ABUNDANCE_PATH = os.getenv("ABUNDANCE_PATH", "")  # set via .env.local
 ADMIN_TOKEN    = os.getenv("ADMIN_TOKEN", "")
 
-# ── 缓存版本号：自动使用 main.py 文件哈希，代码一改缓存自动失效 ────────────
+# ── Cache version: auto-derived from main.py file hash; invalidated on code change
 import hashlib as _hashlib
 CACHE_BUST = _hashlib.md5(open(__file__, "rb").read()).hexdigest()[:8]
 
 # Validate at startup — use logging so warnings are never silently swallowed
-# 启动时校验：使用 logging 确保警告不会被静默丢弃
 if not METADATA_PATH:
     logging.warning("METADATA_PATH not set — data endpoints will fail. Set it in .env.local")
 if not ABUNDANCE_PATH:
@@ -115,13 +113,12 @@ If you use this API in your research, please cite:
     ],
 )
 
-# ── Rate limiting / 速率限制 ─────────────────────────────────────────────────
+# ── Rate limiting ─────────────────────────────────────────────────────────────
 limiter = Limiter(key_func=get_remote_address)
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 # CORS: allow all origins in dev, restrict to frontend URL in production
-# 跨域：开发模式允许所有来源，生产模式必须设置 FRONTEND_URL
 _FRONTEND_URL = os.getenv("FRONTEND_URL", "")
 _DEBUG = os.getenv("DEBUG", "true").lower() == "true"
 
@@ -142,7 +139,7 @@ app.add_middleware(
 )
 
 
-# ── Security headers / 安全响应头 ────────────────────────────────────────────
+# ── Security headers ────────────────────────────────────────────────────────
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import Response
 
@@ -157,7 +154,7 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
 app.add_middleware(SecurityHeadersMiddleware)
 
 
-# ── Startup warmup / 启动预热 ─────────────────────────────────────────────────
+# ── Startup warmup ─────────────────────────────────────────────────────────────
 
 @app.on_event("startup")
 def warmup_data():
@@ -218,7 +215,7 @@ def warmup_data():
                 ),
             ),
         ]
-        # 并行预热：非 phenotype 的重端点同时跑，max_workers=4
+        # Parallel warmup: non-phenotype heavy endpoints, max_workers=4
         import concurrent.futures as _cf
         def _run_warmup(item):
             label, func = item
@@ -231,7 +228,7 @@ def warmup_data():
             list(_pool.map(_run_warmup, direct_warmups))
         logging.info("All direct warmups completed")
 
-        # phenotype 预热：串行执行，避免与上面的并行池叠加内存峰值（每个 ~5GB 临时矩阵）
+        # Phenotype warmup: run sequentially to avoid stacking memory peaks (~5 GB each)
         phenotype_warmups = [
             ("phenotype sex F vs M genus", lambda: getattr(phenotype_association, "__wrapped__", phenotype_association)(None, "sex", "female", "male", "genus", 0.10, 100)),
             ("phenotype sex F vs M phylum", lambda: getattr(phenotype_association, "__wrapped__", phenotype_association)(None, "sex", "female", "male", "phylum", 0.10, 100)),
@@ -241,7 +238,7 @@ def warmup_data():
             _run_warmup(item)
         logging.info("Phenotype warmups completed (sequential)")
 
-        # 疾病浏览器预热：串行执行，预热高频疾病的 profile + studies
+        # Disease browser warmup: sequentially pre-compute profiles + studies for top diseases
         _top_diseases = ["IBD", "CD", "UC", "obesity", "colorectal_cancer",
                          "Type 2 diabetes", "compensated cirrhosis", "adenoma", "IBS"]
         disease_warmups = []
@@ -275,15 +272,15 @@ def warmup_data():
     logging.info("Background data warmup started")
 
 
-# ── Response cache for compute-heavy endpoints / 计算密集端点结果缓存 ─────────
+# ── Response cache for compute-heavy endpoints ─────────────────────────────────
 
 _RESULT_CACHE: dict[str, tuple[float, float, dict]] = {}
 _CACHE_TTL = 3600  # 1 hour
 
-# 磁盘持久化缓存目录（重启后无需重算）
+# Persistent disk cache directory (survives restarts)
 _DISK_CACHE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "_disk_cache")
 os.makedirs(_DISK_CACHE_DIR, exist_ok=True)
-_DISK_CACHE_TTL = 86400 * 7  # 7 天
+_DISK_CACHE_TTL = 86400 * 7  # 7 days
 
 def _disk_cache_path(key: str) -> str:
     safe = key.replace(":", "_").replace("/", "_")
@@ -326,7 +323,7 @@ def get_disk_cached_by_data(key: str):
     try:
         if not os.path.exists(path):
             return None
-        # 缓存文件必须比源数据新，否则失效
+        # Cache file must be newer than source data; otherwise treat as expired
         if os.path.getmtime(path) < _data_mtime():
             return None
         with open(path, "r", encoding="utf-8") as f:
@@ -353,13 +350,13 @@ def set_cached(key: str, val: dict, ttl: int | None = None):
             del _RESULT_CACHE[k]
 
 
-# ── Disease ontology / 疾病本体映射 ───────────────────────────────────────────
+# ── Disease ontology ───────────────────────────────────────────────────────────
 ONTOLOGY_PATH = os.path.join(os.path.dirname(__file__), "disease_ontology.json")
 with open(ONTOLOGY_PATH, "r", encoding="utf-8") as f:
     DISEASE_ONTOLOGY: dict = json.load(f)
 logging.info(f"Disease ontology loaded: {len(DISEASE_ONTOLOGY)} entries")
 
-# ── Data loading (cached) / 数据加载（缓存） ──────────────────────────────────
+# ── Data loading (cached) ──────────────────────────────────────────────────────
 
 _METADATA_LOCK = threading.Lock()
 _ABUNDANCE_LOCK = threading.Lock()
@@ -367,11 +364,11 @@ _ABUNDANCE_LOCK = threading.Lock()
 
 @lru_cache(maxsize=1)
 def _load_metadata_cached() -> pd.DataFrame:
-    """Load and clean metadata CSV. / 加载并清理元数据CSV"""
+    """Load and clean metadata CSV."""
     logging.info(f"Loading metadata from {METADATA_PATH}...")
     df = _read_csv_with_fallbacks(METADATA_PATH, on_bad_lines="skip", low_memory=False)
 
-    # Normalize column names / 规范化列名
+    # Normalize column names
     df.columns = [c.strip() for c in df.columns]
 
     inform_cols = [f"inform{i}" for i in range(12)]
@@ -386,7 +383,6 @@ def _load_metadata_cached() -> pd.DataFrame:
         df["sex"] = sex_series
 
     # Use iso column for country (matches frontend data model)
-    # 使用 iso 列作为国家代码（与前端一致，如 US/CN/JP）
     if "iso" in df.columns:
         iso_series = df["iso"].fillna("").astype(str).str.strip().replace("", "unknown")
         iso_series = iso_series.replace({"TW": "CN", "HK": "CN", "MO": "CN"})
@@ -417,7 +413,6 @@ def _load_metadata_cached() -> pd.DataFrame:
         df["disease"] = "unknown"
 
     # Build composite sample key matching abundance matrix rownames
-    # 构建与丰度矩阵行名匹配的复合样本键
     # Abundance rownames: "PROJECT_SRR"
     if "srr" in df.columns and "project" in df.columns:
         df["sample_key"] = df["project"].astype(str) + "_" + df["srr"].astype(str)
@@ -446,10 +441,9 @@ get_metadata.cache_clear = _clear_metadata_cache
 
 @lru_cache(maxsize=1)
 def _load_abundance_cached() -> pd.DataFrame:
-    """Load abundance CSV (large ~1.5 GB). / 加载丰度CSV（约1.5GB大文件）"""
+    """Load abundance CSV (large ~1.5 GB)."""
     logging.info(f"Loading abundance from {ABUNDANCE_PATH}...")
     # First column is sample_id (rownames from R)
-    # 第一列是样本ID（来自R的行名）
     df = pd.read_csv(ABUNDANCE_PATH, index_col=0, low_memory=False)
     logging.info(f"Abundance loaded: {df.shape}")
     return df
@@ -468,7 +462,7 @@ def _clear_abundance_cache() -> None:
 get_abundance.cache_clear = _clear_abundance_cache
 
 
-# ISO 3166-1 alpha-2 → country name mapping / ISO国家代码→国名映射
+# ISO 3166-1 alpha-2 → country name mapping
 COUNTRY_NAMES = {
     "AE": "UAE", "AF": "Afghanistan", "AL": "Albania", "AM": "Armenia", "AT": "Austria",
     "AU": "Australia", "AZ": "Azerbaijan", "BD": "Bangladesh", "BE": "Belgium",
@@ -566,11 +560,11 @@ def _label_kind(label: object) -> str:
 
 
 def iso_to_name(code: str) -> str:
-    """Convert ISO code to human-readable name. / ISO代码转可读国名"""
+    """Convert ISO code to human-readable name."""
     return COUNTRY_NAMES.get(code, code)
 
 
-# ── Disease name i18n / 疾病名称中英文映射 ────────────────────────────────────
+# ── Disease name i18n ────────────────────────────────────────────────────────
 _DISEASE_ZH_PATH = Path(__file__).parent / "disease_names_zh.json"
 DISEASE_NAMES_ZH: dict[str, str] = {}
 if _DISEASE_ZH_PATH.exists():
@@ -591,7 +585,7 @@ DISEASE_NAMES_EN_FALLBACK: dict[str, str] = {
 
 
 def disease_to_zh(name: str) -> str:
-    """Return Chinese name if available, else original. / 返回中文疾病名（如有）"""
+    """Return Chinese name if available, else original."""
     return DISEASE_NAMES_ZH.get(name, name)
 
 
@@ -626,7 +620,6 @@ def _disease_sort_key(name: str) -> tuple[int, str]:
 def extract_genus(col_name: str) -> str:
     """
     Extract genus from full taxonomy string.
-    从完整分类字符串中提取属名
     e.g. "Bacteria.Bacillota.Clostridia.Lachnospirales.Lachnospiraceae.Blautia" → "Blautia"
     """
     parts = col_name.split(".")
@@ -634,7 +627,7 @@ def extract_genus(col_name: str) -> str:
 
 
 def extract_phylum(col_name: str) -> str:
-    """Extract phylum from full taxonomy. / 提取门名"""
+    """Extract phylum from full taxonomy."""
     parts = col_name.split(".")
     return parts[1] if len(parts) > 1 else col_name
 
@@ -1116,10 +1109,10 @@ def _build_metabolism_overview(mapping: dict, context: dict) -> dict:
     }
 
 
-# ── Pydantic models / 请求/响应模型 ────────────────────────────────────────────
+# ── Pydantic models ────────────────────────────────────────────────────────────
 
 class GroupFilter(BaseModel):
-    """Filter conditions for a sample group. / 样本组筛选条件"""
+    """Filter conditions for a sample group."""
     country: Optional[str] = None   # e.g. "china"
     disease: Optional[str] = None   # e.g. "IBD"
     age_group: Optional[str] = None # e.g. "Adult"
@@ -1134,23 +1127,23 @@ class DiffAnalysisRequest(BaseModel):
 
 
 class SimilarityRequest(BaseModel):
-    """样本相似性搜索请求模型"""
-    abundances: dict[str, float]  # genus_name -> abundance_value / 属名 -> 丰度值
-    metric: str = "braycurtis"    # braycurtis or jaccard / 距离度量
-    top_k: int = 10               # 返回最相似样本数量
+    """Sample similarity search request model."""
+    abundances: dict[str, float]  # genus_name -> abundance_value
+    metric: str = "braycurtis"    # braycurtis or jaccard
+    top_k: int = 10               # number of most similar samples to return
     filter_disease: str = ""
     filter_country: str = ""
     filter_age_group: str = ""
 
 
 class CrossStudyRequest(BaseModel):
-    """跨研究元分析请求模型"""
-    project_ids: list[str]        # 项目ID列表
-    disease: str                  # 目标疾病
+    """Cross-study meta-analysis request model."""
+    project_ids: list[str]        # list of project IDs
+    disease: str                  # target disease
     method: str = "wilcoxon"      # wilcoxon / t-test
     taxonomy_level: str = "genus" # genus / family / phylum
-    p_threshold: float = 0.05     # 显著性阈值
-    min_studies: int = 2          # 最少一致队列数
+    p_threshold: float = 0.05     # significance threshold
+    min_studies: int = 2          # minimum number of concordant cohorts
 
 
 class SampleCountRequest(BaseModel):
@@ -1166,25 +1159,24 @@ class SpearmanAnalysisRequest(BaseModel):
 
 
 class HealthIndexRequest(BaseModel):
-    """微生物组健康指数请求模型"""
+    """Microbiome health index request model."""
     abundances: dict[str, float]  # genus_name -> abundance_value
-    age_group: str = ""           # 可选年龄段, 用于参考范围
+    age_group: str = ""           # optional age group for reference range
     amplicon: str = ""            # e.g. "v3-v4", "v4" (falls back to OTHER)
     iso: str = ""                 # ISO-2 country code (falls back to OTHER)
     sex: str = "unknown"          # female / male / unknown
     length: float | None = None   # sequencing read length (bp); falls back to training median
 
 
-# ── Helper functions / 辅助函数 ────────────────────────────────────────────────
+# ── Helper functions ────────────────────────────────────────────────────────────
 
 def apply_filter(df: pd.DataFrame, f: GroupFilter) -> pd.DataFrame:
-    """Filter metadata dataframe by group conditions. / 按条件筛选元数据"""
+    """Filter metadata dataframe by group conditions."""
     result = df.copy()
     if f.country:
         result = result[result["country"].str.lower() == f.country.lower()]
     if f.disease:
         # Match if ANY of inform0-11 contains the disease
-        # 只要 inform0-11 中任一列匹配即算有该疾病
         INFORM_COLS = [f"inform{i}" for i in range(12)]
         disease_lower = f.disease.strip().lower()
         mask = pd.Series(False, index=result.index)
@@ -1218,7 +1210,6 @@ def apply_filter(df: pd.DataFrame, f: GroupFilter) -> pd.DataFrame:
 def bh_correction(p_values: list[float]) -> list[float]:
     """
     Benjamini-Hochberg FDR correction.
-    BH多重检验校正（FDR）
     """
     n = len(p_values)
     if n == 0:
@@ -1234,7 +1225,7 @@ def bh_correction(p_values: list[float]) -> list[float]:
 
 
 def shannon_diversity(row: np.ndarray) -> float:
-    """Calculate Shannon diversity index. / 计算Shannon多样性指数"""
+    """Calculate Shannon diversity index."""
     row = row[row > 0]
     if len(row) == 0:
         return 0.0
@@ -1243,7 +1234,7 @@ def shannon_diversity(row: np.ndarray) -> float:
 
 
 def simpson_diversity(row: np.ndarray) -> float:
-    """Calculate Simpson diversity index (1-D). / 计算Simpson多样性指数"""
+    """Calculate Simpson diversity index (1-D)."""
     row = row[row > 0]
     if len(row) == 0:
         return 0.0
@@ -1255,14 +1246,12 @@ def bray_curtis_pcoa(matrix_a: np.ndarray, matrix_b: np.ndarray,
                      max_samples: int = 200):
     """
     Compute Bray-Curtis distance matrix and PCoA for two groups.
-    计算两组的Bray-Curtis距离矩阵和PCoA坐标
     Subsamples to max_samples per group for performance.
-    为性能考虑，每组最多采样max_samples个样本
     """
-    # Set random seed for reproducible subsampling / 设置种子保证可重复性
+    # Set random seed for reproducible subsampling
     np.random.seed(42)
 
-    # Subsample for performance / 为性能随机抽样
+    # Subsample for performance
     if len(matrix_a) > max_samples:
         idx = np.random.choice(len(matrix_a), max_samples, replace=False)
         matrix_a = matrix_a[idx]
@@ -1275,23 +1264,22 @@ def bray_curtis_pcoa(matrix_a: np.ndarray, matrix_b: np.ndarray,
     n = len(combined)
 
     # Bray-Curtis distance via scipy C implementation (much faster than Python loop)
-    # 使用scipy的C实现计算Bray-Curtis距离（远比Python循环快）
     bc = cdist(combined, combined, metric="braycurtis")
     bc = np.nan_to_num(bc)  # replace any NaN from all-zero rows
 
-    # Classical MDS (PCoA) / 主坐标分析
-    # Double centering / 双中心化
+    # Classical MDS (PCoA)
+    # Double centering
     n_pts = bc.shape[0]
     H = np.eye(n_pts) - np.ones((n_pts, n_pts)) / n_pts
     B = -0.5 * H @ (bc ** 2) @ H
 
     eigenvalues, eigenvectors = np.linalg.eigh(B)
-    # Sort descending / 降序排列
+    # Sort descending
     idx_sort = np.argsort(eigenvalues)[::-1]
     eigenvalues = eigenvalues[idx_sort]
     eigenvectors = eigenvectors[:, idx_sort]
 
-    # Take first 2 PCoA axes / 取前两个主坐标轴
+    # Take first 2 PCoA axes
     pos_mask = eigenvalues > 0
     if pos_mask.sum() < 2:
         coords = np.zeros((n_pts, 2))
@@ -1314,7 +1302,6 @@ def lefse_analysis(
 ) -> list[dict]:
     """
     Simplified LEfSe: Kruskal-Wallis test + LDA effect size estimation.
-    简化版 LEfSe：Kruskal-Wallis 检验 + LDA 效应值估计
 
     Steps:
     1. Kruskal-Wallis test per taxon (non-parametric ANOVA)
@@ -1326,7 +1313,7 @@ def lefse_analysis(
         vals_a = agg_a[:, i]
         vals_b = agg_b[:, i]
 
-        # Skip taxa with no variation / 跳过无变异的分类
+        # Skip taxa with no variation
         if np.std(vals_a) == 0 and np.std(vals_b) == 0:
             continue
 
@@ -1339,22 +1326,22 @@ def lefse_analysis(
         if kw_p >= p_threshold:
             continue
 
-        # LDA effect size estimation / LDA 效应值估计
+        # LDA effect size estimation
         # Approximation: log10(1 + abs(mean_diff) * scaling_factor)
         mean_a = float(np.mean(vals_a))
         mean_b = float(np.mean(vals_b))
         grand_mean = float(np.mean(np.concatenate([vals_a, vals_b])))
 
-        # Between-class variance / 组间方差
+        # Between-class variance
         n_a, n_b = len(vals_a), len(vals_b)
         between_var = (n_a * (mean_a - grand_mean) ** 2 +
                        n_b * (mean_b - grand_mean) ** 2) / (n_a + n_b)
 
-        # Within-class variance / 组内方差
+        # Within-class variance
         within_var = (n_a * float(np.var(vals_a)) +
                       n_b * float(np.var(vals_b))) / (n_a + n_b)
 
-        # LDA score approximation / LDA 分数近似
+        # LDA score approximation
         if within_var > 0:
             lda_score = math.log10(1 + abs(between_var / within_var) * abs(mean_a - mean_b) * 1e6)
         else:
@@ -1371,7 +1358,7 @@ def lefse_analysis(
             "enriched_group": enriched,
         })
 
-    # Sort by LDA score descending / 按 LDA 分数降序
+    # Sort by LDA score descending
     results.sort(key=lambda x: x["lda_score"], reverse=True)
     return results[:100]  # top 100
 
@@ -1385,13 +1372,12 @@ def permanova_test(
     """
     PERMANOVA (Permutational Multivariate Analysis of Variance).
     Tests if group centroids differ in Bray-Curtis distance space.
-    检验两组在 Bray-Curtis 距离空间中的质心是否显著不同
 
     Returns F-statistic, p-value, R² (effect size).
     """
     np.random.seed(42)
 
-    # Subsample for performance / 抽样以提高性能
+    # Subsample for performance
     if len(agg_a) > max_samples:
         idx = np.random.choice(len(agg_a), max_samples, replace=False)
         agg_a = agg_a[idx]
@@ -1404,21 +1390,21 @@ def permanova_test(
     n = n_a + n_b
     labels = np.array([0] * n_a + [1] * n_b)
 
-    # Compute Bray-Curtis distance matrix / 计算 Bray-Curtis 距离矩阵
+    # Compute Bray-Curtis distance matrix
     bc_dist = cdist(combined, combined, metric="braycurtis")
     bc_dist = np.nan_to_num(bc_dist)
 
-    # Calculate pseudo-F statistic / 计算伪 F 统计量
+    # Calculate pseudo-F statistic
     def calc_pseudo_f(dist_matrix: np.ndarray, group_labels: np.ndarray) -> tuple[float, float]:
         """Calculate pseudo-F and R² from distance matrix and group labels."""
         n_total = len(group_labels)
         groups = np.unique(group_labels)
         k = len(groups)
 
-        # Total sum of squared distances / 总距离平方和
+        # Total sum of squared distances
         ss_total = np.sum(dist_matrix ** 2) / (2 * n_total)
 
-        # Within-group sum of squares / 组内平方和
+        # Within-group sum of squares
         ss_within = 0.0
         for g in groups:
             mask = group_labels == g
@@ -1441,7 +1427,7 @@ def permanova_test(
 
     observed_f, r_squared = calc_pseudo_f(bc_dist, labels)
 
-    # Permutation test / 置换检验
+    # Permutation test
     count_ge = 0
     for _ in range(n_permutations):
         perm_labels = np.random.permutation(labels)
@@ -1461,13 +1447,13 @@ def permanova_test(
     }
 
 
-# ── API endpoints / API端点 ───────────────────────────────────────────────────
+# ── API endpoints ───────────────────────────────────────────────────────────────
 
 @app.get("/api/health", summary="Health check",
          description="Returns API status and current timestamp.")
 @limiter.limit("120/minute")
 def health(request: Request):
-    """Health check / 健康检查"""
+    """Health check."""
     return {"status": "ok", "timestamp": datetime.now().isoformat()}
 
 
@@ -1478,7 +1464,6 @@ def health(request: Request):
 def filter_options(request: Request):
     """
     Return available filter option values from metadata.
-    返回元数据中可用的筛选选项值
     """
     cached = get_cached("filter_options")
     if cached:
@@ -1504,7 +1489,7 @@ def filter_options(request: Request):
 
     result = {
         "countries": countries,
-        "diseases": diseases[:500],       # limit for payload size / 限制响应大小
+        "diseases": diseases[:500],       # limit for payload size
         "age_groups": age_groups,
         "sexes": sexes,
     }
@@ -1519,14 +1504,13 @@ def filter_options(request: Request):
 def data_stats(request: Request):
     """
     Return current dataset statistics for homepage display.
-    返回当前数据集统计数据供首页展示
     """
     cached = get_cached("data_stats")
     if cached:
         return cached
     meta = get_metadata()
 
-    # Read version info if exists / 读取版本信息
+    # Read version info if exists
     version_file = Path(__file__).parent / "data_version.json"
     version_info = {}
     if version_file.exists():
@@ -1633,7 +1617,7 @@ def project_timeline(request: Request):
          description="Returns Chinese translations for disease names.")
 @limiter.limit("120/minute")
 def get_disease_names_zh(request: Request):
-    """Return disease name Chinese translations / 返回疾病名称中文翻译字典
+    """Return disease name Chinese translations.
     Merges disease_names_zh.json + disease_ontology standard_name_zh"""
     merged = dict(DISEASE_NAMES_ZH)
     # Add translations from ontology that aren't in the manual file
@@ -1650,8 +1634,7 @@ def get_disease_names_zh(request: Request):
          description="Returns a mapping from raw disease keys to standardized full display names (no abbreviation suffix).")
 @limiter.limit("120/minute")
 def get_disease_display_names(request: Request):
-    """Return standardized display names (full name only, no abbreviation suffix)
-    返回标准化疾病显示名称映射（仅全称，不附加缩写括号）"""
+    """Return standardized display names (full name only, no abbreviation suffix)."""
     keys = set(DISEASE_ONTOLOGY.keys()) | set(DISEASE_NAMES_EN_FALLBACK.keys())
     keys.update(item["name"] for item in get_disease_list_cached())
     result = {key: disease_to_en(key) for key in sorted(keys, key=_disease_sort_key)}
@@ -1725,7 +1708,6 @@ def spearman_analysis(request: Request, req: SpearmanAnalysisRequest):
 def diff_analysis(request: Request, req: DiffAnalysisRequest):
     """
     Perform differential abundance analysis between two sample groups.
-    对两组样本执行差异丰度分析
 
     Steps:
     1. Filter metadata to get sample IDs for each group
@@ -1737,7 +1719,7 @@ def diff_analysis(request: Request, req: DiffAnalysisRequest):
     meta = get_metadata()
     abund = get_abundance()
 
-    # Get sample subsets / 获取两组样本子集
+    # Get sample subsets
     group_a_meta = apply_filter(meta, req.group_a_filter)
     group_b_meta = apply_filter(meta, req.group_b_filter)
 
@@ -1746,7 +1728,7 @@ def diff_analysis(request: Request, req: DiffAnalysisRequest):
     if len(group_b_meta) == 0:
         raise HTTPException(400, "Group B: no samples match the given filters")
 
-    # Match sample keys to abundance index / 匹配样本键与丰度矩阵索引
+    # Match sample keys to abundance index
     abund_idx = set(abund.index)
     keys_a = group_a_meta["sample_key"].values
     keys_b = group_b_meta["sample_key"].values
@@ -1789,12 +1771,9 @@ def diff_analysis(request: Request, req: DiffAnalysisRequest):
         group_b_name=filter_to_label(req.group_b_filter),
     )
 
-    # NOTE:
-    # The legacy implementation below is unreachable and retained only as historical debt.
-    # /api/diff-analysis is contractually served by run_compare_analysis() above.
+    # NOTE: Legacy implementation retained for reference; the active endpoint is implemented in run_compare_analysis() above.
 
     # Extract abundance matrices and normalize to relative abundance (%)
-    # 提取丰度矩阵并归一化为相对丰度（%）
     raw_a = abund.loc[valid_a].values.astype(float)
     raw_b = abund.loc[valid_b].values.astype(float)
     totals_a = raw_a.sum(axis=1, keepdims=True)
@@ -1805,9 +1784,9 @@ def diff_analysis(request: Request, req: DiffAnalysisRequest):
     mat_b = raw_b / totals_b * 100
     col_names = abund.columns.tolist()
 
-    # ── Aggregate by taxonomy level / 按分类层级聚合 ──────────────────────────
+    # ── Aggregate by taxonomy level ──────────────────────────────────────────
     def group_by_level(matrix: np.ndarray, cols: list[str], level: str):
-        """Aggregate columns by taxonomy level. / 按分类层级聚合列"""
+        """Aggregate columns by taxonomy level."""
         if level == "genus":
             labels = [extract_genus(c) for c in cols]
         elif level == "phylum":
@@ -1815,7 +1794,7 @@ def diff_analysis(request: Request, req: DiffAnalysisRequest):
         else:
             labels = [extract_genus(c) for c in cols]
 
-        # Sum columns with same label / 相同标签的列求和
+        # Sum columns with the same label
         unique_labels = list(dict.fromkeys(labels))  # preserve order
         agg = np.zeros((matrix.shape[0], len(unique_labels)))
         for i, lbl in enumerate(unique_labels):
@@ -1826,9 +1805,8 @@ def diff_analysis(request: Request, req: DiffAnalysisRequest):
     agg_a, taxa = group_by_level(mat_a, col_names, req.taxonomy_level)
     agg_b, _    = group_by_level(mat_b, col_names, req.taxonomy_level)
 
-    # ── Differential abundance test / 差异丰度统计检验 ─────────────────────────
+    # ── Differential abundance test ─────────────────────────────────────────────
     # Use wilcoxon as base test for LEfSe/PERMANOVA methods too
-    # LEfSe/PERMANOVA 同时运行 wilcoxon 作为基础差异分析
     base_method = req.method if req.method in ("wilcoxon", "t-test") else "wilcoxon"
 
     diff_results = []
@@ -1842,11 +1820,10 @@ def diff_analysis(request: Request, req: DiffAnalysisRequest):
         mean_b = float(np.mean(vals_b))
 
         # log2 fold change (add pseudocount to avoid log(0))
-        # log2倍数变化（加伪计数避免log(0)）
         pseudo = 1e-6
         log2fc = math.log2((mean_a + pseudo) / (mean_b + pseudo))
 
-        # Statistical test / 统计检验
+        # Statistical test
         u_stat = 0.0
         try:
             if base_method == "wilcoxon":
@@ -1858,7 +1835,7 @@ def diff_analysis(request: Request, req: DiffAnalysisRequest):
         except Exception:
             p = 1.0
 
-        # Effect size / 效应量
+        # Effect size
         n_a, n_b = len(vals_a), len(vals_b)
         if base_method == "wilcoxon":
             effect_size = float(1 - 2 * u_stat / (n_a * n_b)) if n_a * n_b > 0 else 0.0
@@ -1877,25 +1854,25 @@ def diff_analysis(request: Request, req: DiffAnalysisRequest):
             "effect_size": effect_size,
         })
 
-    # BH correction / BH多重校正
+    # BH correction
     adj_p = bh_correction(p_values)
     for i, row in enumerate(diff_results):
         row["adjusted_p"] = adj_p[i]
 
-    # Sort by adjusted p-value / 按校正p值排序
+    # Sort by adjusted p-value
     diff_results.sort(key=lambda x: x["adjusted_p"])
 
-    # ── LEfSe analysis (if requested) / LEfSe 分析 ───────────────────────────
+    # ── LEfSe analysis (if requested) ───────────────────────────────────────
     lefse_results = None
     if req.method == "lefse":
         lefse_results = lefse_analysis(agg_a, agg_b, taxa)
 
-    # ── PERMANOVA (if requested) / PERMANOVA 分析 ────────────────────────────
+    # ── PERMANOVA (if requested) ────────────────────────────────────────────
     permanova_result = None
     if req.method == "permanova":
         permanova_result = permanova_test(agg_a, agg_b)
 
-    # ── Alpha diversity / Alpha多样性 ─────────────────────────────────────────
+    # ── Alpha diversity ─────────────────────────────────────────────────────────
     shannon_a = [shannon_diversity(r) for r in agg_a]
     simpson_a = [simpson_diversity(r) for r in agg_a]
     shannon_b = [shannon_diversity(r) for r in agg_b]
@@ -1903,7 +1880,7 @@ def diff_analysis(request: Request, req: DiffAnalysisRequest):
 
     alpha_diversity = {
         "group_a": {
-            "shannon": shannon_a[:500],   # limit payload size / 限制响应大小
+            "shannon": shannon_a[:500],   # limit payload size
             "simpson": simpson_a[:500],
         },
         "group_b": {
@@ -1912,10 +1889,10 @@ def diff_analysis(request: Request, req: DiffAnalysisRequest):
         },
     }
 
-    # ── Beta diversity PCoA / Beta多样性PCoA ──────────────────────────────────
+    # ── Beta diversity PCoA ──────────────────────────────────────────────────
     pcoa_coords = bray_curtis_pcoa(agg_a, agg_b, max_samples=150)
 
-    # Build group name labels / 构建组名
+    # Build group name labels
     def filter_to_label(f: GroupFilter) -> str:
         parts = []
         if f.country:
@@ -1941,7 +1918,7 @@ def diff_analysis(request: Request, req: DiffAnalysisRequest):
             "method": req.method,
             "total_taxa": len(taxa),
         },
-        "diff_taxa": diff_results[:200],   # top 200 by significance / 按显著性取前200
+        "diff_taxa": diff_results[:200],   # top 200 by significance
         "alpha_diversity": alpha_diversity,
         "beta_diversity": {
             "pcoa_coords": pcoa_coords,
@@ -1949,7 +1926,6 @@ def diff_analysis(request: Request, req: DiffAnalysisRequest):
     }
 
     # Attach LEfSe and PERMANOVA results if computed
-    # 附加 LEfSe 和 PERMANOVA 结果
     if lefse_results is not None:
         response["lefse_results"] = lefse_results
     if permanova_result is not None:

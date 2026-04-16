@@ -1,7 +1,6 @@
 /**
  * AdminPage.tsx
  * Data management dashboard – upload metadata, view stats, manage versions
- * 数据管理面板 – 上传元数据、查看统计、版本管理
  */
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
@@ -38,13 +37,13 @@ const AdminPage = () => {
   const [stats, setStats] = useState<DataStats | null>(null);
   const [backendAlive, setBackendAlive] = useState<boolean | null>(null);
 
-  // Upload state / 上传状态
+  // Upload state
   const [uploading, setUploading] = useState(false);
   const [uploadResult, setUploadResult] = useState<UploadResult | null>(null);
   const [validateResult, setValidateResult] = useState<ValidateResult | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
-  // Check backend health / 检查后端健康状态
+  // Check backend health
   useEffect(() => {
     fetch(`${API_BASE}/api/health`, { signal: AbortSignal.timeout(5000) })
       .then((r) => r.json())
@@ -52,7 +51,7 @@ const AdminPage = () => {
       .catch(() => setBackendAlive(false));
   }, []);
 
-  // Load stats when authed / 登录后加载统计
+  // Load stats when authed
   useEffect(() => {
     if (!authed) return;
     fetch(`${API_BASE}/api/data-stats`)
@@ -112,7 +111,7 @@ const AdminPage = () => {
       });
       const data = await res.json();
       setUploadResult(data);
-      // Refresh stats / 刷新统计
+      // Refresh stats
       fetch(`${API_BASE}/api/data-stats`)
         .then((r) => r.json())
         .then(setStats)
@@ -132,7 +131,7 @@ const AdminPage = () => {
         <span className={classes.subtitle}>Upload metadata, validate format, track data versions</span>
       </div>
 
-      {/* Backend status / 后端状态 */}
+      {/* Backend status */}
       <div className={classes.statusBar}>
         <span className={classes.statusDot} data-alive={backendAlive === true} />
         <span>
@@ -140,7 +139,7 @@ const AdminPage = () => {
         </span>
       </div>
 
-      {/* Auth gate / 认证 */}
+      {/* Auth gate */}
       {!authed ? (
         <section className={classes.authSection}>
           <h2>Admin Authentication</h2>
@@ -162,7 +161,7 @@ const AdminPage = () => {
         </section>
       ) : (
         <>
-          {/* Stats dashboard / 统计仪表盘 */}
+          {/* Stats dashboard */}
           <section className={classes.statsSection}>
             <h2>Current Dataset</h2>
             {stats ? (
@@ -193,7 +192,7 @@ const AdminPage = () => {
             )}
           </section>
 
-          {/* Upload section / 上传区域 */}
+          {/* Upload section */}
           <section className={classes.uploadSection}>
             <h2>Upload Metadata</h2>
             <p>Upload a CSV file with new metadata to merge into the existing dataset.</p>
@@ -212,7 +211,7 @@ const AdminPage = () => {
               </button>
             </div>
 
-            {/* Validate result / 验证结果 */}
+            {/* Validate result */}
             {validateResult && (
               <div className={classes.resultBox} data-valid={validateResult.valid}>
                 {validateResult.valid ? (
@@ -230,7 +229,7 @@ const AdminPage = () => {
               </div>
             )}
 
-            {/* Upload result / 上传结果 */}
+            {/* Upload result */}
             {uploadResult && (
               <div className={classes.resultBox} data-valid={uploadResult.status === "ok"}>
                 <strong>{uploadResult.status === "ok" ? "Upload successful" : "Upload failed"}</strong>
@@ -241,7 +240,7 @@ const AdminPage = () => {
             )}
           </section>
 
-          {/* API info / API信息 */}
+          {/* API info */}
           <section className={classes.apiSection}>
             <h2>API Endpoints</h2>
             <table className={classes.apiTable}>

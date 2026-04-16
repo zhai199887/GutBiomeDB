@@ -1,4 +1,4 @@
-/* AdminPage styles / 管理面板样式 */
+/* AdminPage styles */
 .page {
   min-height: 100vh;
   padding: 2rem max(calc((100% - 900px) / 2), 2rem);
@@ -10,7 +10,7 @@
 .title { margin: 0.5rem 0 0.2rem; font-size: 1.6rem; font-weight: 600; }
 .subtitle { color: var(--light-gray); font-size: 0.9rem; text-align: left; }
 
-/* Status bar / 状态栏 */
+/* Status bar */
 .statusBar {
   display: flex;
   align-items: center;
@@ -32,7 +32,7 @@
   box-shadow: 0 0 6px #6bcb77aa;
 }
 
-/* Auth / 认证 */
+/* Auth */
 .authSection {
   padding: 2rem;
   border-radius: var(--rounded);
@@ -63,7 +63,7 @@
 .authBtn:disabled { opacity: 0.4; cursor: not-allowed; }
 .error { color: #ff6b6b; font-size: 0.85rem; margin-top: 0.5rem; text-align: left; }
 
-/* Stats / 统计 */
+/* Stats */
 .statsSection {
   margin-top: 1.5rem;
   padding: 1.5rem;
@@ -97,7 +97,7 @@
   letter-spacing: 0.5px;
 }
 
-/* Upload / 上传 */
+/* Upload */
 .uploadSection {
   margin-top: 1.5rem;
   padding: 1.5rem;
@@ -144,7 +144,7 @@
 .uploadBtn:hover { opacity: 0.85; }
 .uploadBtn:disabled { opacity: 0.4; cursor: not-allowed; }
 
-/* Result box / 结果框 */
+/* Result box */
 .resultBox {
   margin-top: 1rem;
   padding: 0.8rem 1rem;
@@ -159,7 +159,7 @@
 .resultBox[data-valid="true"] { border-color: #6bcb77; }
 .resultBox[data-valid="false"] { border-color: #ff6b6b; }
 
-/* API table / API表 */
+/* API table */
 .apiSection {
   margin-top: 1.5rem;
   padding: 1.5rem;

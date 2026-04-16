@@ -1,6 +1,5 @@
 /**
  * i18n translation dictionaries — English & Chinese
- * 国际化翻译字典 — 英文 & 中文
  */
 
 export type Locale = "en" | "zh";
@@ -936,7 +935,7 @@ const zh: Record<keyof typeof en, string> = {
   "compare.export.csv": "导出CSV",
   "compare.export.svg": "导出SVG",
 
-  // 跨研究元分析
+  // Cross-study meta-analysis
   "crossStudy.title": "跨研究元分析",
   "crossStudy.subtitle": "多队列一致性标志物发现（逆方差加权随机效应模型）",
   "crossStudy.selectDisease": "目标疾病",
@@ -962,7 +961,7 @@ const zh: Record<keyof typeof en, string> = {
   "crossStudy.col.direction": "方向",
   "crossStudy.col.nStudies": "显著/总数",
 
-  // 菌属画像工作台
+  // Genus profile workspace
   "species.tab.profile": "画像",
   "species.tab.biomarker": "标志物",
   "species.tab.cooccurrence": "共现",
@@ -992,13 +991,13 @@ const zh: Record<keyof typeof en, string> = {
   "species.cooccurrence.edgeTable": "边表",
   "species.cooccurrence.tableHint": "表中只保留 FDR 显著的共现伙伴。",
 
-  // 代谢功能标签
+  // Metabolism function tags
   "species.metabolism.title": "代谢功能",
   "species.metabolism.subtitle": "与该菌属相关的文献策展功能类别。这些标签反映功能关联，不代表通路活性测量。",
   "species.metabolism.openWorkspace": "打开代谢工作台",
   "species.metabolism.pathways": "相关通路",
 
-  // 跨疾病标志物画像
+  // Cross-disease biomarker profile
   "species.biomarker.title": "跨疾病标志物画像",
   "species.biomarker.subtitle": "比较该菌属在各疾病相对于严格健康对照的效应方向和大小。",
   "species.biomarker.enriched": "富集",
@@ -1012,7 +1011,7 @@ const zh: Record<keyof typeof en, string> = {
   "species.biomarker.prevDisease": "疾病组检出率",
   "species.biomarker.prevControl": "对照组检出率",
 
-  // 研究项目页
+  // Studies page
   "studies.title": "研究项目",
   "studies.subtitle": "浏览 GutBiomeDB 整合的所有 BioProject",
   "studies.searchPlaceholder": "按项目ID或疾病搜索...",
@@ -1024,7 +1023,7 @@ const zh: Record<keyof typeof en, string> = {
   "studies.control": "对照组",
   "studies.diseases": "疾病",
 
-  // 微生物组健康指数
+  // Gut microbiome health index
   "healthIndex.title": "肠道微生物组健康指数 (GMHI)",
   "healthIndex.subtitle": "基于属级丰度数据计算健康评分（0-100）",
   "healthIndex.score": "健康评分",
@@ -1074,7 +1073,7 @@ const zh: Record<keyof typeof en, string> = {
   "healthIndex.tryYourOwn": "试试您自己的数据",
   "healthIndex.scoreRange": "评分范围 (IQR)",
 
-  // 搜索增强
+  // Enhanced search
   "search.recentSearches": "最近搜索",
   "search.clearHistory": "清除历史",
   "search.ctrlK": "按 Ctrl+K 快速搜索",

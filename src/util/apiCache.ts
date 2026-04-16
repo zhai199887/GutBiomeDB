@@ -1,6 +1,5 @@
 /**
  * apiCache.ts — High-performance API response cache with request deduplication
- * 高性能 API 响应缓存 + 请求去重，避免重复/并发请求
  */
 
 interface CacheEntry {
@@ -28,7 +27,6 @@ function getTTL(url: string): number {
  * Fetch with caching + request deduplication.
  * - Returns cached response if available and not expired.
  * - Deduplicates concurrent requests to the same URL.
- * 带缓存 + 去重的 fetch：缓存未过期直接返回，并发相同请求只发一次
  */
 export async function cachedFetch<T>(url: string): Promise<T> {
   const now = Date.now();
@@ -69,7 +67,7 @@ export async function cachedFetch<T>(url: string): Promise<T> {
   return promise as Promise<T>;
 }
 
-/** Clear all cached entries / 清空所有缓存 */
+/** Clear all cached entries */
 export function clearApiCache() {
   cache.clear();
   inflight.clear();

@@ -1,35 +1,34 @@
 # convert_rds_to_parquet.R
-# Convert unfiltered.rds abundance matrix to Parquet format for Python API
-# 将丰度矩阵从RDS格式转换为Parquet格式供Python API使用
+# Convert the Abdill et al. (2025) abundance matrix from RDS to Parquet
+# format for the Python API.
+# Usage: Rscript convert_rds_to_parquet.R <input.rds> <output.parquet>
 
-# Install arrow if not available
-# 如果没有arrow包则安装
+# Install arrow package if not available
 if (!requireNamespace("arrow", quietly = TRUE)) {
   install.packages("arrow", repos = "https://cloud.r-project.org")
 }
 
 library(arrow)
 
-cat("Loading unfiltered.rds...\n")
-# Load abundance data frame (rows = samples, cols = taxa)
-# 加载丰度数据框（行=样本，列=物种）
-abund <- readRDS("D:/R代码/unfiltered.rds")
+args <- commandArgs(trailingOnly = TRUE)
+input_path  <- if (length(args) >= 1) args[1] else stop("Usage: Rscript convert_rds_to_parquet.R <input.rds> <output.parquet>")
+output_path <- if (length(args) >= 2) args[2] else sub("\\.rds$", ".parquet", input_path)
+
+cat("Loading", input_path, "...\n")
+# Load abundance data frame (rows = samples, columns = taxa)
+abund <- readRDS(input_path)
 
 cat(sprintf("Dimensions: %d samples x %d taxa\n", nrow(abund), ncol(abund)))
 
-# Add sample_id column from rownames
-# 从行名添加sample_id列
+# Add sample_id column from row names
 abund$sample_id <- rownames(abund)
 
-# Move sample_id to first column
-# 将sample_id移到第一列
+# Move sample_id to the first column
 abund <- abund[, c("sample_id", setdiff(names(abund), "sample_id"))]
 
-output_path <- "D:/R代码/unfiltered_abundance.parquet"
 cat(sprintf("Writing to %s...\n", output_path))
 
-# Write as parquet
-# 写入parquet格式
+# Write to Parquet format
 write_parquet(abund, output_path)
 
 cat("Done! File size: ")

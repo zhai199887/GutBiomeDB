@@ -1,6 +1,6 @@
 /**
- * tracking.ts — 使用统计追踪（火即忘模式）
- * 生产环境记录页面访问、分析运行、导出、搜索等事件
+ * tracking.ts — Usage analytics (fire-and-forget).
+ * Records page views, analysis runs, exports, and searches in production.
  */
 import { API_BASE } from "@/util/apiBase";
 

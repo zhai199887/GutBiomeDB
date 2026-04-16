@@ -95,7 +95,7 @@ const PhenotypeCharts = () => {
       </div>
       <div className="sub-section" style={{ marginTop: "1.5rem" }}>
         <h3>{t("home.heatmapTitle")}</h3>
-        {/* viewBox: left=-160(y轴标签), top=-80(列头), width=1100(图+图例), height=580(含旋转标签) */}
+        {/* viewBox: left=-160 (y-axis labels), top=-80 (column headers), width=1100 (chart+legend), height=580 (incl. rotated labels) */}
         <svg id="heatmap" className="chart" viewBox="-220 -96 1320 640" />
       </div>
       <div className="sub-section" style={{ marginTop: "1.5rem" }}>
@@ -216,7 +216,7 @@ const drawHeatmap = (
   if (!svg.node()) return;
   svg.selectAll("*").remove();
 
-  // Layout constants / 布局常量
+  // Layout constants
   const W = 940, H = 320;
   const LEGEND_W = 14;
   const LEGEND_GAP = 42;
@@ -285,7 +285,7 @@ const drawHeatmap = (
     .on("mouseleave", () => { highlightAge = null; highlightDisease = null; updateHighlight(); });
 
   // X axis — full disease name, rotated -45°, anchor "end"
-  // 疾病名不截断（最长40字符），旋转-45°便于阅读
+  // Disease names not truncated (max 40 chars), rotated -45 deg for readability
   svg.append("g")
     .attr("transform", `translate(0,${H})`)
     .call(d3.axisBottom(xScale).tickFormat((d) => dName(d, locale, 54)))
@@ -314,7 +314,7 @@ const drawHeatmap = (
     });
 
   // ── Legend: vertical gradient bar on the RIGHT side ─────────────────────
-  // 图例：垂直渐变色条，放在热图右侧 LEGEND_GAP 像素处
+  // Legend: vertical gradient bar, placed LEGEND_GAP px to the right of the heatmap
   const legendX = W + LEGEND_GAP;
   const defs = svg.append("defs");
   const grad = defs.append("linearGradient")

@@ -54,7 +54,7 @@ body {
   margin: 0;
 }
 
-/* Global select/option dark theme / 全局下拉选项深色主题 */
+/* Global select/option dark theme */
 select {
   background: #1a1a2e;
   color: #e4e8ee;
@@ -260,7 +260,7 @@ span[data-tooltip] {
   text-underline-offset: 4px;
 }
 
-/* Page transition animation / 页面过渡动画 */
+/* Page transition animation */
 @keyframes fadeSlideIn {
   from {
     opacity: 0;
@@ -282,7 +282,7 @@ main > section:nth-child(3) { animation-delay: 0.1s; }
 main > section:nth-child(4) { animation-delay: 0.15s; }
 main > section:nth-child(5) { animation-delay: 0.2s; }
 
-/* Loading spinner / 加载旋转器 */
+/* Loading spinner */
 @keyframes spin {
   to { transform: rotate(360deg); }
 }
@@ -297,14 +297,14 @@ main > section:nth-child(5) { animation-delay: 0.2s; }
   animation: spin 0.6s linear infinite;
 }
 
-/* Smooth chart transitions / 平滑图表过渡 */
+/* Smooth chart transitions */
 svg .bar,
 svg .cell,
 svg rect {
   transition: opacity 0.2s ease, fill 0.2s ease;
 }
 
-/* Better responsive / 响应式改进 */
+/* Better responsive */
 @media (max-width: 600px) {
   html { font-size: 12pt; }
   header, section, footer {

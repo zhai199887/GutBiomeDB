@@ -14,16 +14,16 @@ import Overview from "@/sections/Overview";
 import MapSection from "@/sections/MapSection";
 import PhenotypeCharts from "@/sections/PhenotypeCharts";
 import SankeyChart from "@/sections/SankeyChart";
-// Search 已移到独立页面 /search
+// Search moved to standalone /search page
 import "@/components/tooltip";
 import { trackEvent } from "@/util/tracking";
 import { preloadDiseaseNames } from "@/util/diseaseNames";
 import "./App.css";
 
-// 预加载疾病显示名称映射
+// Preload disease display name mapping
 preloadDiseaseNames();
 
-// Lazy-loaded pages for code splitting / 懒加载页面（代码分割）
+// Lazy-loaded pages for code splitting
 const PhenotypePage = lazy(() => import("@/sections/PhenotypePage"));
 const ComparePage = lazy(() => import("@/pages/ComparePage"));
 const MetabolismPage = lazy(() => import("@/pages/MetabolismPage"));
@@ -40,7 +40,7 @@ const DownloadPage = lazy(() => import("@/pages/DownloadPage"));
 const StudiesPage = lazy(() => import("@/pages/StudiesPage"));
 const NotFoundPage = lazy(() => import("@/pages/NotFoundPage"));
 
-/* ── Route-level document title / 路由级页面标题 ── */
+/* ── Route-level document title ── */
 const ROUTE_TITLES = {
   en: {
     "/": "Home",
@@ -100,7 +100,7 @@ const DocumentTitle = ({ children }: { children: ReactNode }) => {
     trackEvent("page_view", pathname);
   }, [locale, pathname]);
 
-  // Ctrl+K / Cmd+K 全局搜索快捷键
+  // Ctrl+K / Cmd+K global search shortcut
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key === "k") {

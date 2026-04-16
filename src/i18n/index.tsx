@@ -1,6 +1,5 @@
 /**
  * Lightweight i18n system using React Context
- * 轻量国际化系统，基于 React Context
  */
 import { createContext, useContext, useState, useCallback, type ReactNode } from "react";
 import { translations, type Locale, type TranslationKey } from "./locales";
@@ -38,7 +37,7 @@ function getInitialLocale(): Locale {
     const saved = localStorage.getItem(STORAGE_KEY);
     if (saved === "en" || saved === "zh") return saved;
   } catch { /* SSR or blocked storage */ }
-  // Auto-detect browser language / 自动检测浏览器语言
+  // Auto-detect browser language
   const browserLang = navigator.language ?? "";
   return browserLang.startsWith("zh") ? "zh" : "en";
 }

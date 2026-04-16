@@ -6,7 +6,7 @@
   color: var(--white);
 }
 
-/* Navigation bar / 导航栏 */
+/* Navigation bar */
 .nav {
   padding: 28px 40px 20px;
   background: color-mix(in hsl, var(--black), var(--white) 6%);
@@ -37,7 +37,7 @@
   margin: 0;
 }
 
-/* Filter section / 筛选面板区域 */
+/* Filter section */
 .filterSection {
   padding: 32px 40px;
   background: color-mix(in hsl, var(--black), var(--white) 5%);
@@ -57,7 +57,7 @@
   .filterGrid { grid-template-columns: 1fr; }
 }
 
-/* Group filter panel / 分组筛选面板 */
+/* Group filter panel */
 .groupPanel {
   background: color-mix(in hsl, var(--black), var(--white) 4%);
   border: 1px solid var(--dark-gray);
@@ -103,7 +103,7 @@
 }
 .select:focus { outline: none; border-color: var(--primary); }
 
-/* Controls row / 控制行 */
+/* Controls row */
 .controls {
   display: flex;
   gap: 24px;
@@ -164,7 +164,7 @@
 .analyzeBtn:hover { opacity: 0.85; }
 .analyzeBtn:disabled { opacity: 0.4; cursor: not-allowed; }
 
-/* Error / 错误提示 */
+/* Error */
 .error {
   margin: 16px 40px;
   padding: 12px 16px;
@@ -175,7 +175,7 @@
   font-size: 0.88rem;
 }
 
-/* Results section / 结果区域 */
+/* Results section */
 .resultSection {
   padding: 32px 40px;
   display: flex;
@@ -183,7 +183,7 @@
   gap: 20px;
 }
 
-/* Summary row / 摘要行 */
+/* Summary row */
 .summary {
   display: flex;
   align-items: center;
@@ -203,7 +203,7 @@
   margin-left: 8px;
 }
 
-/* Tabs / 标签栏 */
+/* Tabs */
 .tabs {
   display: flex;
   gap: 4px;
@@ -228,7 +228,7 @@
   border-bottom-color: var(--primary);
 }
 
-/* Chart area / 图表区域 */
+/* Chart area */
 .chartArea {
   background: color-mix(in hsl, var(--black), var(--white) 3%);
   border: 1px solid var(--dark-gray);
@@ -245,7 +245,7 @@
   height: auto;
 }
 
-/* Export buttons / 导出按钮 */
+/* Export buttons */
 .exportRow {
   display: flex;
   gap: 8px;

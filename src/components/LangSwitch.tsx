@@ -1,6 +1,5 @@
 /**
- * Language toggle button (EN / 中文)
- * 语言切换按钮
+ * Language toggle button (EN / CN)
  */
 import { useI18n } from "@/i18n";
 

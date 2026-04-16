@@ -1,11 +1,10 @@
 /**
  * Utility functions for exporting data as CSV/TSV files
- * 通用数据导出工具（CSV/TSV）
  */
 
 type Row = Record<string, string | number | boolean | null | undefined>;
 
-/** Download a string as a file / 将字符串下载为文件 */
+/** Download a string as a file */
 function downloadBlob(content: string, filename: string, mime: string) {
   const blob = new Blob(["\uFEFF" + content], { type: `${mime};charset=utf-8` });
   const url = URL.createObjectURL(blob);
@@ -16,7 +15,7 @@ function downloadBlob(content: string, filename: string, mime: string) {
   URL.revokeObjectURL(url);
 }
 
-/** Escape a CSV cell value / 转义 CSV 单元格 */
+/** Escape a CSV cell value */
 function escapeCell(value: unknown): string {
   const s = value == null ? "" : String(value);
   return s.includes(",") || s.includes('"') || s.includes("\n")

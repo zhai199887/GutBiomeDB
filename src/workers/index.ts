@@ -32,7 +32,7 @@ export const thread = <Type>(
     /** handle abort */
     const onAbort = () => {
       worker.abort(abort?.signal.reason);
-      // Abort signal received / 中止信号
+      // Abort signal received
     };
     abort?.signal.addEventListener("abort", onAbort);
     /** execute specified method */
@@ -51,29 +51,3 @@ export const thread = <Type>(
         abort?.signal.removeEventListener("abort", onAbort);
       });
   });
-
-/** example of using thread method */
-export const example = async () => {
-  /** in sequence */
-  const a = await thread(
-    (worker) => worker.expensiveFunction(),
-    undefined,
-    (status) => console.debug(status),
-  );
-
-  /** in parallel */
-  const [b, c] = await Promise.all([
-    thread(
-      (worker) => worker.expensiveFunction(),
-      undefined,
-      (status) => console.debug(status),
-    ),
-    thread(
-      (worker) => worker.expensiveFunction(),
-      undefined,
-      (status) => console.debug(status),
-    ),
-  ]);
-
-  console.debug(a, b, c);
-};

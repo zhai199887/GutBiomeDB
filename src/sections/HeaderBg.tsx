@@ -1,7 +1,7 @@
 import { useEffect, useRef } from "react";
 import classes from "./HeaderBg.module.css";
 
-/* ── 粒子类型 ── */
+/* ── Particle types ── */
 interface Cell {
   x: number;
   y: number;
@@ -13,8 +13,8 @@ interface Cell {
   phase: number;
   hue: number;          // 0→primary, 1→secondary
   pulseSpeed: number;
-  nucleusRatio: number;  // 内核相对大小
-  layer: number;         // 0=远景, 1=中景, 2=前景
+  nucleusRatio: number;  // nucleus relative size
+  layer: number;         // 0=far, 1=mid, 2=foreground
 }
 
 interface HelixStrand {
@@ -28,16 +28,16 @@ interface HelixStrand {
   drift: number;
 }
 
-/* ── 颜色常量 ── */
+/* ── Color constants ── */
 const P = { r: 226, g: 63,  b: 255 }; // --primary #e23fff
 const S = { r: 85,  g: 110, b: 255 }; // --secondary #556eff
-const TEAL = { r: 60, g: 200, b: 180 }; // 生物学绿
+const TEAL = { r: 60, g: 200, b: 180 }; // biology green
 
 function lerp3(a: typeof P, b: typeof P, t: number, alpha: number): string {
   return `rgba(${Math.round(a.r + (b.r - a.r) * t)},${Math.round(a.g + (b.g - a.g) * t)},${Math.round(a.b + (b.b - a.b) * t)},${alpha})`;
 }
 
-/* ── 配置 ── */
+/* ── Configuration ── */
 const CELL_COUNT = 80;
 const HELIX_COUNT = 3;
 const CONNECTION_DIST = 180;
@@ -75,12 +75,12 @@ function createHelix(w: number, h: number): HelixStrand {
   };
 }
 
-/* ── 绘制细胞 ── */
+/* ── Draw cell ── */
 function drawCell(ctx: CanvasRenderingContext2D, c: Cell, pulse: number) {
   const mr = c.membraneRadius * (0.95 + pulse * 0.05);
   const nr = c.radius * c.nucleusRatio * (0.9 + pulse * 0.1);
 
-  // 细胞膜 — 半透明外环
+  // Membrane — semi-transparent outer ring
   ctx.beginPath();
   ctx.arc(c.x, c.y, mr, 0, Math.PI * 2);
   const memColor = c.hue < 0.5
@@ -90,7 +90,7 @@ function drawCell(ctx: CanvasRenderingContext2D, c: Cell, pulse: number) {
   ctx.lineWidth = 0.8;
   ctx.stroke();
 
-  // 细胞质 — 径向渐变填充
+  // Cytoplasm — radial gradient fill
   const grad = ctx.createRadialGradient(c.x, c.y, 0, c.x, c.y, mr);
   const bodyColor = c.hue < 0.5
     ? lerp3(P, S, c.hue * 2, c.opacity * (0.6 + pulse * 0.4))
@@ -103,14 +103,14 @@ function drawCell(ctx: CanvasRenderingContext2D, c: Cell, pulse: number) {
   ctx.arc(c.x, c.y, mr, 0, Math.PI * 2);
   ctx.fill();
 
-  // 内核
+  // Nucleus
   ctx.beginPath();
   ctx.arc(c.x, c.y, nr, 0, Math.PI * 2);
   ctx.fillStyle = lerp3(P, S, c.hue, c.opacity * 0.8);
   ctx.fill();
 }
 
-/* ── 绘制 DNA 双螺旋飘带 ── */
+/* ── Draw DNA double helix ribbon ── */
 function drawHelix(ctx: CanvasRenderingContext2D, h: HelixStrand, time: number) {
   const segments = 24;
   const amp = 8;
@@ -121,7 +121,7 @@ function drawHelix(ctx: CanvasRenderingContext2D, h: HelixStrand, time: number) 
   ctx.translate(h.x, h.y);
   ctx.rotate(h.angle);
 
-  // 两条链
+  // Two strands
   for (let strand = 0; strand < 2; strand++) {
     const offset = strand * Math.PI;
     ctx.beginPath();
@@ -140,7 +140,7 @@ function drawHelix(ctx: CanvasRenderingContext2D, h: HelixStrand, time: number) 
     ctx.stroke();
   }
 
-  // 碱基对连接线
+  // Base-pair connecting lines
   for (let i = 0; i < 8; i++) {
     const frac = (i + 0.5) / 8;
     const px = (frac - 0.5) * h.length;
@@ -157,7 +157,7 @@ function drawHelix(ctx: CanvasRenderingContext2D, h: HelixStrand, time: number) 
   ctx.restore();
 }
 
-/* ── 主组件 ── */
+/* ── Main component ── */
 const HeaderBg = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
@@ -202,7 +202,7 @@ const HeaderBg = () => {
       ctx.clearRect(0, 0, w, h);
       time++;
 
-      /* ── 背景渐变光晕 ── */
+      /* ── Background gradient glow ── */
       const bgGrd = ctx.createRadialGradient(w * 0.5, h * 0.4, 0, w * 0.5, h * 0.4, Math.max(w, h) * 0.6);
       bgGrd.addColorStop(0, "rgba(226, 63, 255, 0.025)");
       bgGrd.addColorStop(0.3, "rgba(85, 110, 255, 0.015)");
@@ -211,12 +211,12 @@ const HeaderBg = () => {
       ctx.fillStyle = bgGrd;
       ctx.fillRect(0, 0, w, h);
 
-      /* ── 更新并绘制 DNA 螺旋 ── */
+      /* ── Update and draw DNA helices ── */
       for (const hl of helices) {
         hl.x += hl.drift;
         hl.y += Math.sin(time * 0.003 + hl.phase) * 0.1;
         hl.angle += 0.0003;
-        // 边界回弹
+        // Boundary wrap-around
         if (hl.x < -hl.length) hl.x = w + hl.length;
         if (hl.x > w + hl.length) hl.x = -hl.length;
         if (hl.y < -hl.length) hl.y = h + hl.length;
@@ -224,9 +224,9 @@ const HeaderBg = () => {
         drawHelix(ctx, hl, time);
       }
 
-      /* ── 更新细胞 ── */
+      /* ── Update cells ── */
       for (const c of cells) {
-        // 鼠标交互 — 柔和吸引/排斥
+        // Mouse interaction — soft attract / repel
         const dx = c.x - mouse.x;
         const dy = c.y - mouse.y;
         const dist = Math.sqrt(dx * dx + dy * dy);
@@ -242,17 +242,17 @@ const HeaderBg = () => {
         c.vy *= 0.992;
         c.phase += c.pulseSpeed;
 
-        // 边界环绕
+        // Boundary wrap-around
         if (c.x < -30) c.x = w + 30;
         if (c.x > w + 30) c.x = -30;
         if (c.y < -30) c.y = h + 30;
         if (c.y > h + 30) c.y = -30;
       }
 
-      /* ── 按景深排序绘制 ── */
+      /* ── Sort by depth layer before drawing ── */
       const sorted = [...cells].sort((a, b) => a.layer - b.layer);
 
-      /* ── 网络连线 — 仅中景和前景 ── */
+      /* ── Network connections — mid and foreground only ── */
       for (let i = 0; i < sorted.length; i++) {
         const a = sorted[i];
         if (a.layer === 0) continue;
@@ -274,13 +274,13 @@ const HeaderBg = () => {
         }
       }
 
-      /* ── 绘制细胞 ── */
+      /* ── Draw cells ── */
       for (const c of sorted) {
         const pulse = Math.sin(c.phase) * 0.5 + 0.5;
         drawCell(ctx, c, pulse);
       }
 
-      /* ── 前景微粒 — 极小的漂浮孢子 ── */
+      /* ── Foreground particles — tiny floating spores ── */
       for (let i = 0; i < 30; i++) {
         const seed = i * 7919;
         const px = ((seed * 13 + time * 0.3) % w + w) % w;

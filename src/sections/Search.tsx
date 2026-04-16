@@ -1,6 +1,5 @@
 /**
  * Search.tsx — Species Search Engine
- * 物种搜索引擎：输入属名 → 展示该属在疾病/国家/年龄组中的分布
  * Genus search workspace with disease, country, and age-group profile views
  */
 import { useEffect, useRef, useState, useCallback, useMemo } from "react";
@@ -37,7 +36,7 @@ interface SpeciesProfile {
   by_sex: ProfileEntry[];
 }
 
-// Common gut genera for quick selection / 常见肠道菌属快速选择
+// Common gut genera for quick selection
 const COMMON_GENERA = [
   "Bacteroides", "Prevotella", "Faecalibacterium", "Bifidobacterium",
   "Lactobacillus", "Roseburia", "Blautia", "Ruminococcus",
@@ -72,7 +71,7 @@ const Search = () => {
   const inputRef = useRef<HTMLInputElement>(null);
   const suggestionsRef = useRef<HTMLDivElement>(null);
 
-  // Autocomplete / 自动补全
+  // Autocomplete
   useEffect(() => {
     if (query.trim().length < 2) {
       setSuggestions([]);
@@ -90,7 +89,7 @@ const Search = () => {
     return () => clearTimeout(timer);
   }, [query]);
 
-  // Search handler / 搜索处理
+  // Search handler
   const doSearch = useCallback((genus: string) => {
     if (!genus.trim()) return;
     setLoading(true);
@@ -109,7 +108,7 @@ const Search = () => {
       .finally(() => setLoading(false));
   }, []);
 
-  // Close suggestions on outside click / 点击外部关闭建议
+  // Close suggestions on outside click
   useEffect(() => {
     const handler = (e: MouseEvent) => {
       if (suggestionsRef.current && !suggestionsRef.current.contains(e.target as Node) &&
@@ -129,7 +128,7 @@ const Search = () => {
         {t("search.speciesHint")}
       </p>
 
-      {/* Search bar / 搜索栏 */}
+      {/* Search bar */}
       <div className={classes.searchContainer}>
         <div className={classes.searchBox}>
           <input
@@ -156,7 +155,7 @@ const Search = () => {
           </button>
         </div>
 
-        {/* Autocomplete suggestions / 自动补全建议 */}
+        {/* Autocomplete suggestions */}
         {showSuggestions && suggestions.length > 0 && (
           <div ref={suggestionsRef} className={classes.suggestions}>
             {suggestions.map((s) => (
@@ -171,7 +170,7 @@ const Search = () => {
           </div>
         )}
 
-        {/* 搜索历史 */}
+        {/* Search history */}
         {showHistory && !showSuggestions && history.length > 0 && (
           <div ref={suggestionsRef} className={classes.suggestions}>
             <div className={classes.historyHeader}>
@@ -191,7 +190,7 @@ const Search = () => {
         )}
       </div>
 
-      {/* Quick genus picker / 常用菌属快速选择 */}
+      {/* Quick genus picker */}
       <div className={classes.quickPicker}>
         <label className={classes.quickLabel}>{t("search.quickSelect")}</label>
         <select
@@ -208,19 +207,19 @@ const Search = () => {
         </select>
       </div>
 
-      {/* Error / 错误信息 */}
+      {/* Error */}
       {error && (
         <div className={classes.errorMsg}>
           {error === "Genus not found" ? t("search.notFound") : error}
         </div>
       )}
 
-      {/* Loading / 加载中 */}
+      {/* Loading */}
       {loading && (
         <div className={classes.loadingMsg}>{t("search.searching")}</div>
       )}
 
-      {/* Species profile / 物种画像 */}
+      {/* Species profile */}
       {profile && <SpeciesProfileView profile={profile} />}
     </section>
   );
@@ -228,7 +227,7 @@ const Search = () => {
 
 export default Search;
 
-// ── Species profile visualization / 物种画像可视化 ──────────────────────────
+// ── Species profile visualization ──────────────────────────────────────────
 
 const SpeciesProfileView = ({ profile }: { profile: SpeciesProfile }) => {
   const { t, locale } = useI18n();
@@ -255,19 +254,19 @@ const SpeciesProfileView = ({ profile }: { profile: SpeciesProfile }) => {
     [profile.by_country, rankProfileEntries],
   );
 
-  // Draw disease bar chart / 绘制疾病丰度柱状图
+  // Draw disease bar chart
   useEffect(() => {
     if (!diseaseRef.current || diseaseEntries.length === 0) return;
     drawBarChart(diseaseRef.current, diseaseEntries, "var(--primary)", locale, "disease");
   }, [diseaseEntries, locale]);
 
-  // Draw country bar chart / 绘制国家丰度柱状图
+  // Draw country bar chart
   useEffect(() => {
     if (!countryRef.current || countryEntries.length === 0) return;
     drawBarChart(countryRef.current, countryEntries, "var(--secondary)", locale, "country");
   }, [countryEntries, locale]);
 
-  // Draw age group bar chart / 绘制年龄组丰度柱状图
+  // Draw age group bar chart
   useEffect(() => {
     if (!ageRef.current || profile.by_age_group.length === 0) return;
     drawBarChart(ageRef.current, profile.by_age_group, "#4ecdc4", locale, "age");
@@ -293,7 +292,7 @@ const SpeciesProfileView = ({ profile }: { profile: SpeciesProfile }) => {
 
   return (
     <div className={classes.profileContainer}>
-      {/* Header card / 物种信息卡 */}
+      {/* Header card */}
       <div className={classes.profileHeader}>
         <h3 className={classes.genusName}>
           <Link to={`/species/${encodeURIComponent(profile.genus)}`} style={{ color: "inherit", textDecoration: "none" }}>
@@ -327,7 +326,7 @@ const SpeciesProfileView = ({ profile }: { profile: SpeciesProfile }) => {
         <button onClick={() => exportSearchChart(diseaseRef, "disease", "png")} style={{ fontSize: "0.8rem", padding: "0.3rem 0.8rem", cursor: "pointer", border: "1px solid #dee2e6", borderRadius: "4px", background: "white" }}>{t("export.png")}</button>
       </div>
 
-      {/* Charts grid / 图表网格 */}
+      {/* Charts grid */}
       <div className={classes.chartsGrid}>
         {profile.by_disease.length > 0 && (
           <div className={classes.chartBlock}>
@@ -348,7 +347,7 @@ const SpeciesProfileView = ({ profile }: { profile: SpeciesProfile }) => {
           </div>
         )}
 
-        {/* Sex distribution as simple table / 性别分布简表 */}
+        {/* Sex distribution as simple table */}
         {profile.by_sex.length > 0 && (
           <div className={classes.chartBlock}>
             <h4>{t("search.bySex")}</h4>
@@ -379,7 +378,7 @@ const SpeciesProfileView = ({ profile }: { profile: SpeciesProfile }) => {
   );
 };
 
-// ── D3 horizontal bar chart / D3 水平柱状图 ─────────────────────────────────
+// ── D3 horizontal bar chart ──────────────────────────────────────────────────
 
 const translateLabel = (name: string, locale: string, type: string): string => {
   if (type === "disease") return diseaseDisplayNameI18n(name, locale);

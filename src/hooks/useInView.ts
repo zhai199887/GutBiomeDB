@@ -1,6 +1,6 @@
 /**
- * useInView — Intersection Observer 懒渲染 Hook
- * 元素进入视口后永久保持 inView=true（一次性触发）
+ * useInView — Intersection Observer lazy-render hook.
+ * Once the element enters the viewport, inView stays true (one-shot trigger).
  */
 import { useRef, useState, useEffect } from "react";
 
