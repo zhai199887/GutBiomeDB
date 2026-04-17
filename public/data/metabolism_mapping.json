@@ -1,6 +1,6 @@
 {
-  "version": "1.0",
-  "last_updated": "2026-04-03",
+  "version": "1.1",
+  "last_updated": "2026-04-17",
   "categories": [
     {
       "id": "scfa_producers",
@@ -8,6 +8,7 @@
       "name_zh": "短链脂肪酸产生菌",
       "icon": "🧪",
       "description": "Bacteria that produce short-chain fatty acids (SCFAs) such as butyrate, propionate, and acetate through fermentation of dietary fiber. SCFAs are critical for colonocyte energy, immune regulation, and gut barrier integrity.",
+      "description_zh": "通过发酵膳食纤维产生丁酸、丙酸、乙酸等短链脂肪酸（SCFA）的细菌。短链脂肪酸对结肠上皮细胞供能、免疫调节和肠道屏障完整性至关重要。",
       "taxa": [
         "Faecalibacterium",
         "Roseburia",
@@ -25,12 +26,23 @@
         "Propionate",
         "Acetate"
       ],
+      "key_metabolites_zh": [
+        "丁酸盐",
+        "丙酸盐",
+        "乙酸盐"
+      ],
       "related_pathways": [
         "Pyruvate fermentation",
         "Wood-Ljungdahl pathway",
         "Acrylate pathway"
       ],
+      "related_pathways_zh": [
+        "丙酮酸发酵",
+        "Wood-Ljungdahl 通路",
+        "丙烯酸酯通路"
+      ],
       "health_relevance": "Low SCFA producers are associated with IBD, colorectal cancer, obesity, and metabolic syndrome.",
+      "health_relevance_zh": "短链脂肪酸产生菌减少与炎症性肠病（IBD）、结直肠癌、肥胖和代谢综合征相关。",
       "references": [
         "PMID:26963409",
         "PMID:27259147"
@@ -59,6 +71,7 @@
       "name_zh": "胆汁酸代谢菌",
       "icon": "🟡",
       "description": "Bacteria with bile salt hydrolase (BSH) or 7α-dehydroxylation activity that transform primary bile acids (cholic acid, chenodeoxycholic acid) into secondary bile acids. These metabolites act as signaling molecules affecting TGR5 and FXR receptors.",
+      "description_zh": "具备胆盐水解酶（BSH）或 7α-脱羟基活性的细菌，可将初级胆汁酸（胆酸、鹅去氧胆酸）转化为次级胆汁酸。这些代谢物作为信号分子作用于 TGR5 和 FXR 受体。",
       "taxa": [
         "Clostridium",
         "Lachnoclostridium",
@@ -76,12 +89,24 @@
         "Ursodeoxycholic acid (UDCA)",
         "Isoursodeoxycholic acid"
       ],
+      "key_metabolites_zh": [
+        "石胆酸 (LCA)",
+        "脱氧胆酸 (DCA)",
+        "熊脱氧胆酸 (UDCA)",
+        "异熊脱氧胆酸"
+      ],
       "related_pathways": [
         "BSH pathway",
         "bai operon (7α-dehydroxylation)",
         "UDCA biosynthesis"
       ],
+      "related_pathways_zh": [
+        "BSH 通路",
+        "bai 操纵子（7α-脱羟基）",
+        "UDCA 生物合成"
+      ],
       "health_relevance": "Dysregulated bile acid metabolism is linked to cholestatic liver disease, gallstones, colorectal cancer, and T2D.",
+      "health_relevance_zh": "胆汁酸代谢紊乱与胆汁淤积性肝病、胆结石、结直肠癌和 2 型糖尿病相关。",
       "references": [
         "DOI:10.1038/s41575-019-0142-6"
       ],
@@ -107,6 +132,7 @@
       "name_zh": "色氨酸代谢菌",
       "icon": "🔵",
       "description": "Bacteria that convert dietary tryptophan into indole derivatives, tryptamine, and serotonin precursors. These metabolites modulate gut motility, host immunity, and the gut-brain axis.",
+      "description_zh": "将膳食色氨酸转化为吲哚衍生物、色胺及血清素前体的细菌。这些代谢物调节肠道蠕动、宿主免疫以及脑-肠轴。",
       "taxa": [
         "Lactobacillus",
         "Clostridium",
@@ -123,12 +149,25 @@
         "Indole-3-acetic acid (IAA)",
         "Serotonin precursors"
       ],
+      "key_metabolites_zh": [
+        "吲哚",
+        "吲哚-3-丙酸 (IPA)",
+        "色胺",
+        "吲哚-3-乙酸 (IAA)",
+        "血清素前体"
+      ],
       "related_pathways": [
         "Tryptophanase pathway",
         "ArAT pathway",
         "Kynurenine pathway"
       ],
+      "related_pathways_zh": [
+        "色氨酸酶通路",
+        "ArAT 通路",
+        "犬尿氨酸通路"
+      ],
       "health_relevance": "Altered tryptophan metabolism is implicated in IBS, depression, autism spectrum disorder, and inflammatory diseases.",
+      "health_relevance_zh": "色氨酸代谢改变与肠易激综合征（IBS）、抑郁、孤独症谱系障碍和炎症性疾病相关。",
       "references": [
         "DOI:10.1016/j.cell.2015.11.028"
       ],
@@ -152,6 +191,7 @@
       "name_zh": "硫化物产生菌",
       "icon": "⚫",
       "description": "Bacteria capable of dissimilatory sulfate reduction, producing H₂S. At high concentrations, H₂S inhibits colonocyte respiration and compromises the epithelial barrier, contributing to IBD pathology.",
+      "description_zh": "可进行异化硫酸盐还原并产生硫化氢（H₂S）的细菌。高浓度 H₂S 抑制结肠上皮细胞呼吸、损伤肠道屏障，参与炎症性肠病的发病机制。",
       "taxa": [
         "Desulfovibrio",
         "Bilophila",
@@ -164,11 +204,21 @@
         "Sulfate",
         "Thiosulfate"
       ],
+      "key_metabolites_zh": [
+        "硫化氢 (H₂S)",
+        "硫酸盐",
+        "硫代硫酸盐"
+      ],
       "related_pathways": [
         "Dissimilatory sulfate reduction",
         "Cysteine degradation"
       ],
+      "related_pathways_zh": [
+        "异化硫酸盐还原",
+        "半胱氨酸降解"
+      ],
       "health_relevance": "Elevated H₂S producers associated with UC, colorectal cancer, and high-fat diet consumption.",
+      "health_relevance_zh": "H₂S 产生菌升高与溃疡性结肠炎（UC）、结直肠癌及高脂饮食相关。",
       "references": [
         "DOI:10.1136/gutjnl-2014-308656"
       ],
@@ -190,6 +240,7 @@
       "name_zh": "TMAO前体产生菌",
       "icon": "❤️",
       "description": "Bacteria producing trimethylamine (TMA) from dietary choline, betaine, or L-carnitine. TMA is hepatically oxidized to TMAO, a proatherogenic metabolite associated with cardiovascular disease risk.",
+      "description_zh": "利用膳食胆碱、甜菜碱或 L-肉碱产生三甲胺（TMA）的细菌。TMA 在肝脏内被氧化为 TMAO，是与心血管疾病风险相关的致动脉粥样硬化代谢物。",
       "taxa": [
         "Clostridium",
         "Desulfovibrio",
@@ -205,12 +256,23 @@
         "Trimethylamine N-oxide (TMAO)",
         "Betaine aldehyde"
       ],
+      "key_metabolites_zh": [
+        "三甲胺 (TMA)",
+        "氧化三甲胺 (TMAO)",
+        "甜菜醛"
+      ],
       "related_pathways": [
         "Choline TMA-lyase (CutC/D)",
         "Carnitine Rieske-type oxygenase (CntA/B)",
         "Betaine reductase"
       ],
+      "related_pathways_zh": [
+        "胆碱 TMA 裂解酶 (CutC/D)",
+        "肉碱 Rieske 型加氧酶 (CntA/B)",
+        "甜菜碱还原酶"
+      ],
       "health_relevance": "High TMAO levels are predictive of major adverse cardiovascular events (MACE), thrombosis, and CKD progression.",
+      "health_relevance_zh": "TMAO 水平升高可预测主要不良心血管事件（MACE）、血栓形成及慢性肾病（CKD）进展。",
       "references": [
         "DOI:10.1038/nature10582",
         "DOI:10.1056/NEJMoa1109400"
@@ -236,6 +298,7 @@
       "name_zh": "内毒素产生菌（革兰氏阴性）",
       "icon": "🔴",
       "description": "Gram-negative bacteria whose outer membrane contains lipopolysaccharide (LPS). Translocation of LPS into systemic circulation ('metabolic endotoxemia') triggers TLR4/NF-κB signaling and chronic low-grade inflammation.",
+      "description_zh": "外膜含有脂多糖（LPS）的革兰氏阴性细菌。LPS 进入体循环（即"代谢性内毒素血症"）可激活 TLR4/NF-κB 通路，诱发慢性低度炎症。",
       "taxa": [
         "Escherichia",
         "Klebsiella",
@@ -249,11 +312,20 @@
         "Lipopolysaccharide (LPS)",
         "Lipid A"
       ],
+      "key_metabolites_zh": [
+        "脂多糖 (LPS)",
+        "脂质 A"
+      ],
       "related_pathways": [
         "TLR4/NF-κB signaling",
         "NLRP3 inflammasome activation"
       ],
+      "related_pathways_zh": [
+        "TLR4/NF-κB 信号通路",
+        "NLRP3 炎症小体激活"
+      ],
       "health_relevance": "Metabolic endotoxemia linked to obesity, T2D, NAFLD, and systemic inflammatory conditions.",
+      "health_relevance_zh": "代谢性内毒素血症与肥胖、2 型糖尿病、非酒精性脂肪肝（NAFLD）及全身性炎症状态相关。",
       "references": [
         "DOI:10.1096/fj.08-100354"
       ],
@@ -277,6 +349,7 @@
       "name_zh": "叶酸和B12合成菌",
       "icon": "🟢",
       "description": "Bacteria capable of de novo synthesis of folate (vitamin B9) and cobalamin (vitamin B12), contributing to host B-vitamin status, one-carbon metabolism, and DNA methylation.",
+      "description_zh": "可从头合成叶酸（维生素 B9）和钴胺素（维生素 B12）的细菌，参与宿主 B 族维生素状态、一碳代谢和 DNA 甲基化。",
       "taxa": [
         "Bifidobacterium",
         "Lactobacillus",
@@ -292,12 +365,24 @@
         "Riboflavin (B2)",
         "Thiamine (B1)"
       ],
+      "key_metabolites_zh": [
+        "叶酸 (B9)",
+        "钴胺素 (B12)",
+        "核黄素 (B2)",
+        "硫胺素 (B1)"
+      ],
       "related_pathways": [
         "De novo folate biosynthesis",
         "Adenosylcobalamin biosynthesis",
         "One-carbon metabolism"
       ],
+      "related_pathways_zh": [
+        "叶酸从头合成",
+        "腺苷钴胺素生物合成",
+        "一碳代谢"
+      ],
       "health_relevance": "Microbial B-vitamin production impacts host epigenetics, neural tube development, and anemia susceptibility.",
+      "health_relevance_zh": "微生物 B 族维生素合成影响宿主表观遗传、神经管发育及贫血易感性。",
       "references": [
         "DOI:10.1016/j.cell.2019.08.047"
       ],
@@ -322,6 +407,7 @@
       "name_zh": "神经递质相关菌",
       "icon": "🧠",
       "description": "Bacteria that produce or modulate neurotransmitters and their precursors, influencing the gut-brain axis through vagal signaling, enteroendocrine cells, and systemic metabolite circulation.",
+      "description_zh": "可产生或调控神经递质及其前体的细菌，通过迷走神经信号、肠内分泌细胞和体循环代谢物影响脑-肠轴。",
       "taxa": [
         "Lactobacillus",
         "Bifidobacterium",
@@ -338,12 +424,25 @@
         "Acetylcholine",
         "Histamine"
       ],
+      "key_metabolites_zh": [
+        "γ-氨基丁酸 (GABA)",
+        "血清素 (5-HT)",
+        "多巴胺前体",
+        "乙酰胆碱",
+        "组胺"
+      ],
       "related_pathways": [
         "Glutamate decarboxylase pathway",
         "Tryptophan → 5-HTP → serotonin",
         "DOPA decarboxylase pathway"
       ],
+      "related_pathways_zh": [
+        "谷氨酸脱羧酶通路",
+        "色氨酸 → 5-HTP → 血清素",
+        "DOPA 脱羧酶通路"
+      ],
       "health_relevance": "Gut-brain axis disruption linked to depression, anxiety, autism, Parkinson's disease, and Alzheimer's disease.",
+      "health_relevance_zh": "脑-肠轴紊乱与抑郁、焦虑、孤独症、帕金森病及阿尔茨海默病相关。",
       "references": [
         "DOI:10.1038/s41593-019-0554-0"
       ],
@@ -368,6 +467,7 @@
       "name_zh": "黏蛋白降解菌",
       "icon": "🛡️",
       "description": "Bacteria capable of degrading host-derived mucin glycoproteins in the intestinal mucus layer. Controlled mucin turnover supports niche balance, but excessive degradation compromises the epithelial barrier.",
+      "description_zh": "可降解肠道黏液层中宿主黏蛋白糖蛋白的细菌。适度的黏蛋白周转可维持生态位平衡，但过度降解会损伤上皮屏障。",
       "taxa": [
         "Akkermansia",
         "Bacteroides",
@@ -382,12 +482,24 @@
         "Sialic acid",
         "Sulfate"
       ],
+      "key_metabolites_zh": [
+        "N-乙酰葡糖胺",
+        "岩藻糖",
+        "唾液酸",
+        "硫酸盐"
+      ],
       "related_pathways": [
         "O-glycan degradation",
         "Mucin sulfatase pathway",
         "Fucosidase pathway"
       ],
+      "related_pathways_zh": [
+        "O-聚糖降解",
+        "黏蛋白硫酸酯酶通路",
+        "岩藻糖苷酶通路"
+      ],
       "health_relevance": "Akkermansia muciniphila supports barrier integrity and metabolic health; excessive mucin degradation linked to IBD and pathogen invasion.",
+      "health_relevance_zh": "嗜黏蛋白阿克曼菌（Akkermansia muciniphila）支持屏障完整性和代谢健康；黏蛋白过度降解与炎症性肠病及病原体入侵相关。",
       "references": [
         "DOI:10.1038/s41579-022-00710-3"
       ],
@@ -410,6 +522,7 @@
       "name_zh": "氨基酸发酵菌",
       "icon": "🟠",
       "description": "Bacteria that ferment amino acids (especially aromatic and sulfur-containing amino acids) to produce phenols, indoles, amines, and branched-chain fatty acids. Excessive protein fermentation produces potentially toxic metabolites.",
+      "description_zh": "发酵氨基酸（尤其是芳香族和含硫氨基酸）生成酚类、吲哚、胺类和支链脂肪酸的细菌。过量蛋白质发酵可产生潜在毒性代谢物。",
       "taxa": [
         "Clostridium",
         "Bacteroides",
@@ -426,12 +539,25 @@
         "Branched-chain fatty acids (isobutyrate, isovalerate)",
         "Hydrogen sulfide"
       ],
+      "key_metabolites_zh": [
+        "对甲酚",
+        "苯酚",
+        "氨",
+        "支链脂肪酸（异丁酸、异戊酸）",
+        "硫化氢"
+      ],
       "related_pathways": [
         "Stickland reaction",
         "Phenylalanine deamination",
         "Tyrosine decarboxylation"
       ],
+      "related_pathways_zh": [
+        "Stickland 反应",
+        "苯丙氨酸脱氨",
+        "酪氨酸脱羧"
+      ],
       "health_relevance": "Excessive amino acid fermentation linked to CKD uremic toxins (p-cresyl sulfate), hepatic encephalopathy (ammonia), and colon cancer.",
+      "health_relevance_zh": "氨基酸过度发酵与慢性肾病尿毒素（对甲酚硫酸盐）、肝性脑病（氨升高）及结肠癌相关。",
       "references": [
         "DOI:10.1128/AEM.01992-14"
       ],
@@ -456,6 +582,7 @@
       "name_zh": "氢气/甲烷循环菌",
       "icon": "💨",
       "description": "Bacteria involved in hydrogen production (fermenters) and hydrogen consumption (acetogens, sulfate reducers). Methanogenic archaea also consume H₂. This cross-feeding network regulates fermentation thermodynamics and gas production.",
+      "description_zh": "参与氢气产生（发酵菌）与消耗（产乙酸菌、硫酸盐还原菌）的细菌；产甲烷古菌亦消耗 H₂。此交叉喂养网络调控发酵热力学和产气量。",
       "taxa": [
         "Ruminococcus",
         "Clostridium",
@@ -471,12 +598,24 @@
         "Formate",
         "Acetate"
       ],
+      "key_metabolites_zh": [
+        "氢气 (H₂)",
+        "甲烷 (CH₄)",
+        "甲酸盐",
+        "乙酸盐"
+      ],
       "related_pathways": [
         "Hydrogenase pathway",
         "Wood-Ljungdahl (reductive acetogenesis)",
         "Methanogenesis"
       ],
+      "related_pathways_zh": [
+        "氢化酶通路",
+        "Wood-Ljungdahl（还原性产乙酸）",
+        "产甲烷作用"
+      ],
       "health_relevance": "H₂ accumulation inhibits fermentation efficiency; methane producers linked to constipation-predominant IBS and slow transit.",
+      "health_relevance_zh": "H₂ 积累抑制发酵效率；产甲烷菌与便秘型肠易激综合征（IBS-C）及慢传输型便秘相关。",
       "references": [
         "DOI:10.1038/nrmicro.2014.94"
       ],
@@ -500,6 +639,7 @@
       "name_zh": "乳酸产生与交叉喂养菌",
       "icon": "🥛",
       "description": "Bacteria producing lactate as a primary fermentation end-product. Lactate serves as a critical cross-feeding substrate for butyrate-producing bacteria, linking primary fermentation to SCFA production.",
+      "description_zh": "以乳酸为主要发酵终产物的细菌。乳酸是丁酸产生菌的关键交叉喂养底物，将初级发酵与 SCFA 产生衔接起来。",
       "taxa": [
         "Bifidobacterium",
         "Lactobacillus",
@@ -515,12 +655,24 @@
         "Butyrate (via cross-feeding)",
         "Propionate"
       ],
+      "key_metabolites_zh": [
+        "L-乳酸",
+        "D-乳酸",
+        "丁酸（经交叉喂养）",
+        "丙酸"
+      ],
       "related_pathways": [
         "Bifidum shunt",
         "Homofermentative glycolysis",
         "Lactate → butyrate cross-feeding"
       ],
+      "related_pathways_zh": [
+        "双歧杆菌分流途径",
+        "同型发酵糖酵解",
+        "乳酸 → 丁酸交叉喂养"
+      ],
       "health_relevance": "Lactate accumulation (D-lactic acidosis) is dangerous in short-bowel syndrome; balanced lactate cross-feeding supports gut health.",
+      "health_relevance_zh": "乳酸积累（D-乳酸酸中毒）在短肠综合征中具有危险性；均衡的乳酸交叉喂养则支持肠道健康。",
       "references": [
         "DOI:10.1038/ismej.2015.62"
       ],
@@ -544,6 +696,7 @@
       "name_zh": "草酸降解菌",
       "icon": "💎",
       "description": "Bacteria capable of degrading dietary oxalate, reducing its intestinal absorption and lowering the risk of kidney stone formation. Loss of these bacteria after antibiotic use increases enteric hyperoxaluria.",
+      "description_zh": "可降解膳食草酸的细菌，减少其肠道吸收，降低肾结石形成风险。抗生素使用后这些细菌的丢失会增加肠源性高草酸尿症的风险。",
       "taxa": [
         "Lactobacillus",
         "Bifidobacterium",
@@ -555,11 +708,21 @@
         "Formate",
         "CO₂"
       ],
+      "key_metabolites_zh": [
+        "草酸盐",
+        "甲酸盐",
+        "CO₂"
+      ],
       "related_pathways": [
         "Oxalyl-CoA decarboxylase pathway",
         "Formyl-CoA transferase"
       ],
+      "related_pathways_zh": [
+        "草酰辅酶 A 脱羧酶通路",
+        "甲酰辅酶 A 转移酶"
+      ],
       "health_relevance": "Loss of oxalate degraders linked to calcium oxalate kidney stones and enteric hyperoxaluria post-Roux-en-Y gastric bypass.",
+      "health_relevance_zh": "草酸降解菌丢失与草酸钙肾结石及 Roux-en-Y 胃旁路术后肠源性高草酸尿症相关。",
       "references": [
         "DOI:10.1128/AEM.01535-09"
       ],
@@ -580,6 +743,7 @@
       "name_zh": "复杂多糖降解菌",
       "icon": "🌾",
       "description": "Bacteria encoding extensive glycoside hydrolase (GH) and polysaccharide utilization loci (PUL) repertoires. These keystone species initiate dietary fiber breakdown, releasing oligosaccharides for cross-feeding to other community members.",
+      "description_zh": "编码大量糖苷水解酶（GH）和多糖利用位点（PUL）的细菌。这些关键物种启动膳食纤维降解，释放寡糖供其他群落成员交叉喂养。",
       "taxa": [
         "Bacteroides",
         "Parabacteroides",
@@ -596,12 +760,24 @@
         "Propionate",
         "Succinate"
       ],
+      "key_metabolites_zh": [
+        "寡糖",
+        "乙酸盐",
+        "丙酸盐",
+        "琥珀酸盐"
+      ],
       "related_pathways": [
         "Starch utilization system (Sus)",
         "Arabinoxylan degradation",
         "Inulin-type fructan hydrolysis"
       ],
+      "related_pathways_zh": [
+        "淀粉利用系统 (Sus)",
+        "阿拉伯木聚糖降解",
+        "菊粉型果聚糖水解"
+      ],
       "health_relevance": "Low fiber-degrader abundance associated with Westernized diet, reduced microbial diversity, and increased inflammatory disease risk.",
+      "health_relevance_zh": "纤维降解菌丰度偏低与西方化饮食、菌群多样性下降及炎症性疾病风险升高相关。",
       "references": [
         "DOI:10.1016/j.cell.2019.01.001"
       ],
@@ -627,6 +803,7 @@
       "name_zh": "条件致病菌（病生共生体）",
       "icon": "⚠️",
       "description": "Normally commensal bacteria that can cause disease under conditions of dysbiosis, immune suppression, or barrier breach. These pathobionts carry virulence factors that are typically suppressed in a healthy, competitive microbial community.",
+      "description_zh": "通常作为共生菌存在，但在菌群失调、免疫抑制或屏障破损条件下可致病的细菌。这些条件致病菌携带的毒力因子在健康且竞争平衡的群落中通常被抑制。",
       "taxa": [
         "Klebsiella",
         "Enterococcus",
@@ -642,12 +819,24 @@
         "Gelatinase",
         "Cytolethal distending toxin"
       ],
+      "key_metabolites_zh": [
+        "肠毒素",
+        "溶血素",
+        "明胶酶",
+        "细胞致死性胀大毒素"
+      ],
       "related_pathways": [
         "Type III/VI secretion systems",
         "Quorum sensing",
         "Biofilm formation"
       ],
+      "related_pathways_zh": [
+        "III/VI 型分泌系统",
+        "群体感应",
+        "生物膜形成"
+      ],
       "health_relevance": "Bloom of pathobionts observed in antibiotic-associated diarrhea, VAP, neonatal sepsis, and post-transplant infection.",
+      "health_relevance_zh": "条件致病菌扩张见于抗生素相关性腹泻、呼吸机相关肺炎（VAP）、新生儿脓毒症及移植后感染。",
       "references": [
         "DOI:10.1038/nrmicro3552"
       ],
