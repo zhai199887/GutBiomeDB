@@ -273,6 +273,36 @@ def warmup_data():
     logging.info("Background data warmup started")
 
 
+# ── Cache-version observability ────────────────────────────────────────────────
+
+import cache_audit
+
+CACHE_AUDIT_HASH_FILE = Path(os.getenv(
+    "CACHE_AUDIT_HASH_FILE",
+    str(Path(__file__).parent / "_disk_cache" / ".endpoint_source_hashes.json"),
+))
+
+
+@app.on_event("startup")
+def _run_cache_audit():
+    try:
+        report = cache_audit.run(app, CACHE_AUDIT_HASH_FILE)
+    except cache_audit.DuplicateCacheKeyError as e:
+        logging.error("[cache-audit] FATAL duplicate cache_key: %s", e)
+        raise
+    except Exception as e:
+        logging.exception("[cache-audit] audit crashed, backend continues: %s", e)
+        app.state.cache_audit_report = None
+        return
+    app.state.cache_audit_report = report
+    stale_names = ", ".join(w["name"] for w in report.stale[:5])
+    logging.info(
+        "[cache-audit] scanned %d routes, %d tracked, %d stale (%s), %d seeded, %d unknown in %.1fms",
+        report.total, report.tracked, len(report.stale), stale_names,
+        len(report.seeded), len(report.unknown), report.elapsed_ms,
+    )
+
+
 # ── Response cache for compute-heavy endpoints ─────────────────────────────────
 
 _RESULT_CACHE: dict[str, tuple[float, float, dict]] = {}
