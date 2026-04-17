@@ -5319,11 +5319,17 @@ _ANALYTICS_FILE = Path(__file__).parent / "analytics.jsonl"
 @limiter.limit("120/minute")
 async def track_event(request: Request, evt: TrackEvent):
     """Log usage event (for publication metrics)."""
+    # Extract visitor info from request headers
+    forwarded = request.headers.get("x-forwarded-for", "")
+    ip = forwarded.split(",")[0].strip() if forwarded else (request.client.host if request.client else "")
     entry = {
         "timestamp": datetime.now().isoformat(),
         "event": evt.event,
         "page": evt.page,
         "detail": evt.detail,
+        "ip": ip,
+        "ua": request.headers.get("user-agent", ""),
+        "referer": request.headers.get("referer", ""),
     }
     try:
         with open(_ANALYTICS_FILE, "a", encoding="utf-8") as f:
@@ -5360,10 +5366,38 @@ async def analytics_summary(request: Request, token: str = ""):
     event_counts = Counter(e.get("event", "") for e in events)
     page_counts = Counter(e.get("page", "") for e in events)
 
+    # Daily breakdown
+    daily: dict = {}
+    for e in events:
+        day = e.get("timestamp", "")[:10]
+        if not day:
+            continue
+        if day not in daily:
+            daily[day] = {"views": 0, "ips": set(), "pages": Counter()}
+        daily[day]["views"] += 1
+        ip = e.get("ip", "")
+        if ip:
+            daily[day]["ips"].add(ip)
+        daily[day]["pages"][e.get("page", "")] += 1
+
+    daily_summary = {}
+    for day in sorted(daily):
+        d = daily[day]
+        daily_summary[day] = {
+            "views": d["views"],
+            "unique_visitors": len(d["ips"]),
+            "top_pages": dict(d["pages"].most_common(10)),
+        }
+
+    # Unique visitors (all time)
+    all_ips = set(e.get("ip", "") for e in events if e.get("ip"))
+
     return {
         "total_events": len(events),
+        "unique_visitors": len(all_ips),
         "by_event_type": dict(event_counts.most_common(20)),
         "by_page": dict(page_counts.most_common(20)),
+        "daily": daily_summary,
         "recent": events[-20:] if events else [],
     }
 
