@@ -2,6 +2,7 @@
 main.py – GutBiomeDB FastAPI backend
 """
 
+import hashlib
 import logging
 import os
 import json
@@ -222,6 +223,11 @@ def warmup_data():
                     )
                 ),
             ),
+            ("chord default genus 12", lambda: getattr(chord_data, "__wrapped__", chord_data)(None, 10, 12)),
+            ("cooccurrence IBD", lambda: getattr(cooccurrence_network, "__wrapped__", cooccurrence_network)(None, "IBD", 0.3, 50, 3000, "sparcc", 0.05)),
+            ("cooccurrence CRC", lambda: getattr(cooccurrence_network, "__wrapped__", cooccurrence_network)(None, "colorectal_cancer", 0.3, 50, 3000, "sparcc", 0.05)),
+            ("network-compare IBD", lambda: getattr(network_compare, "__wrapped__", network_compare)(None, "IBD", 0.3, 50, 3000, "sparcc", 0.05)),
+            ("phenotype-taxa Faecalibacterium sex", lambda: getattr(phenotype_taxa_profile, "__wrapped__", phenotype_taxa_profile)(None, "Faecalibacterium", "sex")),
         ]
         # Parallel warmup: non-phenotype heavy endpoints, max_workers=4
         import concurrent.futures as _cf
@@ -2604,10 +2610,15 @@ def metabolism_category_profile(request: Request, category_id: str):
     cached = get_cached(cache_key)
     if cached:
         return cached
+    disk = get_disk_cached_by_data(cache_key)
+    if disk is not None:
+        set_cached(cache_key, disk)
+        return disk
 
     context = _prepare_metabolism_context(get_metadata(), get_abundance())
     result = _metabolism_category_result(category, context, METABOLISM_PROFILE_DISEASE_LIMIT)
     set_cached(cache_key, result)
+    set_disk_cached(cache_key, result)
     return result
 
 
@@ -2624,11 +2635,16 @@ def metabolism_overview(request: Request):
     cached = get_cached(cache_key)
     if cached:
         return cached
+    disk = get_disk_cached_by_data(cache_key)
+    if disk is not None:
+        set_cached(cache_key, disk, ttl=METABOLISM_OVERVIEW_TTL)
+        return disk
 
     mapping = load_metabolism_mapping()
     context = _prepare_metabolism_context(get_metadata(), get_abundance())
     result = _build_metabolism_overview(mapping, context)
     set_cached(cache_key, result, ttl=METABOLISM_OVERVIEW_TTL)
+    set_disk_cached(cache_key, result)
     return result
 
 
@@ -3751,6 +3767,10 @@ def chord_data(request: Request, top_diseases: int = 10, top_genera: int = 12):
     cached = get_cached(cache_key)
     if cached:
         return cached
+    disk = get_disk_cached_by_data(cache_key)
+    if disk is not None:
+        set_cached(cache_key, disk)
+        return disk
     meta = get_metadata()
     abund = get_abundance()
 
@@ -3813,6 +3833,7 @@ def chord_data(request: Request, top_diseases: int = 10, top_genera: int = 12):
         "matrix": matrix,
     }
     set_cached(cache_key, result)
+    set_disk_cached(cache_key, result)
     return result
 
 
@@ -3958,6 +3979,10 @@ def cooccurrence_network(
     cached = get_cached(cache_key)
     if cached:
         return cached
+    disk = get_disk_cached_by_data(cache_key)
+    if disk is not None:
+        set_cached(cache_key, disk)
+        return disk
     meta = get_metadata()
     abund = get_abundance()
     result = _build_cooccurrence_result(
@@ -3971,6 +3996,7 @@ def cooccurrence_network(
         fdr_threshold=fdr_threshold,
     )
     set_cached(cache_key, result)
+    set_disk_cached(cache_key, result)
     return result
 
 
@@ -3997,6 +4023,10 @@ def network_compare(
     cached = get_cached(cache_key)
     if cached:
         return cached
+    disk = get_disk_cached_by_data(cache_key)
+    if disk is not None:
+        set_cached(cache_key, disk)
+        return disk
 
     meta = get_metadata()
     abund = get_abundance()
@@ -4029,6 +4059,7 @@ def network_compare(
         **comparison,
     }
     set_cached(cache_key, result)
+    set_disk_cached(cache_key, result)
     return result
 
 
@@ -4739,20 +4770,25 @@ async def cross_study_analysis(request: Request, req: CrossStudyRequest):
     """Cross-study meta-analysis: multi-cohort consensus biomarker discovery."""
     if len(req.project_ids) < 2:
         raise HTTPException(400, "At least 2 projects required")
-    cache_key = "cross_study_v1:" + json.dumps(
-        {
-            "project_ids": sorted(str(project_id).strip() for project_id in req.project_ids),
-            "disease": req.disease.strip(),
-            "method": req.method,
-            "taxonomy_level": req.taxonomy_level,
-            "p_threshold": req.p_threshold,
-            "min_studies": req.min_studies,
-        },
-        sort_keys=True,
-    )
+    _cross_study_payload = {
+        "project_ids": sorted(str(project_id).strip() for project_id in req.project_ids),
+        "disease": req.disease.strip(),
+        "method": req.method,
+        "taxonomy_level": req.taxonomy_level,
+        "p_threshold": req.p_threshold,
+        "min_studies": req.min_studies,
+    }
+    _cross_study_body_hash = hashlib.sha256(
+        json.dumps(_cross_study_payload, sort_keys=True).encode("utf-8")
+    ).hexdigest()[:16]
+    cache_key = f"cross_study_v2:{_cross_study_body_hash}"
     cached = get_cached(cache_key)
     if cached:
         return cached
+    disk = get_disk_cached_by_data(cache_key)
+    if disk is not None:
+        set_cached(cache_key, disk)
+        return disk
     meta = get_metadata()
     abund = get_abundance()
     abund_idx = set(abund.index)
@@ -4965,6 +5001,7 @@ async def cross_study_analysis(request: Request, req: CrossStudyRequest):
         "all_markers": consensus_markers[:500],
     }
     set_cached(cache_key, result)
+    set_disk_cached(cache_key, result)
     return result
 
 
