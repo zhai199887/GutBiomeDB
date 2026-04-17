@@ -290,3 +290,27 @@ def persist(audits: list[EndpointAudit], prior_file: Path) -> None:
 
     prior_file.parent.mkdir(parents=True, exist_ok=True)
     prior_file.write_text(json.dumps(out, indent=2), encoding="utf-8")
+
+
+def reset_endpoint(name: str, prior_file: Path, audits: list[EndpointAudit]) -> None:
+    """Rewrite a single entry in prior_file using the current audit for `name`.
+
+    Raises KeyError if no audit has cache_key_name == name.
+    """
+    match = next(
+        (a for a in audits
+         if a.status == "tracked" and a.cache_key_name == name),
+        None,
+    )
+    if match is None:
+        raise KeyError(name)
+
+    existing = load_prior(prior_file)
+    existing[name] = {
+        "hash": match.current_hash,
+        "cache_key_version": match.version,
+        "source_status": "source",
+        "last_seen_utc": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+    }
+    prior_file.parent.mkdir(parents=True, exist_ok=True)
+    prior_file.write_text(json.dumps(existing, indent=2), encoding="utf-8")

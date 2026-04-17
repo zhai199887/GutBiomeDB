@@ -268,3 +268,29 @@ def test_persist_preserves_hash_when_source_unavailable(seeded_hash_file):
     raw = json.loads(seeded_hash_file.read_text())
     assert raw["disease_profile"]["hash"] == "a7b3c1"
     assert raw["disease_profile"]["source_status"] == "source_unavailable"
+
+
+from cache_audit import reset_endpoint
+
+
+def test_reset_endpoint_updates_one_leaves_others(seeded_hash_file):
+    raw = json.loads(seeded_hash_file.read_text())
+    raw["network"] = {"hash": "oldnet", "cache_key_version": "v1",
+                       "source_status": "source", "last_seen_utc": "x"}
+    seeded_hash_file.write_text(json.dumps(raw))
+
+    audits = [
+        _tracked_audit("disease_profile", "v1", "newhash"),
+        _tracked_audit("network", "v1", "newnet"),
+    ]
+    reset_endpoint("disease_profile", seeded_hash_file, audits)
+
+    updated = json.loads(seeded_hash_file.read_text())
+    assert updated["disease_profile"]["hash"] == "newhash"
+    assert updated["network"]["hash"] == "oldnet"
+
+
+def test_reset_endpoint_raises_when_name_not_in_audits(seeded_hash_file):
+    audits = [_tracked_audit("other", "v1", "zzz")]
+    with pytest.raises(KeyError):
+        reset_endpoint("disease_profile", seeded_hash_file, audits)
