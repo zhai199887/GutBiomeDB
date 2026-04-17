@@ -5933,7 +5933,7 @@ def _gbhi_gupta_psi(G_pct: np.ndarray, mh: list[int], mn: list[int]) -> float:
     return val
 
 
-SUPP_TABLE6_XLSX = os.path.join(os.path.dirname(__file__), "..", "docs", "NatureMicrobiology_LaTeX", "supplementary_table6_gbhi_scores.xlsx")
+SUPP_TABLE6_XLSX = os.path.join(os.path.dirname(__file__), "..", "docs", "NatureMicrobiology_LaTeX", "table7_gbhi_scores.xlsx")
 
 
 @lru_cache(maxsize=1)
