@@ -6,6 +6,7 @@ import {
   loadSummary,
 } from "@/data";
 import ErrorBoundary from "@/components/ErrorBoundary";
+import GlobalNav from "@/components/GlobalNav";
 import { I18nProvider, useI18n } from "@/i18n";
 import Footer from "@/sections/Footer";
 import Header from "@/sections/Header";
@@ -69,7 +70,7 @@ const ROUTE_TITLES = {
     "/cooccurrence": "网络可视化",
     "/chord": "网络可视化",
     "/metabolism": "代谢功能",
-    "/similarity": "相似搜索",
+    "/similarity": "健康指数",
     "/lifecycle": "生命周期",
     "/search": "菌属检索",
     "/studies": "研究项目",
@@ -153,12 +154,15 @@ const MainPage = () => {
 
 const AppShell = () => {
   const { t } = useI18n();
+  const { pathname } = useLocation();
+  const showGlobalNav = pathname !== "/" && pathname !== "/about" && pathname !== "/api-docs";
 
   return (
     <>
       <a href="#main-content" className="skip-link">{t("common.skipToContent")}</a>
       <ErrorBoundary>
       <DocumentTitle>
+      {showGlobalNav && <GlobalNav />}
       <Suspense fallback={<PageLoader />}>
         <Routes>
           <Route path="/" element={<MainPage />} />
