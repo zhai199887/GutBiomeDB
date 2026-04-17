@@ -3027,6 +3027,59 @@ def clear_disk_cache_endpoint(request: Request, x_admin_token: str | None = Head
             "message": "Disk and memory cache cleared. Warmup will re-run on next request."}
 
 
+@app.delete("/api/admin/purge-endpoint-cache",
+            summary="Purge cache for a single endpoint",
+            description="Delete disk cache files matching the endpoint's cache_key prefix "
+                        "AND clear the same prefix from memory cache. Use when a code "
+                        "change alters an endpoint's output so stale cached results must be discarded.",
+            tags=["Admin"])
+@no_cache_tracking
+@limiter.limit("20/minute")
+def purge_endpoint_cache(
+    request: Request,
+    endpoint: str,
+    x_admin_token: str | None = Header(None),
+):
+    """Purge disk+memory cache entries for a single endpoint by cache_key prefix.
+
+    `endpoint` is the endpoint name from /api/cache-audit (e.g. 'species_profile'),
+    which maps to cache_key prefix `species_profile_v1:`.
+    """
+    _check_admin(x_admin_token)
+    audits = cache_audit.scan_endpoints(app)
+    audit = next((a for a in audits if a.name == endpoint), None)
+    if audit is None:
+        raise HTTPException(404, f"endpoint '{endpoint}' not found in audit scan")
+    cache_key_prefix = audit.cache_key
+    if not cache_key_prefix:
+        raise HTTPException(400, f"endpoint '{endpoint}' has no cache_key (not tracked)")
+
+    # Disk: filenames are derived from cache keys; match by prefix.
+    deleted_files: list[str] = []
+    try:
+        for fname in os.listdir(_DISK_CACHE_DIR):
+            if not fname.endswith(".json") or fname.startswith("."):
+                continue
+            if fname.startswith(cache_key_prefix.replace(":", "_")):
+                os.remove(os.path.join(_DISK_CACHE_DIR, fname))
+                deleted_files.append(fname)
+    except Exception as e:
+        raise HTTPException(500, f"Failed to purge disk cache: {e}") from e
+
+    # Memory: clear any keys that start with the prefix.
+    mem_keys = [k for k in list(_RESULT_CACHE.keys()) if k.startswith(cache_key_prefix)]
+    for k in mem_keys:
+        _RESULT_CACHE.pop(k, None)
+
+    return {
+        "endpoint": endpoint,
+        "cache_key_prefix": cache_key_prefix,
+        "disk_files_deleted": len(deleted_files),
+        "memory_keys_cleared": len(mem_keys),
+        "sample_files": deleted_files[:5],
+    }
+
+
 @app.post("/api/admin/rehash-seed",
           summary="Reset cache-audit baseline hashes",
           description="Rewrite .endpoint_source_hashes.json using current source. "
