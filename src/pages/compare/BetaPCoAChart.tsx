@@ -51,7 +51,7 @@ function ellipsePathFromPoints(
   const lambda2 = trace / 2 - gap;
 
   // Angle of major eigenvector = arctan2(v[1], v[0]) where v = [covXY, λ1-covXX]
-  // (same as paper: arctan2(*vecs[:,0][::-1]))
+  // (equivalent to: arctan2(*vecs[:,0][::-1]))
   const theta = Math.atan2(lambda1 - covXX, covXY || 1e-9);
 
   // Semi-axes in data space

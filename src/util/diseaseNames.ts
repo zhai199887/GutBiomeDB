@@ -464,10 +464,7 @@ function lookupDiseaseZh(key: string): string | undefined {
   return _DISEASE_ZH_NORM[norm];
 }
 
-/**
- * 获取疾病的国际化显示名称
- * locale === "zh" 时返回中文名（内嵌映射），否则返回英文标准名
- */
+/** Return localized display name. Returns Chinese when locale === 'zh', otherwise English. */
 export function diseaseDisplayNameI18n(key: string, locale: string): string {
   if (locale === "zh") {
     const zh = lookupDiseaseZh(key);

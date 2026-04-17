@@ -1,6 +1,5 @@
 /**
  * PhenotypePage — Phenotype Association Analysis
- * 表型关联分析页面（容器组件）
  *
  * Architecture:
  *   PhenotypeControls → dimension/group/tax-level selectors (with n= sample counts)

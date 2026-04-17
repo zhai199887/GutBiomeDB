@@ -27,7 +27,7 @@ export const COUNTRY_NAMES: Record<string, string> = {
   UM: "U.S. Minor Outlying Islands", unknown: "Unknown",
 };
 
-/** Chinese country names / 中文国名 */
+/** Chinese country name mapping */
 export const COUNTRY_NAMES_ZH: Record<string, string> = {
   AE: "阿联酋", AF: "阿富汗", AL: "阿尔巴尼亚", AM: "亚美尼亚", AT: "奥地利",
   AU: "澳大利亚", AZ: "阿塞拜疆", BD: "孟加拉国", BE: "比利时",
@@ -53,13 +53,13 @@ export const COUNTRY_NAMES_ZH: Record<string, string> = {
   SD: "苏丹", UM: "美国本土外小岛屿", unknown: "未知",
 };
 
-/** Age group Chinese names / 年龄组中文名 */
+/** Age group Chinese name mapping */
 export const AGE_GROUP_ZH: Record<string, string> = {
   Infant: "婴儿", Child: "儿童", Adolescent: "青少年", Adult: "成人",
   Older_Adult: "老年人", Centenarian: "百岁老人", Oldest_Old: "高龄老人", Unknown: "未知",
 };
 
-/** Sex Chinese names / 性别中文名 */
+/** Sex Chinese name mapping */
 export const SEX_ZH: Record<string, string> = {
   male: "男", female: "女", unknown: "未知",
 };

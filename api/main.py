@@ -501,7 +501,7 @@ EXCLUDED_DISEASE_ALIASES = {"dss colitis"}
 
 
 def _read_csv_with_fallbacks(path: str, **kwargs) -> pd.DataFrame:
-    """Read CSV with UTF-8 preference and legacy fallbacks."""
+    """Read CSV with UTF-8 preference and GBK/latin1 fallbacks."""
     last_error: Exception | None = None
     for encoding in ("utf-8-sig", "utf-8", "gbk", "latin1"):
         try:
@@ -5173,7 +5173,7 @@ async def health_index(request: Request, req: HealthIndexRequest):
     raw_score_weighted = math.log10((psi_MH + pseudo) / (psi_MN + pseudo))
     raw_score = raw_score_weighted
 
-    # ── Universal softmax health score (paper Figure 1g / Supp Table 6) ──
+    # ── Universal softmax health score (frozen 10-class classifier) ──
     # Single-sample scoring via frozen universal softmax P(NC)*100; percentile
     # looked up from Supp Table 6 NC distribution.
     try:
@@ -5188,12 +5188,12 @@ async def health_index(request: Request, req: HealthIndexRequest):
         normalized = float(round(p_nc * 100.0, 1))
     except Exception as e:
         logging.warning(f"[health-index] universal softmax fallback: {e}")
-        # Fallback: legacy Gupta normalisation
+        # Fallback: Gupta 2020 normalisation
         normalized = max(0.0, min(100.0, (raw_score_weighted + 2.0) / 4.0 * 100.0))
 
     pop = _compute_population_gmhi()
     nc_pop = pop.get("nc_stats", {})
-    # Tier thresholds aligned with paper Results: high≥70, moderate 40-70, low<40
+    # Tier thresholds: high≥70, moderate 40-70, low<40
     if normalized >= 70.0:
         category = "good"
     elif normalized >= 40.0:
