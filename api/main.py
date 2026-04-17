@@ -173,6 +173,13 @@ def warmup_data():
             {"url": "http://127.0.0.1:8000/api/data-stats"},
             {"url": "http://127.0.0.1:8000/api/disease-list"},
             {"url": "http://127.0.0.1:8000/api/health-index/reference"},
+            {"url": "http://127.0.0.1:8000/api/project-timeline"},
+            {"url": "http://127.0.0.1:8000/api/disease-names-zh"},
+            {"url": "http://127.0.0.1:8000/api/disease-display-names"},
+            {"url": "http://127.0.0.1:8000/api/disease-ontology"},
+            {"url": "http://127.0.0.1:8000/api/phenotype-groups?dim_type=disease"},
+            {"url": "http://127.0.0.1:8000/api/phenotype-groups?dim_type=age"},
+            {"url": "http://127.0.0.1:8000/api/phenotype-groups?dim_type=sex"},
         ]
         for spec in lightweight_requests:
             url = spec["url"]
@@ -1480,15 +1487,19 @@ def health(request: Request):
 @app.get("/api/filter-options",
          summary="Get filter options",
          description="Returns available filter values for countries, diseases, age groups, and sexes.")
-@no_cache_tracking
 @limiter.limit("120/minute")
 def filter_options(request: Request):
     """
     Return available filter option values from metadata.
     """
-    cached = get_cached("filter_options")
+    cache_key = "filter_options_v1"
+    cached = get_cached(cache_key)
     if cached:
         return cached
+    disk = get_disk_cached_by_data(cache_key)
+    if disk is not None:
+        set_cached(cache_key, disk)
+        return disk
     meta = get_metadata()
 
     countries = sorted(meta["country"].dropna().astype(str).str.strip().unique().tolist())
@@ -1514,22 +1525,27 @@ def filter_options(request: Request):
         "age_groups": age_groups,
         "sexes": sexes,
     }
-    set_cached("filter_options", result)
+    set_cached(cache_key, result)
+    set_disk_cached(cache_key, result)
     return result
 
 
 @app.get("/api/data-stats",
          summary="Dataset statistics",
          description="Returns total sample count, country count, condition-label counts, and data version.")
-@no_cache_tracking
 @limiter.limit("120/minute")
 def data_stats(request: Request):
     """
     Return current dataset statistics for homepage display.
     """
-    cached = get_cached("data_stats")
+    cache_key = "data_stats_v1"
+    cached = get_cached(cache_key)
     if cached:
         return cached
+    disk = get_disk_cached_by_data(cache_key)
+    if disk is not None:
+        set_cached(cache_key, disk)
+        return disk
     meta = get_metadata()
 
     # Read version info if exists
@@ -1575,20 +1591,25 @@ def data_stats(request: Request):
         "last_updated": version_info.get("last_updated", datetime.now().strftime("%Y-%m-%d")),
         "version": version_info.get("version", f"v1.0_{datetime.now().strftime('%Y%m%d')}"),
     }
-    set_cached("data_stats", result)
+    set_cached(cache_key, result)
+    set_disk_cached(cache_key, result)
     return result
 
 
 @app.get("/api/project-timeline",
          summary="Project growth timeline",
          description="Returns yearly sample and project counts for homepage trend views.")
-@no_cache_tracking
 @limiter.limit("120/minute")
 def project_timeline(request: Request):
     """Return yearly sample/project counts derived from metadata pubdate."""
-    cached = get_cached("project_timeline")
+    cache_key = "project_timeline_v1"
+    cached = get_cached(cache_key)
     if cached:
         return cached
+    disk = get_disk_cached_by_data(cache_key)
+    if disk is not None:
+        set_cached(cache_key, disk)
+        return disk
 
     meta = get_metadata().copy()
     project_col = get_project_column(meta)
@@ -1598,13 +1619,15 @@ def project_timeline(request: Request):
 
     if "year" not in meta.columns:
         result = {"timeline": []}
-        set_cached("project_timeline", result)
+        set_cached(cache_key, result)
+        set_disk_cached(cache_key, result)
         return result
 
     year_meta = meta.dropna(subset=["year"]).copy()
     if year_meta.empty:
         result = {"timeline": []}
-        set_cached("project_timeline", result)
+        set_cached(cache_key, result)
+        set_disk_cached(cache_key, result)
         return result
 
     year_meta["year"] = year_meta["year"].astype(int)
@@ -1628,18 +1651,26 @@ def project_timeline(request: Request):
             for row in grouped.itertuples(index=False)
         ]
     }
-    set_cached("project_timeline", result)
+    set_cached(cache_key, result)
+    set_disk_cached(cache_key, result)
     return result
 
 
 @app.get("/api/disease-names-zh",
          summary="Disease name translations",
          description="Returns Chinese translations for disease names.")
-@no_cache_tracking
 @limiter.limit("120/minute")
 def get_disease_names_zh(request: Request):
     """Return disease name Chinese translations.
     Merges disease_names_zh.json + disease_ontology standard_name_zh"""
+    cache_key = "disease_names_zh_v1"
+    cached = get_cached(cache_key)
+    if cached:
+        return cached
+    disk = get_disk_cached_by_data(cache_key)
+    if disk is not None:
+        set_cached(cache_key, disk)
+        return disk
     merged = dict(DISEASE_NAMES_ZH)
     # Add translations from ontology that aren't in the manual file
     for key, info in DISEASE_ONTOLOGY.items():
@@ -1647,19 +1678,30 @@ def get_disease_names_zh(request: Request):
             zh = info.get("standard_name_zh", "")
             if zh:
                 merged[key] = zh
+    set_cached(cache_key, merged)
+    set_disk_cached(cache_key, merged)
     return merged
 
 
 @app.get("/api/disease-display-names",
          summary="Standardized display names for diseases",
          description="Returns a mapping from raw disease keys to standardized full display names (no abbreviation suffix).")
-@no_cache_tracking
 @limiter.limit("120/minute")
 def get_disease_display_names(request: Request):
     """Return standardized display names (full name only, no abbreviation suffix)."""
+    cache_key = "disease_display_names_v1"
+    cached = get_cached(cache_key)
+    if cached:
+        return cached
+    disk = get_disk_cached_by_data(cache_key)
+    if disk is not None:
+        set_cached(cache_key, disk)
+        return disk
     keys = set(DISEASE_ONTOLOGY.keys()) | set(DISEASE_NAMES_EN_FALLBACK.keys())
     keys.update(item["name"] for item in get_disease_list_cached())
     result = {key: disease_to_en(key) for key in sorted(keys, key=_disease_sort_key)}
+    set_cached(cache_key, result)
+    set_disk_cached(cache_key, result)
     return result
 
 
@@ -1799,12 +1841,20 @@ def diff_analysis(request: Request, req: DiffAnalysisRequest):
 @app.get("/api/phenotype-groups",
          summary="List phenotype groups",
          description="Return all available groups for a dimension type with sample counts.")
-@no_cache_tracking
 @limiter.limit("60/minute")
 def phenotype_groups(request: Request, dim_type: str = "disease"):
     """
     Return groups and sample counts for a given dimension type.
     """
+    cache_key = f"phenotype_groups_v1:{dim_type}"
+    cached = get_cached(cache_key)
+    if cached:
+        return cached
+    disk = get_disk_cached_by_data(cache_key)
+    if disk is not None:
+        set_cached(cache_key, disk)
+        return disk
+
     meta = get_metadata()
     if dim_type == "disease":
         primary_counts = _inform_label_counts(meta, include_nc=True)
@@ -1815,20 +1865,27 @@ def phenotype_groups(request: Request, dim_type: str = "disease"):
                 key=lambda item: (0 if item[0] == "NC" else 1, -item[1], item[0].lower()),
             )
         ]
-        return {"dim_type": dim_type, "groups": groups}
+        result = {"dim_type": dim_type, "groups": groups}
     elif dim_type == "age":
         if "age_group" not in meta.columns:
-            return {"dim_type": dim_type, "groups": []}
-        vc = meta["age_group"].dropna().astype(str).value_counts()
-        groups = [{"group": k, "sample_count": int(v)} for k, v in vc.items() if k.strip()]
-        return {"dim_type": dim_type, "groups": groups}
+            result = {"dim_type": dim_type, "groups": []}
+        else:
+            vc = meta["age_group"].dropna().astype(str).value_counts()
+            groups = [{"group": k, "sample_count": int(v)} for k, v in vc.items() if k.strip()]
+            result = {"dim_type": dim_type, "groups": groups}
     elif dim_type == "sex":
         if "sex" not in meta.columns:
-            return {"dim_type": dim_type, "groups": []}
-        vc = meta["sex"].dropna().astype(str).value_counts()
-        groups = [{"group": k, "sample_count": int(v)} for k, v in vc.items() if k.strip() and k in {"male", "female"}]
-        return {"dim_type": dim_type, "groups": groups}
-    return {"dim_type": dim_type, "groups": []}
+            result = {"dim_type": dim_type, "groups": []}
+        else:
+            vc = meta["sex"].dropna().astype(str).value_counts()
+            groups = [{"group": k, "sample_count": int(v)} for k, v in vc.items() if k.strip() and k in {"male", "female"}]
+            result = {"dim_type": dim_type, "groups": groups}
+    else:
+        result = {"dim_type": dim_type, "groups": []}
+
+    set_cached(cache_key, result)
+    set_disk_cached(cache_key, result)
+    return result
 
 
 def _get_samples_by_pheno(meta: pd.DataFrame, dim_type: str, group: str) -> pd.Series:
@@ -2452,10 +2509,20 @@ def biomarker_profile(request: Request, genus: str, min_samples: int = 10):
 @app.get("/api/disease-ontology", tags=["Disease"],
          summary="Disease ontology mapping",
          description="Returns standardized disease names, MeSH IDs, ICD-10 codes, and categories for all diseases")
-@no_cache_tracking
 @limiter.limit("120/minute")
 def disease_ontology(request: Request):
-    return DISEASE_ONTOLOGY
+    cache_key = "disease_ontology_v1"
+    cached = get_cached(cache_key)
+    if cached:
+        return cached
+    disk = get_disk_cached_by_data(cache_key)
+    if disk is not None:
+        set_cached(cache_key, disk)
+        return disk
+    result = DISEASE_ONTOLOGY
+    set_cached(cache_key, result)
+    set_disk_cached(cache_key, result)
+    return result
 
 
 # ── Disease browser endpoints ─────────────────────────────────
@@ -2478,12 +2545,20 @@ def get_disease_list_cached() -> list[dict]:
 @app.get("/api/disease-list",
          summary="List all diseases",
          description="Returns all diseases with sample counts, sorted by frequency.")
-@no_cache_tracking
 @limiter.limit("120/minute")
 def disease_list(request: Request, q: str = ""):
     """
     Return all diseases with sample counts. Optional search filter.
     """
+    cache_key = f"disease_list_v1:{q.strip().lower()}"
+    cached = get_cached(cache_key)
+    if cached:
+        return cached
+    disk = get_disk_cached_by_data(cache_key)
+    if disk is not None:
+        set_cached(cache_key, disk)
+        return disk
+
     diseases = get_disease_list_cached()
     if q and q.strip():
         q_lower = q.strip().lower()
@@ -2505,7 +2580,10 @@ def disease_list(request: Request, q: str = ""):
             "kind": kind,
         })
         enriched.append(entry)
-    return {"diseases": enriched}
+    result = {"diseases": enriched}
+    set_cached(cache_key, result)
+    set_disk_cached(cache_key, result)
+    return result
 
 
 @app.get(
