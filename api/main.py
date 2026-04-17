@@ -3081,6 +3081,56 @@ def purge_endpoint_cache(
     }
 
 
+@app.get("/api/admin/genus-prevalence",
+         summary="Top-N genera ranked by sample prevalence",
+         description="Return the top-N genus names sorted by number of samples "
+                     "where the genus has non-zero abundance. Used by warmup scripts "
+                     "to prioritize high-coverage genera over rare ones.",
+         tags=["Admin"])
+@no_cache_tracking
+@limiter.limit("6/minute")
+def genus_prevalence(
+    request: Request,
+    top: int = 500,
+    x_admin_token: str | None = Header(None),
+):
+    _check_admin(x_admin_token)
+    if top < 1 or top > 5000:
+        raise HTTPException(400, "top must be in [1, 5000]")
+    abund = get_abundance()
+
+    # Species columns → genus mapping (drop invalid genera).
+    col_to_genus: dict[str, str] = {}
+    for c in abund.columns:
+        g = extract_genus(c)
+        if is_valid_genus(g):
+            col_to_genus[c] = g
+
+    # Build genus → column list.
+    genus_cols: dict[str, list[str]] = {}
+    for c, g in col_to_genus.items():
+        genus_cols.setdefault(g, []).append(c)
+
+    # Prevalence = count of samples where summed genus abundance > 0.
+    prev: dict[str, int] = {}
+    for g, cols in genus_cols.items():
+        if len(cols) == 1:
+            series = abund[cols[0]]
+        else:
+            series = abund[cols].sum(axis=1)
+        prev[g] = int((series > 0).sum())
+
+    ranked = sorted(prev.items(), key=lambda kv: kv[1], reverse=True)[:top]
+    return {
+        "total_genera": len(prev),
+        "total_samples": int(abund.shape[0]),
+        "top_n": len(ranked),
+        "genera": [{"genus": g, "prevalence": p,
+                    "prevalence_pct": round(100.0 * p / max(abund.shape[0], 1), 2)}
+                   for g, p in ranked],
+    }
+
+
 @app.post("/api/admin/rehash-seed",
           summary="Reset cache-audit baseline hashes",
           description="Rewrite .endpoint_source_hashes.json using current source. "
