@@ -3047,33 +3047,34 @@ def purge_endpoint_cache(
     """
     _check_admin(x_admin_token)
     audits = cache_audit.scan_endpoints(app)
-    audit = next((a for a in audits if a.name == endpoint), None)
+    audit = next((a for a in audits if a.fn_name == endpoint), None)
     if audit is None:
         raise HTTPException(404, f"endpoint '{endpoint}' not found in audit scan")
-    cache_key_prefix = audit.cache_key
-    if not cache_key_prefix:
+    if not audit.cache_key_name:
         raise HTTPException(400, f"endpoint '{endpoint}' has no cache_key (not tracked)")
+    # cache_key_name is the bare identifier (e.g. 'species_profile_v1'); disk
+    # filenames derive from full cache keys (e.g. 'species_profile_v1_<slug>.json').
+    fname_prefix = f"{audit.cache_key_name}_"
+    mem_prefix = f"{audit.cache_key_name}:"
 
-    # Disk: filenames are derived from cache keys; match by prefix.
     deleted_files: list[str] = []
     try:
         for fname in os.listdir(_DISK_CACHE_DIR):
             if not fname.endswith(".json") or fname.startswith("."):
                 continue
-            if fname.startswith(cache_key_prefix.replace(":", "_")):
+            if fname.startswith(fname_prefix):
                 os.remove(os.path.join(_DISK_CACHE_DIR, fname))
                 deleted_files.append(fname)
     except Exception as e:
         raise HTTPException(500, f"Failed to purge disk cache: {e}") from e
 
-    # Memory: clear any keys that start with the prefix.
-    mem_keys = [k for k in list(_RESULT_CACHE.keys()) if k.startswith(cache_key_prefix)]
+    mem_keys = [k for k in list(_RESULT_CACHE.keys()) if k.startswith(mem_prefix)]
     for k in mem_keys:
         _RESULT_CACHE.pop(k, None)
 
     return {
         "endpoint": endpoint,
-        "cache_key_prefix": cache_key_prefix,
+        "cache_key_name": audit.cache_key_name,
         "disk_files_deleted": len(deleted_files),
         "memory_keys_cleared": len(mem_keys),
         "sample_files": deleted_files[:5],
