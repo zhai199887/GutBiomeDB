@@ -4,7 +4,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "api"))
 
-from cache_audit import ast_hash
+from cache_audit import ast_hash, extract_cache_key_version
 
 
 def _sample_original():
@@ -57,3 +57,47 @@ def test_ast_hash_detects_literal_change():
     h1, _ = ast_hash(_sample_original)
     h2, _ = ast_hash(_sample_changed_literal)
     assert h1 != h2, "changing 0.05 -> 0.01 must change AST hash"
+
+
+def _fn_with_fstring_v1():
+    cache_key = f"disease_profile_v1:{42}:{100}"
+    return cache_key
+
+
+def _fn_with_plain_string_v2():
+    cache_key = "project_list_v2"
+    return cache_key
+
+
+def _fn_with_no_cache_key():
+    x = 1
+    return x
+
+
+def _fn_with_versionless_cache_key():
+    cache_key = "metabolism_overview"
+    return cache_key
+
+
+def test_extract_version_fstring():
+    name, ver = extract_cache_key_version(_fn_with_fstring_v1)
+    assert name == "disease_profile"
+    assert ver == "v1"
+
+
+def test_extract_version_plain_string():
+    name, ver = extract_cache_key_version(_fn_with_plain_string_v2)
+    assert name == "project_list"
+    assert ver == "v2"
+
+
+def test_extract_version_missing_cache_key():
+    name, ver = extract_cache_key_version(_fn_with_no_cache_key)
+    assert name is None
+    assert ver is None
+
+
+def test_extract_version_unversioned_cache_key_returns_name_but_no_version():
+    name, ver = extract_cache_key_version(_fn_with_versionless_cache_key)
+    assert name == "metabolism_overview"
+    assert ver is None
