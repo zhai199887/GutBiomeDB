@@ -1,7 +1,7 @@
-﻿{
+{
   "rewrites": [
-    { "source": "/api", "destination": "https://32c774a.r12.cpolar.top" },
-    { "source": "/api/(.*)", "destination": "https://32c774a.r12.cpolar.top" },
+    { "source": "/api", "destination": "https://32c774a.r12.cpolar.top/api" },
+    { "source": "/api/(.*)", "destination": "https://32c774a.r12.cpolar.top/api/$1" },
     { "source": "/((?!api(?:/|$)|data(?:/|$)|assets(?:/|$)|favicon\\.ico$).*)", "destination": "/index.html" }
   ],
   "headers": [
