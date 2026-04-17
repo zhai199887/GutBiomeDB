@@ -5,6 +5,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { API_BASE } from "@/util/apiBase";
+import CacheStatusPanel from "./CacheStatusPanel";
 import classes from "./AdminPage.module.css";
 
 interface DataStats {
@@ -138,6 +139,9 @@ const AdminPage = () => {
           Backend: {backendAlive === null ? "Checking…" : backendAlive ? `Online (${API_BASE})` : "Offline"}
         </span>
       </div>
+
+      {/* Cache status (public, no token required) */}
+      {backendAlive && <CacheStatusPanel />}
 
       {/* Auth gate */}
       {!authed ? (
