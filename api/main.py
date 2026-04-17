@@ -2235,6 +2235,10 @@ def species_profile(request: Request, genus: str):
     cached = get_cached(cache_key)
     if cached:
         return cached
+    disk = get_disk_cached_by_data(cache_key)
+    if disk is not None:
+        set_cached(cache_key, disk)
+        return disk
 
     meta = get_metadata()
     abund = get_abundance()
@@ -2383,6 +2387,7 @@ def species_profile(request: Request, genus: str):
         "by_sex": group_means("sex", 5),
     }
     set_cached(cache_key, result)
+    set_disk_cached(cache_key, result)
     return result
 
 
@@ -2405,6 +2410,10 @@ def biomarker_profile(request: Request, genus: str, min_samples: int = 10):
     cached = get_cached(cache_key)
     if cached:
         return cached
+    disk = get_disk_cached_by_data(cache_key)
+    if disk is not None:
+        set_cached(cache_key, disk)
+        return disk
     genus = genus.strip()
 
     meta = get_metadata()
@@ -2507,6 +2516,7 @@ def biomarker_profile(request: Request, genus: str, min_samples: int = 10):
         "profiles": results,
     }
     set_cached(cache_key, result)
+    set_disk_cached(cache_key, result)
     return result
 
 
@@ -3854,6 +3864,10 @@ def species_cooccurrence(request: Request, genus: str, top_k: int = 10, disease:
     cached = get_cached(cache_key)
     if cached:
         return cached
+    disk = get_disk_cached_by_data(cache_key)
+    if disk is not None:
+        set_cached(cache_key, disk)
+        return disk
 
     meta = get_metadata()
     abund = get_abundance()
@@ -3956,6 +3970,7 @@ def species_cooccurrence(request: Request, genus: str, top_k: int = 10, disease:
         "partners": partners[:top_k],
     }
     set_cached(cache_key, result)
+    set_disk_cached(cache_key, result)
     return result
 
 
@@ -4673,6 +4688,10 @@ async def project_list(request: Request):
     cached = get_cached(cache_key)
     if cached:
         return cached
+    disk = get_disk_cached_by_data(cache_key)
+    if disk is not None:
+        set_cached(cache_key, disk)
+        return disk
 
     meta = get_metadata()
     project_col = get_project_column(meta)
@@ -4709,6 +4728,7 @@ async def project_list(request: Request):
     }
     result = {"projects": projects, "total": len(projects), "summary": summary}
     set_cached(cache_key, result)
+    set_disk_cached(cache_key, result)
     return result
 
 
@@ -4727,6 +4747,10 @@ async def project_detail(request: Request, project_id: str):
     cached = get_cached(cache_key)
     if cached:
         return cached
+    disk = get_disk_cached_by_data(cache_key)
+    if disk is not None:
+        set_cached(cache_key, disk)
+        return disk
 
     meta = get_metadata()
     project_col = get_project_column(meta)
@@ -4749,6 +4773,7 @@ async def project_detail(request: Request, project_id: str):
         "by_sex": _series_count_rows(proj_meta["sex"], "sex", limit=10) if "sex" in proj_meta.columns else [],
     }
     set_cached(cache_key, result)
+    set_disk_cached(cache_key, result)
     return result
 
 
