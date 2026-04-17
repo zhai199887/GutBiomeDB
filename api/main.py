@@ -150,6 +150,12 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
 app.add_middleware(SecurityHeadersMiddleware)
 
 
+def no_cache_tracking(fn):
+    """Mark an endpoint as intentionally uncached. cache_audit skips it."""
+    fn._no_cache_tracking = True
+    return fn
+
+
 # ── Startup warmup ─────────────────────────────────────────────────────────────
 
 @app.on_event("startup")
