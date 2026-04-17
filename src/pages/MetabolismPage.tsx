@@ -93,12 +93,17 @@ const sortCategories = (
   return list;
 };
 
-const buildPathwayLinks = (category: MetabolismCategory) =>
-  category.related_pathways.map((pathway, index) => ({
+const buildPathwayLinks = (category: MetabolismCategory, locale: "en" | "zh") => {
+  const labels =
+    locale === "zh" && category.related_pathways_zh?.length
+      ? category.related_pathways_zh
+      : category.related_pathways;
+  return labels.map((pathway, index) => ({
     label: pathway,
     keggId: category.kegg_pathway_ids?.[index] ?? "",
     metacycId: category.metacyc_pathway_ids?.[index] ?? "",
   }));
+};
 
 const resolveCategoryGenera = (
   category: MetabolismCategory,
@@ -445,7 +450,7 @@ const CategoryDetail = ({
   const barRef = useRef<SVGSVGElement>(null);
   const heatRef = useRef<SVGSVGElement>(null);
   const matchResult = resolveCategoryGenera(category, abundance);
-  const pathwayLinks = buildPathwayLinks(category);
+  const pathwayLinks = buildPathwayLinks(category, locale);
 
   useEffect(() => {
     if (!barRef.current || !abundance) {
@@ -660,7 +665,9 @@ const CategoryDetail = ({
         </div>
       </div>
 
-      <p className={classes.detailDesc}>{category.description}</p>
+      <p className={classes.detailDesc}>
+        {locale === "zh" ? category.description_zh ?? category.description : category.description}
+      </p>
 
       <div className={classes.summaryRow}>
         <div className={classes.summaryCard}>
@@ -700,8 +707,11 @@ const CategoryDetail = ({
       <div className={classes.infoBlock}>
         <h4>{t("metabolism.keyMetabolites")}</h4>
         <div className={classes.metaboliteList}>
-          {category.key_metabolites.map((metabolite) => (
-            <span key={metabolite} className={classes.metaboliteTag}>{metabolite}</span>
+          {(locale === "zh" && category.key_metabolites_zh?.length
+            ? category.key_metabolites_zh
+            : category.key_metabolites
+          ).map((metabolite, index) => (
+            <span key={`${metabolite}-${index}`} className={classes.metaboliteTag}>{metabolite}</span>
           ))}
         </div>
       </div>
@@ -743,7 +753,7 @@ const CategoryDetail = ({
 
       <div className={classes.relevanceBlock}>
         <h4>{t("metabolism.clinicalRelevance")}</h4>
-        <p>{category.health_relevance}</p>
+        <p>{locale === "zh" ? category.health_relevance_zh ?? category.health_relevance : category.health_relevance}</p>
       </div>
 
       <div className={classes.chartBlock}>

@@ -4,13 +4,17 @@ export interface MetabolismCategory {
   name_zh: string;
   icon: string;
   description: string;
+  description_zh?: string;
   taxa: string[];
   genus_exact_names?: string[];
   key_metabolites: string[];
+  key_metabolites_zh?: string[];
   related_pathways: string[];
+  related_pathways_zh?: string[];
   kegg_pathway_ids?: string[];
   metacyc_pathway_ids?: string[];
   health_relevance: string;
+  health_relevance_zh?: string;
   references: string[];
 }
 

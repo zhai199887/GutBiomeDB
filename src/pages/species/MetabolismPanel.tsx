@@ -13,7 +13,9 @@ interface MappingCategory {
   taxa?: string[];
   genus_exact_names?: string[];
   key_metabolites?: string[];
+  key_metabolites_zh?: string[];
   related_pathways?: string[];
+  related_pathways_zh?: string[];
   kegg_pathway_ids?: string[];
   metacyc_pathway_ids?: string[];
 }
@@ -68,9 +70,15 @@ export default function MetabolismPanel({ genus }: MetabolismPanelProps) {
                 </div>
               </div>
               <div className="species-summaryPills">
-                {(category.key_metabolites ?? []).slice(0, 4).map((item) => (
-                  <span key={item}>{item}</span>
-                ))}
+                {(
+                  (locale === "zh" && category.key_metabolites_zh?.length
+                    ? category.key_metabolites_zh
+                    : category.key_metabolites) ?? []
+                )
+                  .slice(0, 4)
+                  .map((item, index) => (
+                    <span key={`${item}-${index}`}>{item}</span>
+                  ))}
               </div>
             </div>
 
@@ -78,8 +86,11 @@ export default function MetabolismPanel({ genus }: MetabolismPanelProps) {
               <div>
                 <div>{t("species.metabolism.pathways")}</div>
                 <div className="species-summaryPills">
-                  {category.related_pathways?.map((item) => (
-                    <span key={item}>{item}</span>
+                  {(locale === "zh" && category.related_pathways_zh?.length
+                    ? category.related_pathways_zh
+                    : category.related_pathways ?? []
+                  ).map((item, index) => (
+                    <span key={`${item}-${index}`}>{item}</span>
                   ))}
                 </div>
               </div>
