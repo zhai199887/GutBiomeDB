@@ -298,7 +298,7 @@
       "name_zh": "内毒素产生菌（革兰氏阴性）",
       "icon": "🔴",
       "description": "Gram-negative bacteria whose outer membrane contains lipopolysaccharide (LPS). Translocation of LPS into systemic circulation ('metabolic endotoxemia') triggers TLR4/NF-κB signaling and chronic low-grade inflammation.",
-      "description_zh": "外膜含有脂多糖（LPS）的革兰氏阴性细菌。LPS 进入体循环（即"代谢性内毒素血症"）可激活 TLR4/NF-κB 通路，诱发慢性低度炎症。",
+      "description_zh": "外膜含有脂多糖（LPS）的革兰氏阴性细菌。LPS 进入体循环（即所谓代谢性内毒素血症）可激活 TLR4/NF-κB 通路，诱发慢性低度炎症。",
       "taxa": [
         "Escherichia",
         "Klebsiella",
