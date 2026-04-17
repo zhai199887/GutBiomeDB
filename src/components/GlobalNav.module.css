@@ -1,5 +1,7 @@
 .shell {
   width: 100%;
+  padding: 0;
+  gap: 0;
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   background: linear-gradient(180deg, rgba(16, 24, 41, 0.98), rgba(16, 24, 41, 0.94));
   position: sticky;
