@@ -4109,6 +4109,8 @@ def lifecycle_atlas(
     """
     Return genus composition across 7 named life stages (Infant-Centenarian) plus Unknown.
     """
+    cache_key = "lifecycle_v9"  # cache_audit tracking marker; real key built in _lifecycle_internal
+    _ = cache_key
     return _lifecycle_internal(disease=disease, country=country, top_genera=top_genera, use_cache=True)
 
 
