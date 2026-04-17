@@ -3032,6 +3032,110 @@ def rehash_seed(
     return {"reset": endpoint}
 
 
+@app.get("/api/cache-audit",
+         summary="Per-endpoint cache status snapshot",
+         description="Read-only snapshot: per-endpoint tracking state, disk file "
+                     "size+age, orphan files. Zero background cost - re-scans "
+                     "on each call (~100ms), no common polling expected.",
+         tags=["Admin"])
+@no_cache_tracking
+@limiter.limit("30/minute")
+def cache_audit_snapshot(request: Request):
+    """Return full cache status for all endpoints (for admin panel)."""
+    audits = cache_audit.scan_endpoints(app)
+    prior = cache_audit.load_prior(CACHE_AUDIT_HASH_FILE)
+    now_ts = datetime.now().timestamp()
+
+    disk_files: dict[str, dict] = {}
+    try:
+        for fname in os.listdir(_DISK_CACHE_DIR):
+            if not fname.endswith(".json") or fname.startswith("."):
+                continue
+            fpath = os.path.join(_DISK_CACHE_DIR, fname)
+            try:
+                stat = os.stat(fpath)
+                disk_files[fname] = {
+                    "size_kb": round(stat.st_size / 1024, 2),
+                    "age_hours": round((now_ts - stat.st_mtime) / 3600, 2),
+                }
+            except OSError:
+                pass
+    except OSError:
+        pass
+
+    def _classify_uncached(path: str) -> str:
+        if path.startswith("/api/download/"):
+            return "download_wrapper"
+        if path.startswith("/api/admin/"):
+            return "admin_endpoint"
+        if path == "/api/health":
+            return "trivial_static"
+        if path.startswith("/api/v1/"):
+            return "compatibility_redirect"
+        return "intentional_no_cache"
+
+    tracked: list[dict] = []
+    uncached: list[dict] = []
+    unknown_list: list[dict] = []
+    used_files: set[str] = set()
+
+    for a in audits:
+        entry = {"path": a.path, "method": a.method, "fn_name": a.fn_name}
+        if a.status == "tracked":
+            assert a.cache_key_name and a.version
+            prefix = f"{a.cache_key_name}_{a.version}"
+            matching = [
+                f for f in disk_files
+                if f == f"{prefix}.json" or f.startswith(f"{prefix}_")
+            ]
+            used_files.update(matching)
+            total_kb = round(sum(disk_files[f]["size_kb"] for f in matching), 2)
+            newest_age = min(
+                (disk_files[f]["age_hours"] for f in matching),
+                default=None,
+            )
+            baseline = prior.get(a.cache_key_name, {})
+            baseline_hash = baseline.get("hash", "")
+            entry.update({
+                "cache_key": a.cache_key_name,
+                "version": a.version,
+                "current_hash": a.current_hash,
+                "baseline_hash": baseline_hash,
+                "stale": bool(baseline_hash) and baseline_hash != a.current_hash,
+                "disk_file_count": len(matching),
+                "disk_total_kb": total_kb,
+                "disk_newest_age_hours": newest_age,
+            })
+            tracked.append(entry)
+        elif a.status == "no_cache_by_design":
+            entry["reason"] = _classify_uncached(a.path)
+            uncached.append(entry)
+        else:
+            entry["status"] = a.status
+            if a.cache_key_name:
+                entry["cache_key"] = a.cache_key_name
+            unknown_list.append(entry)
+
+    orphan_files = sorted(set(disk_files.keys()) - used_files)
+
+    return {
+        "summary": {
+            "total_endpoints": len(audits),
+            "tracked": len(tracked),
+            "uncached_by_design": len(uncached),
+            "unknown": len(unknown_list),
+            "stale_count": sum(1 for t in tracked if t.get("stale")),
+            "disk_file_count": len(disk_files),
+            "disk_orphan_count": len(orphan_files),
+            "baseline_seeded_at": prior.get("_meta", {}).get("seeded_at"),
+        },
+        "tracked": sorted(tracked, key=lambda x: x["path"]),
+        "uncached_by_design": sorted(uncached, key=lambda x: x["path"]),
+        "unknown": sorted(unknown_list, key=lambda x: x["path"]),
+        "disk_orphan_files": orphan_files,
+    }
+
+
 @app.post("/api/admin/upload-metadata",
           summary="Upload metadata",
           description="Upload and merge new metadata CSV file (requires admin token).")
