@@ -1431,6 +1431,7 @@ def permanova_test(
 
 @app.get("/api/health", summary="Health check",
          description="Returns API status and current timestamp.")
+@no_cache_tracking
 @limiter.limit("120/minute")
 def health(request: Request):
     """Health check."""
@@ -1440,6 +1441,7 @@ def health(request: Request):
 @app.get("/api/filter-options",
          summary="Get filter options",
          description="Returns available filter values for countries, diseases, age groups, and sexes.")
+@no_cache_tracking
 @limiter.limit("120/minute")
 def filter_options(request: Request):
     """
@@ -1480,6 +1482,7 @@ def filter_options(request: Request):
 @app.get("/api/data-stats",
          summary="Dataset statistics",
          description="Returns total sample count, country count, condition-label counts, and data version.")
+@no_cache_tracking
 @limiter.limit("120/minute")
 def data_stats(request: Request):
     """
@@ -1540,6 +1543,7 @@ def data_stats(request: Request):
 @app.get("/api/project-timeline",
          summary="Project growth timeline",
          description="Returns yearly sample and project counts for homepage trend views.")
+@no_cache_tracking
 @limiter.limit("120/minute")
 def project_timeline(request: Request):
     """Return yearly sample/project counts derived from metadata pubdate."""
@@ -1592,6 +1596,7 @@ def project_timeline(request: Request):
 @app.get("/api/disease-names-zh",
          summary="Disease name translations",
          description="Returns Chinese translations for disease names.")
+@no_cache_tracking
 @limiter.limit("120/minute")
 def get_disease_names_zh(request: Request):
     """Return disease name Chinese translations.
@@ -1609,6 +1614,7 @@ def get_disease_names_zh(request: Request):
 @app.get("/api/disease-display-names",
          summary="Standardized display names for diseases",
          description="Returns a mapping from raw disease keys to standardized full display names (no abbreviation suffix).")
+@no_cache_tracking
 @limiter.limit("120/minute")
 def get_disease_display_names(request: Request):
     """Return standardized display names (full name only, no abbreviation suffix)."""
@@ -1621,6 +1627,7 @@ def get_disease_display_names(request: Request):
 @app.post("/api/estimate-sample-count",
           summary="Estimate sample count",
           description="Return matched sample counts for Group A and Group B before running differential analysis.")
+@no_cache_tracking
 @limiter.limit("60/minute")
 def estimate_sample_count(request: Request, req: SampleCountRequest):
     meta = get_metadata()
@@ -1643,6 +1650,7 @@ def estimate_sample_count(request: Request, req: SampleCountRequest):
 @app.post("/api/spearman-analysis",
           summary="Spearman correlation analysis",
           description="Compute a top-taxa Spearman correlation matrix for the samples selected by the current Compare workspace filters.")
+@no_cache_tracking
 @limiter.limit("20/minute")
 def spearman_analysis(request: Request, req: SpearmanAnalysisRequest):
     meta = get_metadata()
@@ -1681,6 +1689,7 @@ def spearman_analysis(request: Request, req: SpearmanAnalysisRequest):
 @app.post("/api/diff-analysis",
           summary="Differential analysis",
           description="Compare microbiome between two groups using Wilcoxon, t-test, LEfSe, or PERMANOVA.")
+@no_cache_tracking
 @limiter.limit("20/minute")
 def diff_analysis(request: Request, req: DiffAnalysisRequest):
     """
@@ -1751,6 +1760,7 @@ def diff_analysis(request: Request, req: DiffAnalysisRequest):
 @app.get("/api/phenotype-groups",
          summary="List phenotype groups",
          description="Return all available groups for a dimension type with sample counts.")
+@no_cache_tracking
 @limiter.limit("60/minute")
 def phenotype_groups(request: Request, dim_type: str = "disease"):
     """
@@ -2095,6 +2105,7 @@ def get_genus_list() -> list[str]:
 @app.get("/api/species-search",
          summary="Search genera",
          description="Full-text search across genus names, returns up to 20 matches.")
+@no_cache_tracking
 @limiter.limit("120/minute")
 def species_search(request: Request, q: str = ""):
     """
@@ -2402,6 +2413,7 @@ def biomarker_profile(request: Request, genus: str, min_samples: int = 10):
 @app.get("/api/disease-ontology", tags=["Disease"],
          summary="Disease ontology mapping",
          description="Returns standardized disease names, MeSH IDs, ICD-10 codes, and categories for all diseases")
+@no_cache_tracking
 @limiter.limit("120/minute")
 def disease_ontology(request: Request):
     return DISEASE_ONTOLOGY
@@ -2427,6 +2439,7 @@ def get_disease_list_cached() -> list[dict]:
 @app.get("/api/disease-list",
          summary="List all diseases",
          description="Returns all diseases with sample counts, sorted by frequency.")
+@no_cache_tracking
 @limiter.limit("120/minute")
 def disease_list(request: Request, q: str = ""):
     """
@@ -2841,6 +2854,7 @@ def _check_admin(token: str | None):
 @app.get("/api/admin/check",
          summary="Admin authentication check",
          description="Verify admin token validity.")
+@no_cache_tracking
 @limiter.limit("10/minute")
 def admin_check(request: Request, x_admin_token: str | None = Header(None)):
     """Verify admin token."""
@@ -2852,6 +2866,7 @@ def admin_check(request: Request, x_admin_token: str | None = Header(None)):
             summary="Clear disk cache",
             description="Delete all disk-persisted cache files. Call after changing computation logic or uploading new data.",
             tags=["Admin"])
+@no_cache_tracking
 @limiter.limit("10/minute")
 def clear_disk_cache_endpoint(request: Request, x_admin_token: str | None = Header(None)):
     """Clear all disk cache files and in-memory cache."""
@@ -2872,6 +2887,7 @@ def clear_disk_cache_endpoint(request: Request, x_admin_token: str | None = Head
 @app.post("/api/admin/upload-metadata",
           summary="Upload metadata",
           description="Upload and merge new metadata CSV file (requires admin token).")
+@no_cache_tracking
 @limiter.limit("10/minute")
 async def upload_metadata(
     request: Request,
@@ -2903,6 +2919,7 @@ async def upload_metadata(
 @app.post("/api/admin/validate-metadata",
           summary="Validate metadata",
           description="Validate metadata CSV file format and columns (requires admin token).")
+@no_cache_tracking
 @limiter.limit("10/minute")
 async def validate_metadata_endpoint(
     request: Request,
@@ -3011,6 +3028,7 @@ def _download_response(
          summary="Download summary statistics",
          description="Export aggregated statistics as CSV, JSON, or TSV.",
          tags=["Download"])
+@no_cache_tracking
 @limiter.limit("30/minute")
 def download_summary_stats(request: Request, format: str = "csv"):
     """
@@ -3062,6 +3080,7 @@ def download_summary_stats(request: Request, format: str = "csv"):
          summary="Download disease profile",
          description="Export disease-vs-control genus profile results as CSV, TSV, or JSON.",
          tags=["Download"])
+@no_cache_tracking
 @limiter.limit("30/minute")
 def download_disease_profile_data(request: Request, disease: str, format: str = "csv"):
     """Download disease profile data."""
@@ -3095,6 +3114,7 @@ def download_disease_profile_data(request: Request, disease: str, format: str = 
          summary="Download species profile",
          description="Export genus-centric profile tables as CSV, TSV, or JSON.",
          tags=["Download"])
+@no_cache_tracking
 @limiter.limit("30/minute")
 def download_species_profile_data(request: Request, genus: str, format: str = "csv"):
     """Download species profile data."""
@@ -3121,6 +3141,7 @@ def download_species_profile_data(request: Request, genus: str, format: str = "c
          summary="Download genus list",
          description="Export the full valid genus name list as CSV, TSV, or JSON.",
          tags=["Download"])
+@no_cache_tracking
 @limiter.limit("30/minute")
 def download_genus_list(request: Request, format: str = "csv"):
     """Download list of all genera."""
@@ -3144,6 +3165,7 @@ def download_genus_list(request: Request, format: str = "csv"):
     description="Export disease-vs-control differential abundance results as CSV, TSV, or JSON.",
     tags=["Download"],
 )
+@no_cache_tracking
 @limiter.limit("20/minute")
 def download_diff_results(
     request: Request,
@@ -3198,6 +3220,7 @@ def download_diff_results(
     description="Export LEfSe-style biomarker discovery output as CSV, TSV, or JSON.",
     tags=["Download"],
 )
+@no_cache_tracking
 @limiter.limit("20/minute")
 def download_biomarkers(
     request: Request,
@@ -3235,6 +3258,7 @@ def download_biomarkers(
     description="Export the filtered co-occurrence network edge table as CSV, TSV, or JSON.",
     tags=["Download"],
 )
+@no_cache_tracking
 @limiter.limit("20/minute")
 def download_cooccurrence(
     request: Request,
@@ -3281,6 +3305,7 @@ def download_cooccurrence(
     description="Export lifecycle abundance trajectories as CSV, TSV, or JSON.",
     tags=["Download"],
 )
+@no_cache_tracking
 @limiter.limit("20/minute")
 def download_lifecycle(
     request: Request,
@@ -4183,6 +4208,7 @@ def lifecycle_compare(
 @app.get("/api/genus-names",
          summary="List all genera",
          description="Returns all valid genus names from abundance data.")
+@no_cache_tracking
 @limiter.limit("120/minute")
 async def get_genus_names(request: Request):
     """Return list of genus names from abundance matrix columns (for frontend template download)."""
@@ -4196,6 +4222,7 @@ async def get_genus_names(request: Request):
 @app.post("/api/similarity-search",
           summary="Sample similarity search",
           description="Find most similar samples using Bray-Curtis or Jaccard distance.")
+@no_cache_tracking
 @limiter.limit("20/minute")
 async def similarity_search(request: Request, req: SimilarityRequest):
     """Receive user abundance vector, return Top-K most similar samples.
@@ -5124,6 +5151,7 @@ Markers (MH/MN genera) are selected via random-effects meta-analysis
 genera with FDR-adjusted Wilcoxon p<0.05, |log2FC|≥0.5, and |g|≥0.2.
 """,
           tags=["Similarity"])
+@no_cache_tracking
 @limiter.limit("20/minute")
 async def health_index(request: Request, req: HealthIndexRequest):
     """Compute microbiome health index."""
@@ -5326,6 +5354,7 @@ def _compute_population_gmhi() -> dict:
          summary="Health index reference data",
          description="Returns precomputed health/disease genera lists, NC reference statistics, and population GMHI distribution.",
          tags=["Similarity"])
+@no_cache_tracking
 @limiter.limit("60/minute")
 async def health_index_reference(request: Request):
     """Return health index reference data (health/disease genera lists + population distribution)."""
@@ -5353,6 +5382,7 @@ _ANALYTICS_FILE = Path(__file__).parent / "analytics.jsonl"
 @app.post("/api/track", tags=["Admin"],
           summary="Track usage event",
           description="Log usage events for publication metrics.")
+@no_cache_tracking
 @limiter.limit("120/minute")
 async def track_event(request: Request, evt: TrackEvent):
     """Log usage event (for publication metrics)."""
@@ -5379,6 +5409,7 @@ async def track_event(request: Request, evt: TrackEvent):
 @app.get("/api/admin/analytics", tags=["Admin"],
          summary="View analytics summary",
          description="Returns aggregated usage statistics (admin only).")
+@no_cache_tracking
 @limiter.limit("30/minute")
 async def analytics_summary(request: Request, token: str = ""):
     """Admin view of aggregated usage statistics."""
@@ -5447,6 +5478,7 @@ class EmailReportRequest(BaseModel):
 
 @app.post("/api/admin/email-report", tags=["Admin"],
           summary="Generate and email daily analytics report")
+@no_cache_tracking
 @limiter.limit("10/hour")
 async def email_daily_report(request: Request, req: EmailReportRequest):
     """Generate yesterday's analytics report and send via email."""
@@ -5826,6 +5858,7 @@ Feature pipeline (identical to fit_gbhi_universal.py):
 Health(s) = P(NC|s) * 100.
 """,
           tags=["Similarity"])
+@no_cache_tracking
 @limiter.limit("20/minute")
 async def health_score(request: Request, req: HealthScoreRequest):
     if not req.abundances:
@@ -5948,6 +5981,7 @@ async def health_score(request: Request, req: HealthScoreRequest):
 
 # ── API v1 version aliases ─────────────────────────────────
 @app.get("/api/v1/{path:path}")
+@no_cache_tracking
 @limiter.limit("120/minute")
 async def v1_redirect_get(path: str, request: Request):
     """Redirect GET /api/v1/* to /api/* for versioned access"""
@@ -5956,6 +5990,7 @@ async def v1_redirect_get(path: str, request: Request):
     return RedirectResponse(url=url, status_code=307)
 
 @app.post("/api/v1/{path:path}")
+@no_cache_tracking
 @limiter.limit("120/minute")
 async def v1_redirect_post(path: str, request: Request):
     """Redirect POST /api/v1/* to /api/* for versioned access"""
