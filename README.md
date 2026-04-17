@@ -2,14 +2,14 @@
 
 An Integrated Human Gut Microbiome Database.
 
-**168,464 samples | 4,680 genera | 72 countries | 224 condition categories | 8 life stages**
+**168,464 samples | 4,680 taxa (3,142 genera) | 72 countries | 224 condition categories | 7 life stages**
 
 ## Features
 
 - **Differential Analysis** — Wilcoxon rank-sum, t-test, LEfSe (LDA effect size), PERMANOVA with BH FDR correction
 - **Cross-Study Meta-Analysis** — Inverse-variance weighted random effects model (DerSimonian-Laird) with I² heterogeneity assessment
-- **Gut Microbiome Health Index (GMHI)** — Novel health scoring system (0-100) based on 168K samples
-- **Lifecycle Atlas** — Age-stratified microbiome composition across 8 life stages (unique feature)
+- **GutBiomeDB Health Index (GBHI)** — Universal 9-disease softmax classifier health-score system (0–100), validated by leave-one-cohort-out across 168K samples
+- **Lifecycle Atlas** — Age-stratified microbiome composition across 7 life stages (unique feature)
 - **Species Profiling** — Genus-level abundance across diseases, countries, age groups, and sex
 - **Biomarker Discovery** — Wilcoxon + LDA effect size + BH FDR for differential taxa identification
 - **Co-occurrence Network** — Spearman correlation-based microbial interaction networks
@@ -99,20 +99,30 @@ profile <- fromJSON(content(
 cat("Prevalence:", profile$prevalence, "\n")
 ```
 
+## Figure code
+
+Scripts that reproduce every main and Extended Data figure in the paper
+are kept in a separate repo:
+
+https://github.com/zhai199887/gutbiomedb-paper-code
+
+Those scripts import from this platform's `api/` package, so both repos
+need to be on `PYTHONPATH` when reproducing figures.
+
 ## Citation
 
-If you use GutBiomeDB in your research, please cite:
-
-> Zhai J, Li Y, Liu J, Su X, Cui R, Zheng D, Sun Y, Yu J, Dai C. GutBiomeDB: An Integrated Human Gut Microbiome Database. *Manuscript in preparation*, 2026.
+Zhai J, Li Y, Liu J, Su X, Cui R, Zheng D, Sun Y, Yu J, Dai C.
+GutBiomeDB: an integrated human gut microbiome database of 168,464 samples.
+Manuscript, 2026.
 
 ```bibtex
 @unpublished{zhai2026gutbiomedb,
-  title   = {GutBiomeDB: An Integrated Human Gut Microbiome Database},
-  author  = {Zhai, Jinxia and Li, Yingjie and Liu, Jiameng and Su, Xinyi
-             and Cui, Runze and Zheng, Dianyu and Sun, Yuhan and Yu, Jingsheng
-             and Dai, Cong},
-  note    = {Manuscript in preparation},
-  year    = {2026}
+  title  = {GutBiomeDB: an integrated human gut microbiome database of 168,464 samples},
+  author = {Zhai, Jinxia and Li, Yingjie and Liu, Jiameng and Su, Xinyi
+            and Cui, Runze and Zheng, Dianyu and Sun, Yuhan and Yu, Jingsheng
+            and Dai, Cong},
+  year   = {2026},
+  note   = {Manuscript}
 }
 ```
 

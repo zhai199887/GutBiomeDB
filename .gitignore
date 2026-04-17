@@ -46,3 +46,13 @@ public/favicon_refs/
 
 # Claude Code local settings (contains permission bypass - never commit)
 .claude/
+
+# Backend generated disk cache — regenerated at runtime from the 168,464-sample
+# matrix; single source of truth is the live platform, never commit snapshots
+api/_disk_cache/
+
+# Windows shell redirection artefact (`> null` accidentally writes a literal file)
+api/null
+
+# Pickled model artefacts — distribute via release assets, not git
+*.pkl
