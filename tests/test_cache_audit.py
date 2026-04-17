@@ -143,3 +143,57 @@ def test_scan_endpoints_skips_non_apiroute_entries():
     audits = scan_endpoints(app)
     names = {a.fn_name for a in audits}
     assert names == {"foo", "bar", "baz"}
+
+
+from cache_audit import compute_report
+
+
+def _tracked_audit(name: str, version: str, hex6: str) -> EndpointAudit:
+    return EndpointAudit(
+        path=f"/api/{name}", method="GET", fn_name=name,
+        status="tracked", cache_key_name=name, version=version,
+        current_hash=hex6, source_status="source",
+    )
+
+
+def test_compute_report_first_run_seeds_all():
+    audits = [_tracked_audit("disease_profile", "v1", "abc123")]
+    report = compute_report(audits, prior={})
+    assert len(report.stale) == 0
+    assert report.seeded == ["disease_profile"]
+
+
+def test_compute_report_unchanged_returns_zero_stale():
+    audits = [_tracked_audit("disease_profile", "v1", "abc123")]
+    prior = {"disease_profile": {"hash": "abc123", "cache_key_version": "v1"}}
+    report = compute_report(audits, prior=prior)
+    assert len(report.stale) == 0
+    assert report.seeded == []
+
+
+def test_compute_report_hash_changed_version_unchanged_is_stale():
+    audits = [_tracked_audit("disease_profile", "v1", "def456")]
+    prior = {"disease_profile": {"hash": "abc123", "cache_key_version": "v1"}}
+    report = compute_report(audits, prior=prior)
+    assert len(report.stale) == 1
+    assert report.stale[0]["name"] == "disease_profile"
+    assert report.stale[0]["prior"] == "abc123"
+    assert report.stale[0]["current"] == "def456"
+    assert report.stale[0]["version"] == "v1"
+
+
+def test_compute_report_hash_changed_version_bumped_is_clean():
+    audits = [_tracked_audit("disease_profile", "v2", "def456")]
+    prior = {"disease_profile": {"hash": "abc123", "cache_key_version": "v1"}}
+    report = compute_report(audits, prior=prior)
+    assert len(report.stale) == 0
+
+
+def test_compute_report_collects_unknown_and_legacy():
+    audits = [
+        EndpointAudit("/a", "GET", "a", "unknown"),
+        EndpointAudit("/b", "GET", "b", "legacy_unversioned", cache_key_name="b"),
+    ]
+    report = compute_report(audits, prior={})
+    assert report.unknown == ["a"]
+    assert report.legacy_unversioned == ["b"]

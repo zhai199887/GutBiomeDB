@@ -147,3 +147,73 @@ def scan_endpoints(app: Any) -> list[EndpointAudit]:
             current_hash=hex6, source_status=src_status,
         ))
     return audits
+
+
+@dataclass
+class AuditReport:
+    total: int
+    tracked: int
+    elapsed_ms: float
+    stale: list[dict]
+    seeded: list[str]
+    unknown: list[str]
+    legacy_unversioned: list[str]
+    source_unavailable: list[str]
+    ast_parse_failed: list[str]
+
+
+def compute_report(audits: list[EndpointAudit], prior: dict) -> AuditReport:
+    """Diff current audits against prior hash-file contents.
+
+    prior: dict mapping endpoint name -> {"hash": str, "cache_key_version": str}.
+           _meta key is ignored by this function.
+    """
+    stale: list[dict] = []
+    seeded: list[str] = []
+    unknown: list[str] = []
+    legacy_unversioned: list[str] = []
+    source_unavailable: list[str] = []
+    ast_parse_failed: list[str] = []
+    tracked_count = 0
+
+    for a in audits:
+        if a.status == "unknown":
+            unknown.append(a.fn_name)
+            continue
+        if a.status == "legacy_unversioned":
+            legacy_unversioned.append(a.cache_key_name or a.fn_name)
+            continue
+        if a.status == "source_unavailable":
+            source_unavailable.append(a.fn_name)
+            continue
+        if a.status == "ast_parse_failed":
+            ast_parse_failed.append(a.fn_name)
+            continue
+        if a.status != "tracked":
+            continue
+
+        tracked_count += 1
+        assert a.cache_key_name is not None and a.version is not None
+        entry = prior.get(a.cache_key_name)
+        if entry is None:
+            seeded.append(a.cache_key_name)
+            continue
+        if entry.get("hash") != a.current_hash and entry.get("cache_key_version") == a.version:
+            stale.append({
+                "name": a.cache_key_name,
+                "prior": entry.get("hash", ""),
+                "current": a.current_hash,
+                "version": a.version,
+            })
+
+    return AuditReport(
+        total=len(audits),
+        tracked=tracked_count,
+        elapsed_ms=0.0,
+        stale=stale,
+        seeded=seeded,
+        unknown=unknown,
+        legacy_unversioned=legacy_unversioned,
+        source_unavailable=source_unavailable,
+        ast_parse_failed=ast_parse_failed,
+    )
