@@ -101,3 +101,45 @@ def test_extract_version_unversioned_cache_key_returns_name_but_no_version():
     name, ver = extract_cache_key_version(_fn_with_versionless_cache_key)
     assert name == "metabolism_overview"
     assert ver is None
+
+
+from fastapi import FastAPI
+from cache_audit import scan_endpoints, EndpointAudit
+
+
+def _make_fake_app():
+    app = FastAPI()
+
+    @app.get("/api/foo")
+    def foo():
+        cache_key = f"foo_v1:{1}"
+        return {"k": cache_key}
+
+    @app.get("/api/bar")
+    def bar():
+        return {}
+
+    @app.get("/api/baz")
+    def baz():
+        return {"ok": True}
+    baz._no_cache_tracking = True
+
+    return app
+
+
+def test_scan_endpoints_classifies_three_states():
+    app = _make_fake_app()
+    audits = scan_endpoints(app)
+    by_name = {a.fn_name: a for a in audits}
+    assert by_name["foo"].status == "tracked"
+    assert by_name["foo"].cache_key_name == "foo"
+    assert by_name["foo"].version == "v1"
+    assert by_name["bar"].status == "unknown"
+    assert by_name["baz"].status == "no_cache_by_design"
+
+
+def test_scan_endpoints_skips_non_apiroute_entries():
+    app = _make_fake_app()
+    audits = scan_endpoints(app)
+    names = {a.fn_name for a in audits}
+    assert names == {"foo", "bar", "baz"}

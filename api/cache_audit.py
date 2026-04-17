@@ -9,9 +9,32 @@ import ast
 import hashlib
 import inspect
 import re
-from typing import Any, Callable
+import textwrap
+from dataclasses import dataclass
+from typing import Any, Callable, Literal
 
 _VERSION_RE = re.compile(r"^([A-Za-z0-9_]+?)_v(\d+)(?::|$)")
+
+Status = Literal[
+    "tracked",
+    "legacy_unversioned",
+    "no_cache_by_design",
+    "unknown",
+    "ast_parse_failed",
+    "source_unavailable",
+]
+
+
+@dataclass
+class EndpointAudit:
+    path: str
+    method: str
+    fn_name: str
+    status: Status
+    cache_key_name: str | None = None
+    version: str | None = None
+    current_hash: str = ""
+    source_status: str = ""
 
 
 def ast_hash(fn: Callable[..., Any]) -> tuple[str, str]:
@@ -27,7 +50,7 @@ def ast_hash(fn: Callable[..., Any]) -> tuple[str, str]:
     except OSError:
         return ("", "source_unavailable")
     try:
-        tree = ast.parse(src)
+        tree = ast.parse(textwrap.dedent(src))
     except SyntaxError:
         return ("", "ast_parse_failed")
     normal = ast.dump(tree, annotate_fields=False)
@@ -43,7 +66,7 @@ def extract_cache_key_version(fn: Callable[..., Any]) -> tuple[str | None, str |
     """
     try:
         src = inspect.getsource(fn)
-        tree = ast.parse(src)
+        tree = ast.parse(textwrap.dedent(src))
     except (OSError, SyntaxError):
         return (None, None)
 
@@ -82,3 +105,45 @@ def _first_literal_prefix(value: ast.AST) -> str | None:
     if isinstance(value, ast.BinOp) and isinstance(value.op, ast.Add):
         return _first_literal_prefix(value.left)
     return None
+
+
+def scan_endpoints(app: Any) -> list[EndpointAudit]:
+    """Reflect over FastAPI app.routes and classify each user-defined endpoint."""
+    from fastapi.routing import APIRoute
+
+    audits: list[EndpointAudit] = []
+    for route in app.routes:
+        if not isinstance(route, APIRoute):
+            continue
+        fn = route.endpoint
+        fn_name = getattr(fn, "__name__", "<unknown>")
+        methods = sorted(route.methods or {"GET"})
+        method = methods[0]
+
+        if getattr(fn, "_no_cache_tracking", False):
+            audits.append(EndpointAudit(
+                path=route.path, method=method, fn_name=fn_name,
+                status="no_cache_by_design",
+            ))
+            continue
+
+        name, version = extract_cache_key_version(fn)
+        hex6, src_status = ast_hash(fn)
+
+        if src_status == "source_unavailable":
+            status: Status = "source_unavailable"
+        elif src_status == "ast_parse_failed":
+            status = "ast_parse_failed"
+        elif name is None:
+            status = "unknown"
+        elif version is None:
+            status = "legacy_unversioned"
+        else:
+            status = "tracked"
+
+        audits.append(EndpointAudit(
+            path=route.path, method=method, fn_name=fn_name,
+            status=status, cache_key_name=name, version=version,
+            current_hash=hex6, source_status=src_status,
+        ))
+    return audits
