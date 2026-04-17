@@ -197,3 +197,35 @@ def test_compute_report_collects_unknown_and_legacy():
     report = compute_report(audits, prior={})
     assert report.unknown == ["a"]
     assert report.legacy_unversioned == ["b"]
+
+
+from cache_audit import detect_cache_key_collisions, DuplicateCacheKeyError
+import pytest
+
+
+def test_detect_collisions_raises_on_duplicate():
+    audits = [
+        _tracked_audit("foo", "v1", "aaa"),
+        _tracked_audit("foo", "v1", "bbb"),
+    ]
+    with pytest.raises(DuplicateCacheKeyError) as excinfo:
+        detect_cache_key_collisions(audits)
+    msg = str(excinfo.value)
+    assert "foo" in msg
+    assert "v1" in msg
+
+
+def test_detect_collisions_passes_when_versions_differ():
+    audits = [
+        _tracked_audit("foo", "v1", "aaa"),
+        _tracked_audit("foo", "v2", "bbb"),
+    ]
+    detect_cache_key_collisions(audits)
+
+
+def test_detect_collisions_ignores_non_tracked_status():
+    audits = [
+        EndpointAudit("/a", "GET", "a", "unknown"),
+        EndpointAudit("/b", "GET", "b", "unknown"),
+    ]
+    detect_cache_key_collisions(audits)

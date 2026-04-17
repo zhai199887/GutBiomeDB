@@ -217,3 +217,22 @@ def compute_report(audits: list[EndpointAudit], prior: dict) -> AuditReport:
         source_unavailable=source_unavailable,
         ast_parse_failed=ast_parse_failed,
     )
+
+
+class DuplicateCacheKeyError(Exception):
+    """Two endpoints use the same (cache_key_name, version). Fail-fast at startup."""
+
+
+def detect_cache_key_collisions(audits: list[EndpointAudit]) -> None:
+    seen: dict[tuple[str, str], str] = {}
+    for a in audits:
+        if a.status != "tracked":
+            continue
+        assert a.cache_key_name is not None and a.version is not None
+        key = (a.cache_key_name, a.version)
+        if key in seen:
+            raise DuplicateCacheKeyError(
+                f"cache_key '{a.cache_key_name}_{a.version}' used by "
+                f"{seen[key]} AND {a.fn_name}"
+            )
+        seen[key] = a.fn_name
