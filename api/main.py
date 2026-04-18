@@ -5802,10 +5802,14 @@ _BOT_UA_KEYWORDS = ("bot", "spider", "crawl", "headless", "monitor", "scraper", 
 _CLOUD_IP_PREFIXES = ("66.249.", "34.", "35.", "104.196.", "104.197.", "104.198.", "35.224.", "35.232.", "35.235.", "35.236.")
 
 
-def _classify_visitor(ip: str, ua: str) -> tuple[str, str, str]:
+def _classify_visitor(ip: str, ua: str, referer: str = "") -> tuple[str, str, str]:
     """Returns (label, browser_short, device_short)."""
     ua_l = (ua or "").lower()
+    ref_l = (referer or "").lower()
     if ip in _OWNER_IPS:
+        label = "owner"
+    elif "headlesschrome" in ua_l and ".vercel.app" in ref_l:
+        # Vercel deploy preview / Speed Insights probe — counts as us
         label = "owner"
     elif any(k in ua_l for k in _BOT_UA_KEYWORDS):
         if "googlebot" in ua_l:
@@ -5929,14 +5933,14 @@ async def analytics_summary(request: Request, token: str = ""):
         ip = e.get("ip", "")
         if ip:
             daily[day]["ips_all"].add(ip)
-            label, _, _ = _classify_visitor(ip, e.get("ua", ""))
+            label, _, _ = _classify_visitor(ip, e.get("ua", ""), e.get("referer", ""))
             if label == "human":
                 daily[day]["ips_human"].add(ip)
         daily[day]["pages"][e.get("page", "")] += 1
 
     # Per-IP visitor profiles (overall)
     visitor_data: dict = defaultdict(lambda: {
-        "events": 0, "pages": Counter(), "ua": "",
+        "events": 0, "pages": Counter(), "ua": "", "referer": "",
         "first_seen": "", "last_seen": "",
     })
     for e in events:
@@ -5951,11 +5955,12 @@ async def analytics_summary(request: Request, token: str = ""):
             v["first_seen"] = ts
         if ts > v["last_seen"]:
             v["last_seen"] = ts
-            v["ua"] = e.get("ua", "")  # latest UA for this IP
+            v["ua"] = e.get("ua", "")
+            v["referer"] = e.get("referer", "")
 
     visitors = []
     for ip, v in visitor_data.items():
-        label, browser, device = _classify_visitor(ip, v["ua"])
+        label, browser, device = _classify_visitor(ip, v["ua"], v["referer"])
         visitors.append({
             "ip": ip,
             "label": label,
@@ -5966,12 +5971,13 @@ async def analytics_summary(request: Request, token: str = ""):
             "first_seen": v["first_seen"],
             "last_seen": v["last_seen"],
             "ua": v["ua"],
+            "referer": v["referer"],
         })
     visitors.sort(key=lambda x: -x["events"])
 
     # Per-day visitor list (detail)
     daily_visitors: dict = defaultdict(lambda: defaultdict(lambda: {
-        "events": 0, "pages": Counter(), "ua": "",
+        "events": 0, "pages": Counter(), "ua": "", "referer": "",
     }))
     for e in events:
         day = e.get("timestamp", "")[:10]
@@ -5983,17 +5989,19 @@ async def analytics_summary(request: Request, token: str = ""):
         dv["pages"][e.get("page", "")] += 1
         if e.get("ua"):
             dv["ua"] = e.get("ua", "")
+        if e.get("referer"):
+            dv["referer"] = e.get("referer", "")
 
     daily_visitors_out: dict = {}
     for day, ips in daily_visitors.items():
         items = []
         for ip, v in ips.items():
-            label, browser, device = _classify_visitor(ip, v["ua"])
+            label, browser, device = _classify_visitor(ip, v["ua"], v["referer"])
             items.append({
                 "ip": ip, "label": label, "browser": browser, "device": device,
                 "events": v["events"],
                 "top_pages": dict(v["pages"].most_common(5)),
-                "ua": v["ua"],
+                "ua": v["ua"], "referer": v["referer"],
             })
         items.sort(key=lambda x: -x["events"])
         daily_visitors_out[day] = items
