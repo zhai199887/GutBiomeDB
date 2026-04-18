@@ -5799,7 +5799,22 @@ _ANALYTICS_FILE = Path(__file__).parent / "analytics.jsonl"
 
 _OWNER_IPS = {ip.strip() for ip in os.getenv("ANALYTICS_EXCLUDE_IPS", "23.172.200.73").split(",") if ip.strip()}
 _BOT_UA_KEYWORDS = ("bot", "spider", "crawl", "headless", "monitor", "scraper", "preview", "fetch", "facebookexternalhit", "lighthouse")
-_CLOUD_IP_PREFIXES = ("66.249.", "34.", "35.", "104.196.", "104.197.", "104.198.", "35.224.", "35.232.", "35.235.", "35.236.")
+# Cloud / probe IP prefixes — narrow enough to avoid hitting real GCP/AWS users.
+# Verified sources:
+#   66.249.   Googlebot
+#   34.72.    Google Cloud us-central1 (Vercel infra)
+#   104.196-198. Google Cloud (Vercel infra)
+#   35.224/232/235/236.  Google Cloud (Vercel infra)
+#   13.57.    AWS us-west-1 (Vercel Speed Insights)
+#   54.215.   AWS us-west-1 (Vercel Speed Insights)
+#   205.169.  Palo Alto Networks (Cortex Xpanse asset scanner)
+_CLOUD_IP_PREFIXES = (
+    "66.249.", "34.72.",
+    "104.196.", "104.197.", "104.198.",
+    "35.224.", "35.232.", "35.235.", "35.236.",
+    "13.57.", "54.215.",
+    "205.169.",
+)
 
 
 def _classify_visitor(ip: str, ua: str, referer: str = "") -> tuple[str, str, str]:
@@ -5818,7 +5833,7 @@ def _classify_visitor(ip: str, ua: str, referer: str = "") -> tuple[str, str, st
             label = "bingbot"
         else:
             label = "bot"
-    elif ip.startswith(_CLOUD_IP_PREFIXES) and ("linux" in ua_l or "headless" in ua_l):
+    elif ip.startswith(_CLOUD_IP_PREFIXES):
         label = "cloud_probe"
     else:
         label = "human"
