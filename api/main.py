@@ -5797,6 +5797,68 @@ class TrackEvent(BaseModel):
 
 _ANALYTICS_FILE = Path(__file__).parent / "analytics.jsonl"
 
+_OWNER_IPS = {ip.strip() for ip in os.getenv("ANALYTICS_EXCLUDE_IPS", "23.172.200.73").split(",") if ip.strip()}
+_BOT_UA_KEYWORDS = ("bot", "spider", "crawl", "headless", "monitor", "scraper", "preview", "fetch", "facebookexternalhit", "lighthouse")
+_CLOUD_IP_PREFIXES = ("66.249.", "34.", "35.", "104.196.", "104.197.", "104.198.", "35.224.", "35.232.", "35.235.", "35.236.")
+
+
+def _classify_visitor(ip: str, ua: str) -> tuple[str, str, str]:
+    """Returns (label, browser_short, device_short)."""
+    ua_l = (ua or "").lower()
+    if ip in _OWNER_IPS:
+        label = "owner"
+    elif any(k in ua_l for k in _BOT_UA_KEYWORDS):
+        if "googlebot" in ua_l:
+            label = "googlebot"
+        elif "bingbot" in ua_l:
+            label = "bingbot"
+        else:
+            label = "bot"
+    elif ip.startswith(_CLOUD_IP_PREFIXES) and ("linux" in ua_l or "headless" in ua_l):
+        label = "cloud_probe"
+    else:
+        label = "human"
+
+    if "edg/" in ua_l:
+        m = re.search(r"edg/([\d.]+)", ua_l)
+        browser = f"Edge {m.group(1).split('.')[0]}" if m else "Edge"
+    elif "crios/" in ua_l:
+        m = re.search(r"crios/([\d.]+)", ua_l)
+        browser = f"Chrome iOS {m.group(1).split('.')[0]}" if m else "Chrome iOS"
+    elif "firefox/" in ua_l:
+        m = re.search(r"firefox/([\d.]+)", ua_l)
+        browser = f"Firefox {m.group(1).split('.')[0]}" if m else "Firefox"
+    elif "chrome/" in ua_l:
+        m = re.search(r"chrome/([\d.]+)", ua_l)
+        browser = f"Chrome {m.group(1).split('.')[0]}" if m else "Chrome"
+    elif "safari/" in ua_l and "version/" in ua_l:
+        m = re.search(r"version/([\d.]+)", ua_l)
+        browser = f"Safari {m.group(1).split('.')[0]}" if m else "Safari"
+    elif "googlebot" in ua_l:
+        browser = "Googlebot"
+    elif "bingbot" in ua_l:
+        browser = "Bingbot"
+    else:
+        browser = "Unknown"
+
+    if "iphone" in ua_l:
+        device = "iPhone"
+    elif "ipad" in ua_l:
+        device = "iPad"
+    elif "android" in ua_l:
+        device = "Android"
+    elif "windows" in ua_l:
+        device = "Windows"
+    elif "mac os x" in ua_l or "macintosh" in ua_l:
+        device = "macOS"
+    elif "linux" in ua_l:
+        device = "Linux"
+    else:
+        device = "Unknown"
+
+    return label, browser, device
+
+
 @app.post("/api/track", tags=["Admin"],
           summary="Track usage event",
           description="Log usage events for publication metrics.")
@@ -5848,42 +5910,118 @@ async def analytics_summary(request: Request, token: str = ""):
         pass
 
     # Aggregate
-    from collections import Counter
+    from collections import Counter, defaultdict
     event_counts = Counter(e.get("event", "") for e in events)
     page_counts = Counter(e.get("page", "") for e in events)
 
-    # Daily breakdown
+    # Daily breakdown — daily.unique_visitors EXCLUDES owner & bots
     daily: dict = {}
     for e in events:
         day = e.get("timestamp", "")[:10]
         if not day:
             continue
         if day not in daily:
-            daily[day] = {"views": 0, "ips": set(), "pages": Counter()}
+            daily[day] = {
+                "views": 0, "ips_all": set(), "ips_human": set(),
+                "pages": Counter(),
+            }
         daily[day]["views"] += 1
         ip = e.get("ip", "")
         if ip:
-            daily[day]["ips"].add(ip)
+            daily[day]["ips_all"].add(ip)
+            label, _, _ = _classify_visitor(ip, e.get("ua", ""))
+            if label == "human":
+                daily[day]["ips_human"].add(ip)
         daily[day]["pages"][e.get("page", "")] += 1
+
+    # Per-IP visitor profiles (overall)
+    visitor_data: dict = defaultdict(lambda: {
+        "events": 0, "pages": Counter(), "ua": "",
+        "first_seen": "", "last_seen": "",
+    })
+    for e in events:
+        ip = e.get("ip", "")
+        if not ip:
+            continue
+        v = visitor_data[ip]
+        v["events"] += 1
+        v["pages"][e.get("page", "")] += 1
+        ts = e.get("timestamp", "")
+        if not v["first_seen"] or ts < v["first_seen"]:
+            v["first_seen"] = ts
+        if ts > v["last_seen"]:
+            v["last_seen"] = ts
+            v["ua"] = e.get("ua", "")  # latest UA for this IP
+
+    visitors = []
+    for ip, v in visitor_data.items():
+        label, browser, device = _classify_visitor(ip, v["ua"])
+        visitors.append({
+            "ip": ip,
+            "label": label,
+            "browser": browser,
+            "device": device,
+            "events": v["events"],
+            "top_pages": dict(v["pages"].most_common(5)),
+            "first_seen": v["first_seen"],
+            "last_seen": v["last_seen"],
+            "ua": v["ua"],
+        })
+    visitors.sort(key=lambda x: -x["events"])
+
+    # Per-day visitor list (detail)
+    daily_visitors: dict = defaultdict(lambda: defaultdict(lambda: {
+        "events": 0, "pages": Counter(), "ua": "",
+    }))
+    for e in events:
+        day = e.get("timestamp", "")[:10]
+        ip = e.get("ip", "")
+        if not day or not ip:
+            continue
+        dv = daily_visitors[day][ip]
+        dv["events"] += 1
+        dv["pages"][e.get("page", "")] += 1
+        if e.get("ua"):
+            dv["ua"] = e.get("ua", "")
+
+    daily_visitors_out: dict = {}
+    for day, ips in daily_visitors.items():
+        items = []
+        for ip, v in ips.items():
+            label, browser, device = _classify_visitor(ip, v["ua"])
+            items.append({
+                "ip": ip, "label": label, "browser": browser, "device": device,
+                "events": v["events"],
+                "top_pages": dict(v["pages"].most_common(5)),
+                "ua": v["ua"],
+            })
+        items.sort(key=lambda x: -x["events"])
+        daily_visitors_out[day] = items
 
     daily_summary = {}
     for day in sorted(daily):
         d = daily[day]
         daily_summary[day] = {
             "views": d["views"],
-            "unique_visitors": len(d["ips"]),
+            "unique_visitors": len(d["ips_human"]),
+            "unique_visitors_raw": len(d["ips_all"]),
             "top_pages": dict(d["pages"].most_common(10)),
+            "visitors": daily_visitors_out.get(day, []),
         }
 
-    # Unique visitors (all time)
+    # Unique visitors (all time) — human only for headline
     all_ips = set(e.get("ip", "") for e in events if e.get("ip"))
+    human_ips = {v["ip"] for v in visitors if v["label"] == "human"}
 
     return {
         "total_events": len(events),
-        "unique_visitors": len(all_ips),
+        "unique_visitors": len(human_ips),
+        "unique_visitors_raw": len(all_ips),
+        "owner_ips": sorted(_OWNER_IPS),
         "by_event_type": dict(event_counts.most_common(20)),
         "by_page": dict(page_counts.most_common(20)),
         "daily": daily_summary,
+        "visitors": visitors,
         "recent": events[-20:] if events else [],
     }
 
