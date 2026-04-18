@@ -4226,6 +4226,25 @@ AGE_GROUP_ORDER = ["Infant", "Child", "Adolescent", "Adult", "Older_Adult", "Old
 AGE_NAMED_ORDER = ["Infant", "Child", "Adolescent", "Adult", "Older_Adult", "Oldest_Old", "Centenarian"]
 
 
+def _json_safe(obj):
+    # Starlette's JSON encoder rejects NaN/inf (strict JSON). scipy.stats
+    # routines (spearmanr, kruskal, mannwhitneyu) legitimately return NaN on
+    # degenerate inputs, and eta-squared divisions can too. Replace every
+    # non-finite float with None so the response round-trips cleanly.
+    if isinstance(obj, float):
+        return obj if math.isfinite(obj) else None
+    if isinstance(obj, (np.floating,)):
+        f = float(obj)
+        return f if math.isfinite(f) else None
+    if isinstance(obj, dict):
+        return {k: _json_safe(v) for k, v in obj.items()}
+    if isinstance(obj, list):
+        return [_json_safe(v) for v in obj]
+    if isinstance(obj, tuple):
+        return tuple(_json_safe(v) for v in obj)
+    return obj
+
+
 def _lifecycle_filter_meta(meta: pd.DataFrame, disease: str = "", country: str = "") -> pd.DataFrame:
     """Filter metadata for lifecycle views using disease/country selectors."""
     filtered = meta.copy()
@@ -4563,6 +4582,7 @@ def _lifecycle_internal(
         "alpha_diversity_stats": alpha_stats,
     }
 
+    result = _json_safe(result)
     if use_cache:
         set_cached(cache_key, result)
         set_disk_cached(cache_key, result)
@@ -4639,6 +4659,7 @@ def lifecycle_compare(
         "disease_data": disease_result,
         "nc_data": nc_result,
     }
+    result = _json_safe(result)
     set_cached(cache_key, result)
     set_disk_cached(cache_key, result)
     return result
