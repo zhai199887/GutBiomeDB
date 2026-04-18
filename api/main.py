@@ -6033,10 +6033,12 @@ async def analytics_summary(request: Request, token: str = ""):
     # Per-day visitor list (detail)
     daily_visitors: dict = defaultdict(lambda: defaultdict(lambda: {
         "events": 0, "pages": Counter(), "ua": "", "referer": "",
+        "first_seen": "", "last_seen": "", "timeline": [],
     }))
     for e in events:
         day = e.get("timestamp", "")[:10]
         ip = e.get("ip", "")
+        ts = e.get("timestamp", "")
         if not day or not ip:
             continue
         dv = daily_visitors[day][ip]
@@ -6046,17 +6048,41 @@ async def analytics_summary(request: Request, token: str = ""):
             dv["ua"] = e.get("ua", "")
         if e.get("referer"):
             dv["referer"] = e.get("referer", "")
+        if ts:
+            if not dv["first_seen"] or ts < dv["first_seen"]:
+                dv["first_seen"] = ts
+            if ts > dv["last_seen"]:
+                dv["last_seen"] = ts
+            dv["timeline"].append({
+                "ts": ts,
+                "page": e.get("page", ""),
+                "event": e.get("event", ""),
+                "referer": e.get("referer", ""),
+            })
+
+    def _duration_sec(first: str, last: str) -> int:
+        try:
+            t0 = datetime.fromisoformat(first)
+            t1 = datetime.fromisoformat(last)
+            return max(0, int((t1 - t0).total_seconds()))
+        except Exception:
+            return 0
 
     daily_visitors_out: dict = {}
     for day, ips in daily_visitors.items():
         items = []
         for ip, v in ips.items():
             label, browser, device = _classify_visitor(ip, v["ua"], v["referer"])
+            v["timeline"].sort(key=lambda x: x["ts"])
             items.append({
                 "ip": ip, "label": label, "browser": browser, "device": device,
                 "events": v["events"],
                 "top_pages": dict(v["pages"].most_common(5)),
                 "ua": v["ua"], "referer": v["referer"],
+                "first_seen": v["first_seen"],
+                "last_seen": v["last_seen"],
+                "duration_sec": _duration_sec(v["first_seen"], v["last_seen"]),
+                "timeline": v["timeline"],
             })
         items.sort(key=lambda x: -x["events"])
         daily_visitors_out[day] = items
