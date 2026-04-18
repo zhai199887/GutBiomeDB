@@ -151,6 +151,46 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
 app.add_middleware(SecurityHeadersMiddleware)
 
 
+# ── API access log (for spotting direct-API scraping) ──────────────
+_API_ACCESS_FILE = Path(__file__).parent / "api_access.jsonl"
+_API_ACCESS_SKIP_PREFIXES = ("/api/track", "/api/health", "/api/admin/", "/api/cache-audit")
+
+
+class ApiAccessLogMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        import time as _time
+        path = request.url.path
+        is_api = path.startswith("/api/")
+        skip = is_api and any(path.startswith(p) for p in _API_ACCESS_SKIP_PREFIXES)
+
+        t0 = _time.perf_counter()
+        response = await call_next(request)
+        if not is_api or skip:
+            return response
+
+        dt_ms = int((_time.perf_counter() - t0) * 1000)
+        forwarded = request.headers.get("x-forwarded-for", "")
+        ip = forwarded.split(",")[0].strip() if forwarded else (request.client.host if request.client else "")
+        try:
+            with open(_API_ACCESS_FILE, "a", encoding="utf-8") as f:
+                f.write(json.dumps({
+                    "ts": datetime.now().isoformat(timespec="seconds"),
+                    "ip": ip,
+                    "path": path,
+                    "method": request.method,
+                    "status": response.status_code,
+                    "dt_ms": dt_ms,
+                    "ua": (request.headers.get("user-agent", "") or "")[:200],
+                    "referer": (request.headers.get("referer", "") or "")[:200],
+                }, ensure_ascii=False) + "\n")
+        except Exception:
+            pass
+        return response
+
+
+app.add_middleware(ApiAccessLogMiddleware)
+
+
 def no_cache_tracking(fn):
     """Mark an endpoint as intentionally uncached. cache_audit skips it."""
     fn._no_cache_tracking = True
@@ -6046,6 +6086,152 @@ async def analytics_summary(request: Request, token: str = ""):
         "daily": daily_summary,
         "visitors": visitors,
         "recent": events[-20:] if events else [],
+    }
+
+
+# ── API access traffic summary ────────────────────────────────────
+
+@app.get("/api/admin/api-traffic", tags=["Admin"],
+         summary="Direct-API traffic summary",
+         description="Aggregates /api/* access log to spot direct scraping (cross-references analytics.jsonl).")
+@no_cache_tracking
+@limiter.limit("30/minute")
+async def api_traffic_summary(request: Request, token: str = "", days: int = 14):
+    """Surface API consumers; mark IPs that never browsed pages as 'direct API only'."""
+    if token != ADMIN_TOKEN:
+        raise HTTPException(403, "Invalid admin token")
+
+    if not _API_ACCESS_FILE.exists():
+        return {"total_requests": 0, "daily": {}, "top_ips": [], "top_paths": []}
+
+    # Page-view IP set — IPs that we know browsed the site (from analytics.jsonl)
+    browser_ips: set[str] = set()
+    if _ANALYTICS_FILE.exists():
+        try:
+            with open(_ANALYTICS_FILE, "r", encoding="utf-8") as f:
+                for line in f:
+                    line = line.strip()
+                    if not line:
+                        continue
+                    try:
+                        e = json.loads(line)
+                    except Exception:
+                        continue
+                    ip = e.get("ip", "")
+                    if ip:
+                        browser_ips.add(ip)
+                    if e.get("ip", "") and e.get("event") == "page_view":
+                        browser_ips.add(e["ip"])
+        except Exception:
+            pass
+
+    from collections import Counter, defaultdict
+    rows = []
+    try:
+        with open(_API_ACCESS_FILE, "r", encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if line:
+                    try:
+                        rows.append(json.loads(line))
+                    except Exception:
+                        pass
+    except Exception:
+        pass
+
+    cutoff = (datetime.now() - timedelta(days=days)).isoformat()
+    rows = [r for r in rows if r.get("ts", "") >= cutoff]
+
+    daily: dict = defaultdict(lambda: {
+        "requests": 0,
+        "ips": Counter(),
+        "paths": Counter(),
+        "ip_meta": {},   # ip -> {ua, referer, paths}
+        "errors_5xx": 0,
+        "errors_4xx": 0,
+    })
+    for r in rows:
+        day = r.get("ts", "")[:10]
+        if not day:
+            continue
+        d = daily[day]
+        d["requests"] += 1
+        ip = r.get("ip", "")
+        path = r.get("path", "")
+        status = r.get("status", 0)
+        if ip:
+            d["ips"][ip] += 1
+            meta = d["ip_meta"].setdefault(ip, {"ua": "", "referer": "", "paths": Counter()})
+            meta["ua"] = r.get("ua", meta["ua"])
+            meta["referer"] = r.get("referer", meta["referer"])
+            meta["paths"][path] += 1
+        d["paths"][path] += 1
+        if 500 <= status < 600:
+            d["errors_5xx"] += 1
+        elif 400 <= status < 500:
+            d["errors_4xx"] += 1
+
+    daily_out: dict = {}
+    for day in sorted(daily):
+        d = daily[day]
+        ips_detail = []
+        for ip, cnt in d["ips"].most_common(20):
+            meta = d["ip_meta"].get(ip, {})
+            label, browser, device = _classify_visitor(ip, meta.get("ua", ""), meta.get("referer", ""))
+            # Promote: API hits with no page_view → direct_api (suspicious)
+            if ip not in browser_ips and label == "human":
+                source = "direct_api"
+            else:
+                source = label
+            ips_detail.append({
+                "ip": ip,
+                "requests": cnt,
+                "source": source,
+                "label": label,
+                "browser": browser, "device": device,
+                "top_paths": dict(meta.get("paths", Counter()).most_common(5)),
+                "ua": meta.get("ua", "")[:120],
+            })
+        daily_out[day] = {
+            "requests": d["requests"],
+            "unique_ips": len(d["ips"]),
+            "errors_4xx": d["errors_4xx"],
+            "errors_5xx": d["errors_5xx"],
+            "top_paths": dict(d["paths"].most_common(15)),
+            "top_ips": ips_detail,
+        }
+
+    # Overall top IPs / paths across the window
+    all_ips = Counter()
+    all_paths = Counter()
+    for d in daily.values():
+        all_ips.update(d["ips"])
+        all_paths.update(d["paths"])
+
+    top_ips_overall = []
+    for ip, cnt in all_ips.most_common(20):
+        # find most recent meta
+        ua = referer = ""
+        for r in reversed(rows):
+            if r.get("ip") == ip:
+                ua = r.get("ua", "")
+                referer = r.get("referer", "")
+                break
+        label, browser, device = _classify_visitor(ip, ua, referer)
+        source = "direct_api" if (ip not in browser_ips and label == "human") else label
+        top_ips_overall.append({
+            "ip": ip, "requests": cnt, "source": source, "label": label,
+            "browser": browser, "device": device, "ua": ua[:120],
+        })
+
+    return {
+        "window_days": days,
+        "total_requests": sum(d["requests"] for d in daily.values()),
+        "unique_ips": len(all_ips),
+        "browser_ips_seen": len(browser_ips),
+        "daily": daily_out,
+        "top_ips": top_ips_overall,
+        "top_paths": dict(all_paths.most_common(20)),
     }
 
 
