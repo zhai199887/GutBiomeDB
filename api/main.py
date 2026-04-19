@@ -4226,22 +4226,50 @@ AGE_GROUP_ORDER = ["Infant", "Child", "Adolescent", "Adult", "Older_Adult", "Old
 AGE_NAMED_ORDER = ["Infant", "Child", "Adolescent", "Adult", "Older_Adult", "Oldest_Old", "Centenarian"]
 
 
-def _json_safe(obj):
+_JSON_SAFE_NAN_COUNT = [0]
+
+
+def _json_safe(obj, _path: str = "$"):
     # Starlette's JSON encoder rejects NaN/inf (strict JSON). scipy.stats
     # routines (spearmanr, kruskal, mannwhitneyu) legitimately return NaN on
     # degenerate inputs, and eta-squared divisions can too. Replace every
     # non-finite float with None so the response round-trips cleanly.
+    if obj is None:
+        return None
+    if isinstance(obj, bool):
+        return obj
+    if isinstance(obj, (int,)):
+        return obj
     if isinstance(obj, float):
-        return obj if math.isfinite(obj) else None
-    if isinstance(obj, (np.floating,)):
+        if math.isfinite(obj):
+            return obj
+        _JSON_SAFE_NAN_COUNT[0] += 1
+        if _JSON_SAFE_NAN_COUNT[0] < 50:
+            logging.warning("_json_safe: replaced NaN/inf at %s (py float)", _path)
+        return None
+    if isinstance(obj, np.floating):
         f = float(obj)
-        return f if math.isfinite(f) else None
+        if math.isfinite(f):
+            return f
+        _JSON_SAFE_NAN_COUNT[0] += 1
+        if _JSON_SAFE_NAN_COUNT[0] < 50:
+            logging.warning("_json_safe: replaced NaN/inf at %s (np.%s)", _path, type(obj).__name__)
+        return None
+    if isinstance(obj, np.integer):
+        return int(obj)
+    if isinstance(obj, np.bool_):
+        return bool(obj)
+    if isinstance(obj, np.ndarray):
+        return [_json_safe(v, f"{_path}[{i}]") for i, v in enumerate(obj.tolist())]
     if isinstance(obj, dict):
-        return {k: _json_safe(v) for k, v in obj.items()}
-    if isinstance(obj, list):
-        return [_json_safe(v) for v in obj]
-    if isinstance(obj, tuple):
-        return tuple(_json_safe(v) for v in obj)
+        return {k: _json_safe(v, f"{_path}.{k}") for k, v in obj.items()}
+    if isinstance(obj, (list, tuple)):
+        cls = list if isinstance(obj, list) else tuple
+        return cls(_json_safe(v, f"{_path}[{i}]") for i, v in enumerate(obj))
+    if isinstance(obj, str):
+        return obj
+    # Unknown type: log once so we can debug, return as-is and let JSON encoder complain.
+    logging.warning("_json_safe: unknown type %s at %s", type(obj).__name__, _path)
     return obj
 
 
