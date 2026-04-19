@@ -763,43 +763,67 @@ function drawStackedArea(
     return currentDist < bestDist ? current : best;
   }, firstAgeGroup);
 
-  chartRoot.selectAll(".layer")
-    .data(series)
-    .join("path")
-    .attr("class", "layer")
-    .attr("d", area)
-    .attr("fill", (layer) => colorMap[layer.key] ?? (layer.key === "Other" ? "#cbd5e1" : phylumColor(lifecycle.phylum_map[layer.key] ?? "Unknown")))
-    .attr("opacity", (layer) => {
-      if (!isolatedGenus) return layer.key === "Other" ? 0.68 : 0.9;
-      return isolatedGenus === layer.key ? 0.98 : 0.12;
-    })
-    .attr("stroke", (layer) => isolatedGenus === layer.key ? "#f8fafc" : "transparent")
-    .attr("stroke-width", (layer) => isolatedGenus === layer.key ? 1.2 : 0)
-    .on("mousemove", function onMove(event, layer) {
-      const [pointerX] = d3.pointer(event, svgEl);
-      const localX = Math.max(0, Math.min(innerWidth, pointerX - margin.left));
-      const nearest = nearestAgeGroup(localX);
-      const row = rows.find((item) => item.age_group === nearest);
-      if (!row) return;
+  const fillFor = (key: string) => colorMap[key] ?? (key === "Other" ? "#cbd5e1" : phylumColor(lifecycle.phylum_map[key] ?? "Unknown"));
+  const opacityFor = (key: string) => {
+    if (!isolatedGenus) return key === "Other" ? 0.68 : 0.9;
+    return isolatedGenus === key ? 0.98 : 0.12;
+  };
+  const strokeFor = (key: string) => (isolatedGenus === key ? "#f8fafc" : "transparent");
+  const strokeWidthFor = (key: string) => (isolatedGenus === key ? 1.2 : 0);
+  const hoverHandler = function onMove(this: SVGElement, event: MouseEvent, layer: { key: string }) {
+    const [pointerX] = d3.pointer(event, svgEl);
+    const localX = Math.max(0, Math.min(innerWidth, pointerX - margin.left));
+    const nearest = nearestAgeGroup(localX);
+    const row = rows.find((item) => item.age_group === nearest);
+    if (!row) return;
+    const abundance = Number(row[layer.key] ?? 0);
+    const phylum = layer.key === "Other" ? "Other" : (lifecycle.phylum_map[layer.key] ?? "Unknown");
+    tooltip
+      .html([
+        `<strong>${ageLabel(nearest)}</strong>`,
+        layer.key === "Other" ? (locale === "zh" ? "其他属汇总" : "Other genera aggregate") : `<i>${layer.key}</i>`,
+        `${locale === "zh" ? "门" : "Phylum"}: ${phylum}`,
+        `${locale === "zh" ? "相对丰度" : "Relative abundance"}: ${abundance.toFixed(2)}%`,
+        `${locale === "zh" ? "样本量" : "Sample count"}: ${row.sample_count.toLocaleString()}`,
+        `${locale === "zh" ? "Shannon 均值" : "Mean Shannon"}: ${row.shannon_mean.toFixed(3)}`,
+      ].join("<br/>"))
+      .style("left", `${event.pageX + 14}px`)
+      .style("top", `${event.pageY - 24}px`)
+      .style("opacity", 1);
+  };
+  const mouseOutHandler = () => { tooltip.style("opacity", 0); };
 
-      const abundance = Number(row[layer.key] ?? 0);
-      const phylum = layer.key === "Other" ? "Other" : (lifecycle.phylum_map[layer.key] ?? "Unknown");
-      tooltip
-        .html([
-          `<strong>${ageLabel(nearest)}</strong>`,
-          layer.key === "Other" ? (locale === "zh" ? "其他属汇总" : "Other genera aggregate") : `<i>${layer.key}</i>`,
-          `${locale === "zh" ? "门" : "Phylum"}: ${phylum}`,
-          `${locale === "zh" ? "相对丰度" : "Relative abundance"}: ${abundance.toFixed(2)}%`,
-          `${locale === "zh" ? "样本量" : "Sample count"}: ${row.sample_count.toLocaleString()}`,
-          `${locale === "zh" ? "Shannon 均值" : "Mean Shannon"}: ${row.shannon_mean.toFixed(3)}`,
-        ].join("<br/>"))
-        .style("left", `${event.pageX + 14}px`)
-        .style("top", `${event.pageY - 24}px`)
-        .style("opacity", 1);
-    })
-    .on("mouseout", () => {
-      tooltip.style("opacity", 0);
-    });
+  if (ageGroups.length === 1) {
+    // Single-stage degradation: D3 area needs >=2 x points, draw a stacked bar instead
+    const centerX = xScale(firstAgeGroup) ?? innerWidth / 2;
+    const barWidth = Math.min(140, Math.max(80, innerWidth * 0.3));
+    chartRoot.selectAll(".layer")
+      .data(series)
+      .join("rect")
+      .attr("class", "layer")
+      .attr("x", centerX - barWidth / 2)
+      .attr("y", (layer) => yScale(layer[0][1]))
+      .attr("width", barWidth)
+      .attr("height", (layer) => Math.max(0, yScale(layer[0][0]) - yScale(layer[0][1])))
+      .attr("fill", (layer) => fillFor(layer.key))
+      .attr("opacity", (layer) => opacityFor(layer.key))
+      .attr("stroke", (layer) => strokeFor(layer.key))
+      .attr("stroke-width", (layer) => strokeWidthFor(layer.key))
+      .on("mousemove", hoverHandler)
+      .on("mouseout", mouseOutHandler);
+  } else {
+    chartRoot.selectAll(".layer")
+      .data(series)
+      .join("path")
+      .attr("class", "layer")
+      .attr("d", area)
+      .attr("fill", (layer) => fillFor(layer.key))
+      .attr("opacity", (layer) => opacityFor(layer.key))
+      .attr("stroke", (layer) => strokeFor(layer.key))
+      .attr("stroke-width", (layer) => strokeWidthFor(layer.key))
+      .on("mousemove", hoverHandler)
+      .on("mouseout", mouseOutHandler);
+  }
 
   const sampleBadges = chartRoot.selectAll(".sample-badge")
     .data(rows)
