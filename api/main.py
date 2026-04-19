@@ -4426,9 +4426,10 @@ def _lifecycle_internal(
     if use_cache:
         cached = get_cached(cache_key)
         if cached:
-            return cached
+            return _json_safe(cached)
         disk_hit = get_disk_cached_by_data(cache_key)
         if disk_hit:
+            disk_hit = _json_safe(disk_hit)
             set_cached(cache_key, disk_hit)
             return disk_hit
 
@@ -4652,9 +4653,10 @@ def lifecycle_compare(
     cache_key = f"lifecycle_compare_v3:{disease}:{country}:{top_genera}"
     cached = get_cached(cache_key)
     if cached:
-        return cached
+        return _json_safe(cached)
     disk_hit = get_disk_cached_by_data(cache_key)
     if disk_hit:
+        disk_hit = _json_safe(disk_hit)
         set_cached(cache_key, disk_hit)
         return disk_hit
 
