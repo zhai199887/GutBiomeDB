@@ -292,7 +292,7 @@ def warmup_data():
             _run_warmup(item)
         logging.info("Phenotype warmups completed (sequential)")
 
-        # Disease browser warmup: dynamic n>=100 diseases, sequentially pre-compute
+        # Disease browser warmup: dynamic n>=30 diseases, sequentially pre-compute
         # profile + studies + lifecycle-compare (latter only when named age_groups >= 3).
         # Existing disk-cached entries hit cache instantly; new entries compute once
         # then set_disk_cached writes to permanent disk cache.
@@ -300,7 +300,7 @@ def warmup_data():
             _meta_for_warmup = get_metadata()
             _disease_counts = _inform_label_counts(_meta_for_warmup, include_nc=False)
             _qualified = sorted(
-                [name for name, cnt in _disease_counts.items() if cnt >= 100],
+                [name for name, cnt in _disease_counts.items() if cnt >= 30],
                 key=lambda n: -_disease_counts[n],
             )
             # Age-group coverage per disease (for lifecycle-compare eligibility)
@@ -319,7 +319,7 @@ def warmup_data():
                     if len(_named_ags) >= 3:
                         _lifecycle_eligible.add(_d)
             logging.info(
-                f"Warmup plan: {len(_qualified)} diseases (n>=100), "
+                f"Warmup plan: {len(_qualified)} diseases (n>=30), "
                 f"{len(_lifecycle_eligible)} lifecycle-compare eligible"
             )
 
