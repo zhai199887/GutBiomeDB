@@ -390,11 +390,13 @@ def get_disk_cached(key: str):
         return None
 
 def set_disk_cached(key: str, val: dict):
-    """Persist result to disk cache."""
+    """Persist result to disk cache. allow_nan=False refuses to write NaN/inf
+    so corrupt cache files (which then break cache-hit responses with strict
+    JSON encoders) cannot be created silently."""
     path = _disk_cache_path(key)
     try:
         with open(path, "w", encoding="utf-8") as f:
-            json.dump(val, f, ensure_ascii=False)
+            json.dump(val, f, ensure_ascii=False, allow_nan=False)
     except Exception as e:
         logging.warning(f"Disk cache write failed for {key}: {e}")
 
