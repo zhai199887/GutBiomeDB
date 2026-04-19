@@ -292,20 +292,54 @@ def warmup_data():
             _run_warmup(item)
         logging.info("Phenotype warmups completed (sequential)")
 
-        # Disease browser warmup: sequentially pre-compute profiles + studies for top diseases
-        _top_diseases = ["IBD", "CD", "UC", "obesity", "colorectal_cancer",
-                         "Type 2 diabetes", "compensated cirrhosis", "adenoma", "IBS"]
-        disease_warmups = []
-        for _d in _top_diseases:
-            disease_warmups.append(
-                (f"disease-profile {_d}", lambda d=_d: getattr(disease_profile, "__wrapped__", disease_profile)(None, d, 40))
+        # Disease browser warmup: dynamic n>=100 diseases, sequentially pre-compute
+        # profile + studies + lifecycle-compare (latter only when named age_groups >= 3).
+        # Existing disk-cached entries hit cache instantly; new entries compute once
+        # then set_disk_cached writes to permanent disk cache.
+        try:
+            _meta_for_warmup = get_metadata()
+            _disease_counts = _inform_label_counts(_meta_for_warmup, include_nc=False)
+            _qualified = sorted(
+                [name for name, cnt in _disease_counts.items() if cnt >= 100],
+                key=lambda n: -_disease_counts[n],
             )
-            disease_warmups.append(
-                (f"disease-studies {_d}", lambda d=_d: getattr(disease_studies, "__wrapped__", disease_studies)(None, d))
+            # Age-group coverage per disease (for lifecycle-compare eligibility)
+            _lifecycle_eligible: set[str] = set()
+            if "age_group" in _meta_for_warmup.columns:
+                _inform_cols = [f"inform{i}" for i in range(12)]
+                for _d in _qualified:
+                    _mask = _inform_label_mask(_meta_for_warmup, _d, _inform_cols)
+                    if not _mask.any():
+                        continue
+                    _ags = (
+                        _meta_for_warmup.loc[_mask, "age_group"]
+                        .dropna().astype(str).str.strip()
+                    )
+                    _named_ags = {a for a in _ags.unique().tolist() if a and a != "Unknown"}
+                    if len(_named_ags) >= 3:
+                        _lifecycle_eligible.add(_d)
+            logging.info(
+                f"Warmup plan: {len(_qualified)} diseases (n>=100), "
+                f"{len(_lifecycle_eligible)} lifecycle-compare eligible"
             )
-        for item in disease_warmups:
-            _run_warmup(item)
-        logging.info("Disease browser warmups completed (sequential)")
+
+            disease_warmups = []
+            for _d in _qualified:
+                disease_warmups.append(
+                    (f"disease-profile {_d}", lambda d=_d: getattr(disease_profile, "__wrapped__", disease_profile)(None, d, 40))
+                )
+                disease_warmups.append(
+                    (f"disease-studies {_d}", lambda d=_d: getattr(disease_studies, "__wrapped__", disease_studies)(None, d))
+                )
+                if _d in _lifecycle_eligible:
+                    disease_warmups.append(
+                        (f"lifecycle-compare {_d}", lambda d=_d: getattr(lifecycle_compare, "__wrapped__", lifecycle_compare)(None, d, "", 10))
+                    )
+            for item in disease_warmups:
+                _run_warmup(item)
+            logging.info(f"Disease browser warmups completed (sequential, {len(disease_warmups)} tasks)")
+        except Exception as e:
+            logging.warning(f"Disease warmup planning failed: {e}")
 
     def _preload_data():
         # Avoid blocking startup on the full abundance matrix so health checks
