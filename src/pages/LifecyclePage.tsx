@@ -164,6 +164,17 @@ const LifecyclePage = () => {
       : name.replace(/_/g, " ")
   );
 
+  const underpoweredMessage = (d: LifecycleData | null | undefined): string | null => {
+    if (!d?.data || d.data.length >= 3) return null;
+    const stageList = d.data.map((r) => ageLabel(r.age_group)).join(" / ")
+      || (locale === "zh" ? "未知" : "unknown");
+    const n = d.total_samples ?? 0;
+    if (locale === "zh") {
+      return `该队列已知年龄样本仅落在「${stageList}」阶段（n=${n.toLocaleString()}），覆盖年龄段少于 3 个，跨阶段统计（Kruskal–Wallis / Spearman / 阶段转换）与 α 多样性趋势不可用。下方仅展示当前阶段的组成与均值。`;
+    }
+    return `Cohort with known age is concentrated in ${stageList} (n=${n.toLocaleString()}); fewer than 3 age stages, so cross-stage statistics (Kruskal–Wallis / Spearman / transitions) and α-diversity trend are unavailable. Only the composition and means for this stage are shown below.`;
+  };
+
   useEffect(() => {
     cachedFetch<{ diseases: DiseaseItem[] }>(`${API_BASE}/api/disease-list`)
       .then((payload) => setDiseases(payload.diseases ?? []))
@@ -407,6 +418,12 @@ const LifecyclePage = () => {
 
       {!loading && !error && legendData ? (
         <>
+          {(() => {
+            const msg = viewMode === "compare"
+              ? underpoweredMessage(dualData?.disease_data)
+              : underpoweredMessage(data);
+            return msg ? <div className={classes.noticeWarn}>{msg}</div> : null;
+          })()}
           <div className={classes.summaryRow}>
             <div className={classes.summaryCard}>
               <span className={classes.summaryLabel}>{t("lifecycle.sampleCount")}</span>
@@ -435,16 +452,17 @@ const LifecyclePage = () => {
                 <strong>{viewMode === "compare" ? t("lifecycle.modeCompare") : t("lifecycle.modeNormal")}</strong>
               </div>
             )}
-            {legendData.alpha_diversity_stats ? (() => {
-              const a = legendData.alpha_diversity_stats!;
+            {(() => {
+              const a = legendData.alpha_diversity_stats;
+              if (!a || typeof a.shannon_spearman_rho !== "number") return null;
               return (
                 <div className={classes.summaryCard}>
                   <span className={classes.summaryLabel}>{locale === "zh" ? "Shannon 年龄趋势" : "Shannon age trend"}</span>
                   <strong>ρ = {a.shannon_spearman_rho > 0 ? "+" : ""}{a.shannon_spearman_rho.toFixed(3)}</strong>
-                  <span className={classes.summarySubtext}>η²={a.shannon_eta_squared.toFixed(3)}, P{a.shannon_spearman_p < 0.001 ? " < 0.001" : ` = ${a.shannon_spearman_p.toFixed(3)}`}</span>
+                  <span className={classes.summarySubtext}>η²={(a.shannon_eta_squared ?? 0).toFixed(3)}, P{(a.shannon_spearman_p ?? 1) < 0.001 ? " < 0.001" : ` = ${(a.shannon_spearman_p ?? 1).toFixed(3)}`}</span>
                 </div>
               );
-            })() : null}
+            })()}
           </div>
 
           {viewMode === "area" && data ? (
@@ -474,19 +492,21 @@ const LifecyclePage = () => {
                   <div>
                     <h3>{t("lifecycle.alphaDiversity")}</h3>
                     <p>{locale === "zh" ? "按年龄段展示 Shannon / Simpson 均值与标准差。" : "Age-group mean diversity with one-standard-deviation error bars."}</p>
-                    {data?.alpha_diversity_stats ? (() => {
-                      const a = data.alpha_diversity_stats!;
+                    {(() => {
+                      const a = data?.alpha_diversity_stats;
+                      if (!a) return null;
                       const isSh = diversityMetric === "shannon";
                       const h = isSh ? a.shannon_kw_h : a.simpson_kw_h;
                       const eta = isSh ? a.shannon_eta_squared : a.simpson_eta_squared;
                       const rho = isSh ? a.shannon_spearman_rho : a.simpson_spearman_rho;
                       const sp = isSh ? a.shannon_spearman_p : a.simpson_spearman_p;
+                      if (typeof h !== "number" || typeof rho !== "number") return null;
                       return (
                         <p style={{ fontSize: "0.78rem", color: "#93c5fd", marginTop: "0.3rem" }}>
-                          Kruskal–Wallis H={h.toFixed(1)}, η²={eta.toFixed(3)} · Spearman ρ={rho > 0 ? "+" : ""}{rho.toFixed(3)}, P{sp < 0.001 ? " < 0.001" : ` = ${sp.toFixed(3)}`}
+                          Kruskal–Wallis H={h.toFixed(1)}, η²={(eta ?? 0).toFixed(3)} · Spearman ρ={rho > 0 ? "+" : ""}{rho.toFixed(3)}, P{(sp ?? 1) < 0.001 ? " < 0.001" : ` = ${(sp ?? 1).toFixed(3)}`}
                         </p>
                       );
-                    })() : null}
+                    })()}
                   </div>
                   <div className={classes.metricToggle}>
                     <button

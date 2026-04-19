@@ -38,6 +38,17 @@
   line-height: 1.55;
 }
 
+.noticeWarn {
+  margin-bottom: 1.25rem;
+  padding: 0.85rem 1rem;
+  border-radius: 12px;
+  border: 1px solid rgba(250, 204, 21, 0.35);
+  background: linear-gradient(135deg, rgba(120, 53, 15, 0.22), rgba(69, 26, 3, 0.38));
+  color: #fde68a;
+  font-size: 0.9rem;
+  line-height: 1.55;
+}
+
 .controls {
   display: flex;
   flex-wrap: wrap;
