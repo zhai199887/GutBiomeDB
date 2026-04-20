@@ -1,7 +1,7 @@
 {
   "rewrites": [
-    { "source": "/api", "destination": "https://18a964e8.r8.cpolar.cn/api" },
-    { "source": "/api/(.*)", "destination": "https://18a964e8.r8.cpolar.cn/api/$1" },
+    { "source": "/api", "destination": "http://140.238.207.153:8000/api" },
+    { "source": "/api/(.*)", "destination": "http://140.238.207.153:8000/api/$1" },
     { "source": "/((?!api(?:/|$)|data(?:/|$)|assets(?:/|$)|favicon\\.ico$).*)", "destination": "/index.html" }
   ],
   "headers": [
