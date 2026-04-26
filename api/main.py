@@ -3337,7 +3337,7 @@ def batch_warmup(
     def _key_to_url(key: str) -> str:
         prefix, _, rest = key.partition(":")
         parts = rest.split(":")
-        api = "http://127.0.0.1:8000"
+        api = os.environ.get("GBDB_SELF_API_BASE", "http://127.0.0.1:8000").rstrip("/")
         e = lambda s: _qq(s, safe="")
         if prefix == "lifecycle_v9":
             d, c, t = parts[0], parts[1], parts[2]
@@ -3394,6 +3394,7 @@ def batch_warmup(
     failed: list[dict] = []
     stopped_at = offset
     stop_reason = "completed"
+    loopback_timeout_sec = int(os.environ.get("GBDB_LOOPBACK_TIMEOUT_SEC", "180"))
 
     for i, key in enumerate(batch):
         rss_gb = _self_rss_gb()
@@ -3411,7 +3412,7 @@ def batch_warmup(
             continue
         try:
             rq = _urlreq.Request(url, headers={"User-Agent": "gbdb-batch-warmup/1.0"})
-            with _urlreq.urlopen(rq, timeout=180) as resp:
+            with _urlreq.urlopen(rq, timeout=loopback_timeout_sec) as resp:
                 resp.read()
                 ok += 1
         except _urlerr.HTTPError as he:
