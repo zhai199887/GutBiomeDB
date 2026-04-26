@@ -75,22 +75,21 @@ if not ADMIN_TOKEN:
 # 24 GB ARM instance even with GBDB_SKIP_STARTUP_WARMUP=1).
 # Cache hits remain fast (semaphore acquire/release ~ms), only cold compute serializes.
 # DEFINED HERE (before any @app.get) to avoid forward-reference NameError.
-_HEAVY_COMPUTE_SEMAPHORE = threading.BoundedSemaphore(2)
+_HEAVY_COMPUTE_SEMAPHORE = threading.BoundedSemaphore(99999)  # §14.40: kept only for backward-compat references; not actually limiting
 
 
 def heavy_compute(fn):
-    """Wrap an endpoint so at most 2 concurrent invocations run.
+    """No-op decorator (§14.40 fix).
 
-    3rd+ visitor request waits until one of the running computes finishes.
-    Tradeoff: 3rd visitor sees latency; alternative is OOM-killing the backend.
+    Was: ``BoundedSemaphore(2)`` wrap. That caused cache-hit requests to queue
+    behind cold-compute requests (errata §14.34 Q, §14.39). With backend now
+    OOM-immune via ``OOMScoreAdjust=-1000`` (§14.38) and abundance loaded via
+    memmap (§14.40), the semaphore was both unnecessary and harmful.
+
+    The 6 ``@heavy_compute``-annotated endpoints keep the marker for grep-ability
+    but the decorator now just returns the original function.
     """
-    from functools import wraps as _wraps
-
-    @_wraps(fn)
-    def wrapper(*args, **kwargs):
-        with _HEAVY_COMPUTE_SEMAPHORE:
-            return fn(*args, **kwargs)
-    return wrapper
+    return fn
 
 
 app = FastAPI(
@@ -600,11 +599,42 @@ get_metadata.cache_clear = _clear_metadata_cache
 
 @lru_cache(maxsize=1)
 def _load_abundance_cached() -> pd.DataFrame:
-    """Load abundance CSV (large ~1.5 GB)."""
-    logging.info(f"Loading abundance from {ABUNDANCE_PATH}...")
-    # First column is sample_id (rownames from R)
-    df = pd.read_csv(ABUNDANCE_PATH, index_col=0, low_memory=False)
-    logging.info(f"Abundance loaded: {df.shape}")
+    """Load abundance matrix. Prefer memmap (.npy + .meta.json) over CSV.
+
+    §14.40 (2026-04-26): the memmap path keeps the ~6 GB float64 matrix in the
+    kernel PageCache (file-backed), so the backend's anonymous RSS baseline drops
+    from 14-17 GB (CSV → in-RAM pandas DataFrame) to roughly 1-2 GB. Pandas
+    operations on filtered subsets still allocate anonymous RAM, but the full
+    matrix never does, which is what was triggering OOM-kills under traffic.
+
+    Files expected next to ``ABUNDANCE_PATH`` (built once with
+    ``/tmp/conv_abund.py``):
+      ``unfiltered_abundance.npy``         contiguous float64 array on disk
+      ``unfiltered_abundance.meta.json``   {"index": [...], "columns": [...]}
+
+    If either is missing, falls back to ``pd.read_csv`` (old behaviour).
+    """
+    import numpy as np
+    csv_path = ABUNDANCE_PATH
+    if csv_path.endswith(".csv"):
+        npy_path = csv_path[:-4] + ".npy"
+        meta_path = csv_path[:-4] + ".meta.json"
+    else:
+        npy_path = csv_path + ".npy"
+        meta_path = csv_path + ".meta.json"
+
+    if os.path.exists(npy_path) and os.path.exists(meta_path):
+        logging.info(f"Loading abundance via memmap from {npy_path}")
+        arr = np.load(npy_path, mmap_mode="r")
+        with open(meta_path, "r") as f:
+            meta = json.load(f)
+        df = pd.DataFrame(arr, index=meta["index"], columns=meta["columns"], copy=False)
+        logging.info(f"Abundance memmap loaded: shape={df.shape} dtype={arr.dtype}")
+        return df
+
+    logging.info(f"Loading abundance from CSV {csv_path} (memmap files not present)")
+    df = pd.read_csv(csv_path, index_col=0, low_memory=False)
+    logging.info(f"Abundance CSV loaded: {df.shape}")
     return df
 
 
