@@ -2,6 +2,8 @@
 main.py – GutBiomeDB FastAPI backend
 """
 
+import ctypes
+import gc
 import hashlib
 import logging
 import os
@@ -457,6 +459,34 @@ def get_disk_cached(key: str):
     except Exception:
         return None
 
+# §14.42 J1 (2026-04-26): release retained anon RAM back to OS after cold compute.
+# Glibc/Python keep freed memory in a per-process pool by default, so a single
+# lifecycle-compare cache miss can leave 20+ GB of "used" anon RAM on the
+# dashboard for hours. Calling gc.collect() + malloc_trim(0) at the *end* of
+# every successful cold-compute path returns those pages to the kernel
+# immediately. Cache-hit code paths never call set_disk_cached, so this never
+# fires for cache hits — they remain ms-level.
+try:
+    _LIBC = ctypes.CDLL("libc.so.6")
+    _LIBC.malloc_trim.argtypes = [ctypes.c_size_t]
+    _LIBC.malloc_trim.restype = ctypes.c_int
+except Exception:
+    _LIBC = None  # non-glibc platforms (rare on production); fall back to gc only
+
+
+def _release_memory_to_os() -> None:
+    """Force Python GC and tell glibc to return freed pages to the OS."""
+    try:
+        gc.collect()
+    except Exception:
+        pass
+    if _LIBC is not None:
+        try:
+            _LIBC.malloc_trim(0)
+        except Exception:
+            pass
+
+
 def set_disk_cached(key: str, val: dict):
     """Persist result to disk cache. allow_nan=False refuses to write NaN/inf
     so corrupt cache files (which then break cache-hit responses with strict
@@ -467,6 +497,8 @@ def set_disk_cached(key: str, val: dict):
             json.dump(val, f, ensure_ascii=False, allow_nan=False)
     except Exception as e:
         logging.warning(f"Disk cache write failed for {key}: {e}")
+    # §14.42 J1: cold compute finished + result persisted → release anon RAM.
+    _release_memory_to_os()
 
 def _data_mtime() -> float:
     """Return max mtime of metadata + abundance source files."""
