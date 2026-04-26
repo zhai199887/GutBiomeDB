@@ -3238,6 +3238,167 @@ def rehash_seed(
     return {"reset": endpoint}
 
 
+@app.get("/api/admin/batch-warmup",
+         summary="Batch warmup cache keys from a plan file (loopback HTTP)",
+         description="Reads /opt/gutbiomedb/warmup/plan/<plan>.json, processes "
+                     "keys[offset:offset+limit] via loopback HTTP to self. "
+                     "Skips already-cached keys cheaply. Stops if backend RSS "
+                     "exceeds rss_break_gb. Returns progress so the orchestrator "
+                     "can call again with offset = stopped_at.",
+         tags=["Admin"])
+@no_cache_tracking
+@limiter.limit("60/minute")
+def batch_warmup(
+    request: Request,
+    plan: str,
+    offset: int = 0,
+    limit: int = 50,
+    rss_break_gb: int = 18,
+    skip_cached: bool = True,
+    x_admin_token: str | None = Header(None),
+):
+    _check_admin(x_admin_token)
+
+    plan_path = Path(f"/opt/gutbiomedb/warmup/plan/{plan}.json")
+    if not plan_path.exists():
+        raise HTTPException(404, f"plan not found: {plan_path}")
+    try:
+        with open(plan_path) as f:
+            plan_data = json.load(f)
+    except Exception as e:
+        raise HTTPException(500, f"failed to load plan: {e}")
+    keys_all = plan_data.get("keys", [])
+    if not isinstance(keys_all, list):
+        raise HTTPException(500, "plan.keys is not a list")
+
+    total = len(keys_all)
+    batch = keys_all[offset : offset + limit]
+    if not batch:
+        return {
+            "plan": plan, "offset": offset, "limit": limit,
+            "total": total, "remaining": 0,
+            "ok": 0, "skipped": 0, "rate_limited": 0, "failed": [],
+            "stopped_at": offset, "reason": "empty_batch", "done": True,
+        }
+
+    import urllib.request as _urlreq
+    import urllib.error as _urlerr
+    from urllib.parse import quote as _qq
+
+    def _self_rss_gb() -> float:
+        try:
+            with open(f"/proc/{os.getpid()}/status") as fs:
+                for ln in fs:
+                    if ln.startswith("VmRSS:"):
+                        return int(ln.split()[1]) / (1024 * 1024)
+        except Exception:
+            pass
+        return 0.0
+
+    def _key_to_url(key: str) -> str:
+        prefix, _, rest = key.partition(":")
+        parts = rest.split(":")
+        api = "http://127.0.0.1:8000"
+        e = lambda s: _qq(s, safe="")
+        if prefix == "lifecycle_v9":
+            d, c, t = parts[0], parts[1], parts[2]
+            url = f"{api}/api/lifecycle?top_genera={t}"
+            if d: url += f"&disease={e(d)}"
+            if c: url += f"&country={e(c)}"
+            return url
+        if prefix == "lifecycle_compare_v3":
+            d, c, t = parts[0], parts[1], parts[2]
+            url = f"{api}/api/lifecycle-compare?disease={e(d)}&top_genera={t}"
+            if c: url += f"&country={e(c)}"
+            return url
+        if prefix == "disease_profile_v1":
+            return f"{api}/api/disease-profile?disease={e(parts[0])}&top_n={parts[1]}"
+        if prefix == "disease_studies_v1":
+            return f"{api}/api/disease-studies?disease={e(parts[0])}"
+        if prefix == "lollipop_v1":
+            return f"{api}/api/lollipop-data?disease={e(parts[0])}&top_n={parts[1]}"
+        if prefix == "metabolism_profile_v1":
+            return f"{api}/api/metabolism-category-profile?category_id={e(parts[0])}"
+        if prefix == "biomarker_discovery_v1":
+            return (f"{api}/api/biomarker-discovery"
+                    f"?disease={e(parts[0])}&lda_threshold={parts[1]}&p_threshold={parts[2]}")
+        if prefix == "cooccurrence_v1":
+            return (f"{api}/api/cooccurrence"
+                    f"?disease={e(parts[0])}&min_r={parts[1]}&top_genera={parts[2]}"
+                    f"&max_samples={parts[3]}&method={parts[4]}&fdr_threshold={parts[5]}")
+        if prefix == "network_compare_v1":
+            return (f"{api}/api/network-compare"
+                    f"?disease={e(parts[0])}&min_r={parts[1]}&top_genera={parts[2]}"
+                    f"&max_samples={parts[3]}&method={parts[4]}&fdr_threshold={parts[5]}")
+        if prefix == "project_detail_v1":
+            return f"{api}/api/project-detail?project_id={e(parts[0])}"
+        if prefix == "species_profile_v1":
+            return f"{api}/api/species-profile?genus={e(parts[0])}"
+        if prefix == "biomarker_profile_v1":
+            return f"{api}/api/biomarker-profile?genus={e(parts[0])}&min_samples={parts[1]}"
+        if prefix == "phenotype_taxa_profile_v1":
+            return (f"{api}/api/phenotype-taxa-profile"
+                    f"?taxon={e(parts[0])}&dim_type={parts[1]}")
+        if prefix == "phenotype_assoc_v1":
+            return (f"{api}/api/phenotype-association"
+                    f"?dim_type={parts[0]}&group_a={e(parts[1])}&group_b={e(parts[2])}"
+                    f"&tax_level={parts[3]}&min_prevalence={parts[4]}&top_n={parts[5]}")
+        if prefix == "species_cooccurrence_v1":
+            d_or_nc = "" if parts[2] == "__nc__" else parts[2]
+            return (f"{api}/api/species-cooccurrence"
+                    f"?genus={e(parts[0])}&top_k={parts[1]}&disease_name={e(d_or_nc)}")
+        raise ValueError(f"Unknown cache_key prefix: {prefix}")
+
+    ok = 0
+    skipped = 0
+    rate_limited = 0
+    failed: list[dict] = []
+    stopped_at = offset
+    stop_reason = "completed"
+
+    for i, key in enumerate(batch):
+        rss_gb = _self_rss_gb()
+        if rss_gb > rss_break_gb:
+            stop_reason = f"rss_{rss_gb:.1f}gb_over_{rss_break_gb}gb"
+            stopped_at = offset + i
+            break
+        if skip_cached and get_disk_cached_by_data(key) is not None:
+            skipped += 1
+            continue
+        try:
+            url = _key_to_url(key)
+        except ValueError as ve:
+            failed.append({"key": key, "err": str(ve)[:80]})
+            continue
+        try:
+            rq = _urlreq.Request(url, headers={"User-Agent": "gbdb-batch-warmup/1.0"})
+            with _urlreq.urlopen(rq, timeout=180) as resp:
+                resp.read()
+                ok += 1
+        except _urlerr.HTTPError as he:
+            if he.code == 429:
+                rate_limited += 1
+            else:
+                failed.append({"key": key, "status": he.code, "err": str(he.reason)[:60]})
+        except Exception as ex:
+            failed.append({"key": key, "err": str(ex)[:80]})
+        if (i + 1) % 30 == 0:
+            import gc
+            gc.collect()
+
+    if stop_reason == "completed":
+        stopped_at = offset + len(batch)
+    return {
+        "plan": plan, "offset": offset, "limit": limit,
+        "total": total, "remaining": max(0, total - stopped_at),
+        "ok": ok, "skipped": skipped, "rate_limited": rate_limited,
+        "failed_count": len(failed), "failed": failed[:20],
+        "stopped_at": stopped_at, "reason": stop_reason,
+        "done": stopped_at >= total,
+        "current_rss_gb": round(_self_rss_gb(), 2),
+    }
+
+
 @app.get("/api/cache-audit",
          summary="Per-endpoint cache status snapshot",
          description="Read-only snapshot: per-endpoint tracking state, disk file "
