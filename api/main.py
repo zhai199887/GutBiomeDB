@@ -2012,6 +2012,7 @@ def _get_samples_by_pheno(meta: pd.DataFrame, dim_type: str, group: str) -> pd.S
          summary="Phenotype association analysis",
          description="Mann-Whitney U + BH-FDR per taxon between two phenotype groups.")
 @limiter.limit("10/minute")
+@heavy_compute
 def phenotype_association(
     request: Request,
     dim_type: str = "sex",
@@ -2184,6 +2185,7 @@ def phenotype_association(
          summary="Taxa abundance distribution per group",
          description="Return per-group quantile distributions for a specific taxon (for boxplot).")
 @limiter.limit("30/minute")
+@heavy_compute
 def phenotype_taxa_profile(
     request: Request,
     taxon: str,
@@ -2749,6 +2751,7 @@ def metabolism_overview(request: Request):
          summary="Disease microbiome profile",
          description="Top genera for a disease vs healthy controls with fold-change and prevalence.")
 @limiter.limit("60/minute")
+@heavy_compute
 def disease_profile(request: Request, disease: str, top_n: int = 40):
     """
     Return a profile for a given disease:
@@ -2803,6 +2806,7 @@ def disease_profile(request: Request, disease: str, top_n: int = 40):
          summary="Disease study breakdown",
          description="Returns per-project disease/control counts, dominant country, top marker, and consistency score.")
 @limiter.limit("60/minute")
+@heavy_compute
 def disease_studies(request: Request, disease: str):
     if not disease or not disease.strip():
         raise HTTPException(400, "disease parameter is required")
@@ -3074,6 +3078,29 @@ def microbe_disease_network(request: Request, top_diseases: int = 15, top_genera
 
 
 # ── Data management endpoints ──────────────────────────────────
+
+# §14.34 N (2026-04-26): global concurrency limiter for heavy compute endpoints.
+# Prevents OOM when multiple visitors hit the same cold-cache lifecycle/disease
+# endpoint simultaneously (each compute peak ~5 GB; >2 concurrent could OOM the
+# 24 GB ARM instance even with GBDB_SKIP_STARTUP_WARMUP=1).
+# Cache hits are still fast (semaphore acquire/release ~ms), only cold compute serializes.
+_HEAVY_COMPUTE_SEMAPHORE = threading.BoundedSemaphore(2)
+
+
+def heavy_compute(fn):
+    """Wrap an endpoint so at most 2 concurrent invocations run.
+
+    3rd+ visitor request waits until one of the running computes finishes.
+    Tradeoff: 3rd visitor sees latency; alternative is OOM-killing the backend.
+    """
+    from functools import wraps as _wraps
+
+    @_wraps(fn)
+    def wrapper(*args, **kwargs):
+        with _HEAVY_COMPUTE_SEMAPHORE:
+            return fn(*args, **kwargs)
+    return wrapper
+
 
 def _check_admin(token: str | None):
     """Reject if ADMIN_TOKEN unset or token doesn't match."""
@@ -4830,6 +4857,7 @@ def _lifecycle_internal(
          summary="Lifecycle microbiome atlas",
          description="Genus-level composition across 7 named life stages (Infant to Centenarian) plus Unknown.")
 @limiter.limit("60/minute")
+@heavy_compute
 def lifecycle_atlas(
     request: Request,
     disease: str = "",
@@ -4848,6 +4876,7 @@ def lifecycle_atlas(
          summary="Lifecycle comparison: disease vs NC",
          description="Side-by-side lifecycle trajectories for a disease cohort versus healthy controls.")
 @limiter.limit("30/minute")
+@heavy_compute
 def lifecycle_compare(
     request: Request,
     disease: str,
