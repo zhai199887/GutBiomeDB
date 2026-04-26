@@ -201,7 +201,18 @@ def no_cache_tracking(fn):
 
 @app.on_event("startup")
 def warmup_data():
-    """Pre-load data into memory at startup to avoid cold-start latency."""
+    """Pre-load data into memory at startup to avoid cold-start latency.
+
+    §14.34 (2026-04-26 OOM cascade #3): added GBDB_SKIP_STARTUP_WARMUP env gate.
+    Set to '1' on memory-constrained instances (24GB ARM) to avoid 27-28 GB peak
+    that triggers OOM cascade. With skip enabled:
+    - backend RSS stable at ~6 GB after metadata/abundance load
+    - first-time visitor requests cold-compute (slow but no OOM)
+    - batch warmup orchestrator can safely run without piling on backend's own warmup
+    """
+    if os.environ.get("GBDB_SKIP_STARTUP_WARMUP") == "1":
+        logging.info("[startup] GBDB_SKIP_STARTUP_WARMUP=1, skipping all warmup_data")
+        return
     import threading
 
     def _warmup_endpoints():
