@@ -69,6 +69,30 @@ if not ABUNDANCE_PATH:
 if not ADMIN_TOKEN:
     logging.warning("ADMIN_TOKEN not set — admin endpoints will reject all requests")
 
+# §14.34 N (2026-04-26): global concurrency limiter for heavy compute endpoints.
+# Prevents OOM when multiple visitors hit the same cold-cache lifecycle/disease
+# endpoint simultaneously (each compute peak ~5 GB; >2 concurrent could OOM the
+# 24 GB ARM instance even with GBDB_SKIP_STARTUP_WARMUP=1).
+# Cache hits remain fast (semaphore acquire/release ~ms), only cold compute serializes.
+# DEFINED HERE (before any @app.get) to avoid forward-reference NameError.
+_HEAVY_COMPUTE_SEMAPHORE = threading.BoundedSemaphore(2)
+
+
+def heavy_compute(fn):
+    """Wrap an endpoint so at most 2 concurrent invocations run.
+
+    3rd+ visitor request waits until one of the running computes finishes.
+    Tradeoff: 3rd visitor sees latency; alternative is OOM-killing the backend.
+    """
+    from functools import wraps as _wraps
+
+    @_wraps(fn)
+    def wrapper(*args, **kwargs):
+        with _HEAVY_COMPUTE_SEMAPHORE:
+            return fn(*args, **kwargs)
+    return wrapper
+
+
 app = FastAPI(
     title="GutBiomeDB API",
     version="2.0.0",
@@ -3078,29 +3102,6 @@ def microbe_disease_network(request: Request, top_diseases: int = 15, top_genera
 
 
 # ── Data management endpoints ──────────────────────────────────
-
-# §14.34 N (2026-04-26): global concurrency limiter for heavy compute endpoints.
-# Prevents OOM when multiple visitors hit the same cold-cache lifecycle/disease
-# endpoint simultaneously (each compute peak ~5 GB; >2 concurrent could OOM the
-# 24 GB ARM instance even with GBDB_SKIP_STARTUP_WARMUP=1).
-# Cache hits are still fast (semaphore acquire/release ~ms), only cold compute serializes.
-_HEAVY_COMPUTE_SEMAPHORE = threading.BoundedSemaphore(2)
-
-
-def heavy_compute(fn):
-    """Wrap an endpoint so at most 2 concurrent invocations run.
-
-    3rd+ visitor request waits until one of the running computes finishes.
-    Tradeoff: 3rd visitor sees latency; alternative is OOM-killing the backend.
-    """
-    from functools import wraps as _wraps
-
-    @_wraps(fn)
-    def wrapper(*args, **kwargs):
-        with _HEAVY_COMPUTE_SEMAPHORE:
-            return fn(*args, **kwargs)
-    return wrapper
-
 
 def _check_admin(token: str | None):
     """Reject if ADMIN_TOKEN unset or token doesn't match."""
