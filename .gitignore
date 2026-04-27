@@ -68,3 +68,10 @@ superpowers/
 tools/
 **/__pycache__/
 *.pyc
+
+# Sydney runtime: venv, raw data dump, admin sessions, warmup state/logs
+.venv/
+data/
+portal-server/sessions/
+warmup/DONE.*
+warmup/logs/
