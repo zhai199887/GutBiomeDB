@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sydney</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(160deg,
+        #0d1b4e 0%,
+        #1a1070 12%,
+        #7b1fa2 28%,
+        #c2185b 42%,
+        #f57c00 58%,
+        #1565c0 76%,
+        #0a2472 100%
+      );
+      font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Helvetica Neue", "Noto Sans SC", sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .lock-screen {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0;
+      user-select: none;
+    }
+
+    .time {
+      font-size: 80px;
+      font-weight: 200;
+      color: white;
+      letter-spacing: -3px;
+      text-shadow: 0 2px 24px rgba(0,0,0,0.25);
+      line-height: 1;
+      margin-bottom: 6px;
+    }
+
+    .date-str {
+      font-size: 17px;
+      font-weight: 300;
+      color: rgba(255,255,255,0.85);
+      margin-bottom: 36px;
+    }
+
+    .avatar {
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #F8C8D8 0%, #A8D5F5 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 32px rgba(0,0,0,0.28), 0 0 0 2px rgba(255,255,255,0.25);
+      margin-bottom: 14px;
+    }
+
+    .avatar svg {
+      width: 46px;
+      height: 46px;
+    }
+
+    .username {
+      font-size: 18px;
+      font-weight: 500;
+      color: white;
+      text-shadow: 0 1px 6px rgba(0,0,0,0.3);
+      margin-bottom: 18px;
+    }
+
+    .pw-row {
+      display: flex;
+      align-items: center;
+      position: relative;
+    }
+
+    .pw-input {
+      width: 210px;
+      height: 36px;
+      border-radius: 18px;
+      border: 1.5px solid rgba(255,255,255,0.45);
+      background: rgba(255,255,255,0.22);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      color: white;
+      font-size: 15px;
+      padding: 0 44px 0 16px;
+      outline: none;
+      letter-spacing: 3px;
+      transition: background 0.2s, border-color 0.2s, box-shadow 0.2s;
+    }
+
+    .pw-input::placeholder {
+      color: rgba(255,255,255,0.55);
+      letter-spacing: 0;
+      font-size: 13px;
+    }
+
+    .pw-input:focus {
+      background: rgba(255,255,255,0.32);
+      border-color: rgba(255,255,255,0.7);
+      box-shadow: 0 0 0 3px rgba(255,255,255,0.2);
+    }
+
+    .submit-btn {
+      position: absolute;
+      right: 5px;
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.9);
+      border: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.15s, transform 0.1s;
+    }
+
+    .submit-btn:hover { background: white; }
+    .submit-btn:active { transform: scale(0.93); }
+
+    .submit-btn svg {
+      width: 14px;
+      height: 14px;
+      stroke: #333;
+    }
+
+    .error-msg {
+      margin-top: 12px;
+      font-size: 12px;
+      color: rgba(255,180,180,0.95);
+      min-height: 18px;
+      text-align: center;
+    }
+
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      20%       { transform: translateX(-9px); }
+      40%       { transform: translateX(9px); }
+      60%       { transform: translateX(-5px); }
+      80%       { transform: translateX(5px); }
+    }
+    .shake { animation: shake 0.38s ease; }
+
+    .bottom-hint {
+      position: fixed;
+      bottom: 22px;
+      font-size: 12px;
+      color: rgba(255,255,255,0.38);
+    }
+  </style>
+</head>
+<body>
+  <div class="lock-screen">
+    <div class="time" id="clock">00:00</div>
+    <div class="date-str" id="date-str"></div>
+
+    <div class="avatar">
+      <svg viewBox="0 0 24 24" fill="white" xmlns="http://www.w3.org/2000/svg">
+        <path d="M12 12c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm0 2c-3.33 0-10 1.67-10 5v2h20v-2c0-3.33-6.67-5-10-5z"/>
+      </svg>
+    </div>
+
+    <div class="username">Sydney</div>
+
+    <form id="form" onsubmit="login(event)">
+      <div class="pw-row" id="pw-row">
+        <input
+          type="password"
+          class="pw-input"
+          id="pw"
+          placeholder="输入密码"
+          autocomplete="current-password"
+          autofocus
+        />
+        <button type="submit" class="submit-btn" title="解锁">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M5 12h14M12 5l7 7-7 7"/>
+          </svg>
+        </button>
+      </div>
+    </form>
+
+    <div class="error-msg" id="err"></div>
+  </div>
+
+  <div class="bottom-hint">GutBiomeDB · Sydney 云端</div>
+
+  <script>
+    const DAYS = ['星期日','星期一','星期二','星期三','星期四','星期五','星期六']
+    const MONTHS = ['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月']
+
+    function tick() {
+      const n = new Date()
+      const h = String(n.getHours()).padStart(2, '0')
+      const m = String(n.getMinutes()).padStart(2, '0')
+      document.getElementById('clock').textContent = h + ':' + m
+      document.getElementById('date-str').textContent =
+        MONTHS[n.getMonth()] + n.getDate() + '日 ' + DAYS[n.getDay()]
+    }
+    tick()
+    setInterval(tick, 15000)
+
+    async function login(e) {
+      e.preventDefault()
+      const pw = document.getElementById('pw').value
+      const errEl = document.getElementById('err')
+      const row = document.getElementById('pw-row')
+      errEl.textContent = ''
+      if (!pw) return
+
+      try {
+        const r = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ password: pw }),
+        })
+        const data = await r.json()
+        if (data.ok) {
+          window.location.reload()
+        } else {
+          errEl.textContent = '密码错误，请重试'
+          row.classList.remove('shake')
+          void row.offsetWidth
+          row.classList.add('shake')
+          document.getElementById('pw').value = ''
+          document.getElementById('pw').focus()
+        }
+      } catch {
+        errEl.textContent = '连接失败，请稍后重试'
+      }
+    }
+  </script>
+</body>
+</html>

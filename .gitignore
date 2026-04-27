@@ -75,3 +75,7 @@ data/
 portal-server/sessions/
 warmup/DONE.*
 warmup/logs/
+
+# Warmup ad-hoc run records and orchestrator state -- regenerable
+warmup/.manual/
+warmup/.orchestrator/
