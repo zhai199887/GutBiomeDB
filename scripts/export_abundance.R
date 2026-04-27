@@ -1,20 +1,21 @@
 # Export abundance summary from unfiltered.rds
-# Input:  D:\R代码\unfiltered.rds
+# Usage: Rscript export_abundance.R
 # Output: public/data/abundance_summary.json
 
 library(jsonlite)
 
 # ── Paths ────────────────────────────────────────────────────────────────────
-rds_files <- list.files("D:/", pattern = "unfiltered\\.rds", recursive = TRUE, full.names = TRUE)
-if (length(rds_files) == 0) stop("Cannot find unfiltered.rds under D:\\")
+DATA_ROOT <- Sys.getenv("DATA_ROOT", "D:/")
+rds_files <- list.files(DATA_ROOT, pattern = "unfiltered\\.rds", recursive = TRUE, full.names = TRUE)
+if (length(rds_files) == 0) stop(paste("Cannot find unfiltered.rds under", DATA_ROOT))
 RDS_PATH <- rds_files[1]
 cat("RDS path:", RDS_PATH, "\n")
 
-META_PATH <- list.files("D:/", pattern = "result_with_age_sex_with_age_group_meta\\.csv",
+META_PATH <- list.files(DATA_ROOT, pattern = "result_with_age_sex_with_age_group_meta\\.csv",
                         recursive = TRUE, full.names = TRUE)[1]
 cat("CSV path:", META_PATH, "\n")
 
-SCRIPT_DIR <- "E:/microbiomap_clone/compendium_website/scripts"
+SCRIPT_DIR <- normalizePath(dirname(sys.frame(1)$ofile), mustWork = FALSE)
 OUT_PATH <- file.path(SCRIPT_DIR, "..", "public", "data", "abundance_summary.json")
 OUT_PATH <- normalizePath(OUT_PATH, mustWork = FALSE)
 cat("Output:", OUT_PATH, "\n\n")

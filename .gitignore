@@ -59,3 +59,12 @@ api/null
 
 # Pickled model artefacts — distribute via release assets, not git
 *.pkl
+
+# Runtime access log — leaks visitor IP/UA, never commit
+api/api_access.jsonl
+
+# Local plans/tools/test caches — never commit
+superpowers/
+tools/
+**/__pycache__/
+*.pyc

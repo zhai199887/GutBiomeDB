@@ -1,6 +1,8 @@
 {
   "total_samples": 168464,
   "total_projects": 482,
+  "total_taxa": 4680,
+  "total_unique_genera": 3143,
   "total_genera": 4680,
   "total_unique_diseases": 224,
   "total_non_nc_condition_labels": 224,
@@ -9,14 +11,12 @@
   "age_counts": {
     "Adult": 66303,
     "Unknown": 37965,
-    "Infant": 36083,
+    "Infant": 36518,
     "Child": 15841,
     "Older_Adult": 7739,
     "Adolescent": 2070,
     "Oldest_Old": 1616,
-    "Centenarian": 412,
-    "NC": 230,
-    "Necrotizing enterocolitis": 205
+    "Centenarian": 412
   },
   "sex_counts": {
     "unknown": 93826,
@@ -235,17 +235,7 @@
     {
       "age_group": "Infant",
       "sex": "unknown",
-      "count": 21202
-    },
-    {
-      "age_group": "NC",
-      "sex": "unknown",
-      "count": 230
-    },
-    {
-      "age_group": "Necrotizing enterocolitis",
-      "sex": "unknown",
-      "count": 205
+      "count": 21637
     },
     {
       "age_group": "Older_Adult",
