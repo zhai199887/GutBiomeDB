@@ -5,7 +5,7 @@ import path from "node:path";
 
 const DEBUG_PORT = Number(process.env.CDP_DEBUG_PORT || 9222);
 const BASE_URL = process.env.AUDIT_BASE_URL || "https://compendiumwebsite.vercel.app";
-const OUTPUT_ROOT = process.env.AUDIT_OUTPUT_DIR || `E:\\tasks\\live_site_audit_${new Date().toISOString().slice(0, 10).replace(/-/g, "")}`;
+const OUTPUT_ROOT = process.env.AUDIT_OUTPUT_DIR || `./live_site_audit_${new Date().toISOString().slice(0, 10).replace(/-/g, "")}`;
 const VIEWPORT_WIDTH = Number(process.env.AUDIT_VIEWPORT_WIDTH || 1920);
 const VIEWPORT_HEIGHT = Number(process.env.AUDIT_VIEWPORT_HEIGHT || 1080);
 const LOCALE = process.env.AUDIT_LOCALE || "zh";

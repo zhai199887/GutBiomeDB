@@ -2,7 +2,6 @@
 """
 Process metadata CSV and export frontend summary JSON files.
 
-Input:  D:\\**\\result_with_age_sex_with_age_group_meta.csv
 Output: public/data/metadata.json
         public/data/metadata_summary.json
 """
@@ -44,9 +43,10 @@ def locate_source_csv() -> Path:
     platform_copy = ROOT.parent / "data" / "metadata.csv"
     if platform_copy.exists():
         return platform_copy
-    matches = sorted(glob.glob(r"D:\**\result_with_age_sex_with_age_group_meta.csv", recursive=True))
+    search_root = os.environ.get("DATA_ROOT", "D:\\")
+    matches = sorted(glob.glob(os.path.join(search_root, "**", "result_with_age_sex_with_age_group_meta.csv"), recursive=True))
     if not matches:
-        raise FileNotFoundError("Cannot find result_with_age_sex_with_age_group_meta.csv under D:\\")
+        raise FileNotFoundError(f"Cannot find result_with_age_sex_with_age_group_meta.csv under {search_root}")
     return Path(matches[0])
 
 
@@ -100,15 +100,29 @@ def count_unique_projects(df: pd.DataFrame) -> int:
     return 0
 
 
-def count_unique_genera() -> int:
+def _abundance_columns() -> list:
     if not ABUNDANCE_PATH.exists():
-        return 0
+        return []
     columns = pd.read_csv(ABUNDANCE_PATH, nrows=0).columns.tolist()
     if not columns:
-        return 0
+        return []
     head = columns[0].strip().lower()
-    data_columns = columns[1:] if head in {"sample_id", "sampleid", "sample", "rownames"} else columns
-    return len(data_columns)
+    return columns[1:] if head in {"sample_id", "sampleid", "sample", "rownames"} else columns
+
+
+def count_total_taxa() -> int:
+    """Total taxonomic features (columns) in the abundance matrix."""
+    return len(_abundance_columns())
+
+
+def count_unique_genera_resolved() -> int:
+    """True unique-genus count after splitting taxonomy on '.' and taking the last segment."""
+    cols = _abundance_columns()
+    return len({col.split(".")[-1].strip() for col in cols})
+
+
+def count_unique_genera() -> int:
+    return count_total_taxa()
 
 
 def apply_control_group_remap(df: pd.DataFrame) -> None:
@@ -322,7 +336,9 @@ def main() -> None:
     summary = {
         "total_samples": int(len(df)),
         "total_projects": count_unique_projects(df),
-        "total_genera": count_unique_genera(),
+        "total_taxa": count_total_taxa(),
+        "total_unique_genera": count_unique_genera_resolved(),
+        "total_genera": count_total_taxa(),
         "total_unique_diseases": int(len(non_nc_condition_labels)),
         "total_non_nc_condition_labels": int(len(non_nc_condition_labels)),
         "total_condition_categories": int(len(non_nc_condition_labels) + int(has_nc_category)),
