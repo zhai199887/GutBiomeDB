@@ -35,6 +35,12 @@ const CooccurrencePanel = () => {
   const sortedDiseases = useMemo(() => sortDiseaseItemsByName(diseases), [diseases]);
 
   useEffect(() => {
+    if (!disease.trim()) {
+      setData(null);
+      setError("");
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     setError("");
     const params = new URLSearchParams({
@@ -43,7 +49,7 @@ const CooccurrencePanel = () => {
       method,
       fdr_threshold: "0.05",
     });
-    if (disease) params.set("disease", disease);
+    params.set("disease", disease);
 
     cachedFetch<CoData>(`${API_BASE}/api/cooccurrence?${params}`)
       .then((payload) => setData(payload))
@@ -103,7 +109,7 @@ const CooccurrencePanel = () => {
             className={styles.input}
             value={disease}
             onChange={(event) => setDisease(event.target.value)}
-            placeholder={locale === "zh" ? "留空表示健康对照" : "Leave blank for healthy controls"}
+            placeholder={locale === "zh" ? "请选择疾病" : "Select a disease"}
           />
           <datalist id="network-disease-list">
             {sortedDiseases.map((item) => (
@@ -180,6 +186,9 @@ const CooccurrencePanel = () => {
       {methodNote ? <p className={styles.note}>{methodNote}</p> : null}
       {error ? <div className={styles.error}>{error}</div> : null}
       {loading ? <div className={styles.loading}>{locale === "zh" ? "正在计算共现网络..." : "Computing co-occurrence network..."}</div> : null}
+      {!disease.trim() && !loading && !error ? (
+        <div className={styles.loading}>{locale === "zh" ? "请先选择疾病以查看共现网络" : "Please select a disease to view the co-occurrence network"}</div>
+      ) : null}
 
       {data ? (
         <>
