@@ -1,7 +1,7 @@
 {
   "rewrites": [
-    { "source": "/api", "destination": "http://140.238.207.153:8000/api" },
-    { "source": "/api/(.*)", "destination": "http://140.238.207.153:8000/api/$1" },
+    { "source": "/api", "destination": "http://117.72.123.224/api" },
+    { "source": "/api/(.*)", "destination": "http://117.72.123.224/api/$1" },
     { "source": "/((?!api(?:/|$)|data(?:/|$)|assets(?:/|$)|favicon\\.ico$).*)", "destination": "/index.html" }
   ],
   "headers": [
