@@ -20,6 +20,7 @@ def load_download_functions(profile):
         "_validate_download_format", "_slugify_download_part", "_download_filename",
         "_download_headers", "_normalize_download_value", "_download_response",
         "download_species_profile_data", "download_disease_profile_data",
+        "download_biomarkers",
     }
     functions = []
     for node in ast.parse(source.read_text(encoding="utf-8-sig")).body:
@@ -36,6 +37,7 @@ def load_download_functions(profile):
         # The full profile is expensive; the serializer and endpoint remain real.
         "species_profile": lambda request, genus: copy.deepcopy(profile),
         "disease_profile": lambda request, disease, top_n: copy.deepcopy(profile),
+        "biomarker_discovery": lambda request, disease, lda_threshold, p_threshold: copy.deepcopy(profile),
         "get_genus_list": lambda: ["Bacteroides"],
     }
     exec(compile(ast.Module(body=functions, type_ignores=[]), str(source), "exec"), namespace)
@@ -118,6 +120,47 @@ class DiseaseDownloadTests(unittest.TestCase):
         self.assertEqual(rows[0].get("p_value_underflow"), "false")
         self.assertEqual(rows[1].get("p_value_underflow"), "true")
         self.assertEqual(rows[1].get("adjusted_p_underflow"), "true")
+
+
+class BiomarkerDownloadTests(unittest.TestCase):
+    def setUp(self):
+        self.profile = {
+            "disease": "ACF with polyp",
+            "markers": [{
+                "taxon": "Bacteroides",
+                "phylum": "Bacteroidota",
+                "mean_disease": 8.2,
+                "mean_control": 0.57,
+                "prevalence_disease": 0.86,
+                "prevalence_control": 0.53,
+                "log2fc": 3.84,
+                "lda_score": 5.9555,
+                "p_value": 1.8e-7,
+                "adjusted_p": 1.14e-5,
+            }],
+        }
+        self.endpoint = load_download_functions(self.profile)["download_biomarkers"]
+
+    def test_csv_maps_marker_payload_to_public_effect_score_schema(self):
+        response = self.endpoint(None, "ACF with polyp", 2.0, "csv")
+        rows = list(csv.DictReader(io.StringIO(asyncio.run(response_text(response)))))
+        self.assertEqual(
+            rows[0].keys(),
+            {"taxon", "phylum", "effect_score", "p_value", "adjusted_p",
+             "disease_mean", "control_mean", "disease_prevalence",
+             "control_prevalence", "log2fc"},
+        )
+        self.assertEqual(float(rows[0]["effect_score"]), 5.9555)
+        self.assertEqual(float(rows[0]["adjusted_p"]), 1.14e-5)
+        self.assertEqual(float(rows[0]["disease_mean"]), 8.2)
+        self.assertEqual(float(rows[0]["control_prevalence"]), 0.53)
+
+    def test_json_uses_same_public_marker_fields(self):
+        response = self.endpoint(None, "ACF with polyp", 2.0, "json")
+        marker = json.loads(asyncio.run(response_text(response)))["markers"][0]
+        self.assertEqual(marker["effect_score"], 5.9555)
+        self.assertEqual(marker["adjusted_p"], 1.14e-5)
+        self.assertEqual(marker["disease_mean"], 8.2)
 
 
 if __name__ == "__main__":
