@@ -105,7 +105,7 @@ A comprehensive analysis platform for the human gut microbiome, integrating **16
 ## Features
 - **Differential Analysis**: Wilcoxon rank-sum test, t-test, LEfSe (LDA effect size), PERMANOVA
 - **Species Profiling**: Genus-level abundance across diseases, countries, age groups, and sex
-- **Disease Biomarker Discovery**: Wilcoxon + BH FDR correction + LDA effect size estimation
+- **Disease Biomarker Discovery**: Mann–Whitney U + BH FDR correction + custom effect score
 - **Co-occurrence Network**: Spearman correlation-based microbial interaction networks
 - **Sample Similarity Search**: Bray-Curtis / Jaccard distance-based sample matching
 - **Lifecycle Atlas**: Age-stratified microbiome composition across 7 named life stages (Infant to Centenarian) plus Unknown
@@ -3952,7 +3952,7 @@ def download_diff_results(
 @app.get(
     "/api/download/biomarkers",
     summary="Download biomarker discovery results",
-    description="Export LEfSe-style biomarker discovery output as CSV, TSV, or JSON.",
+    description="Export Mann–Whitney U + BH-FDR biomarker results with a custom effect score as CSV, TSV, or JSON.",
     tags=["Download"],
 )
 @no_cache_tracking
@@ -3965,23 +3965,39 @@ def download_biomarkers(
 ):
     """Download biomarker discovery markers for one disease."""
     payload = biomarker_discovery(request, disease=disease, lda_threshold=lda_threshold, p_threshold=0.05)
-    rows = payload.get("markers", [])
+    rows = [
+        {
+            "taxon": marker.get("taxon", ""),
+            "phylum": marker.get("phylum", ""),
+            "effect_score": marker.get("lda_score"),
+            "p_value": marker.get("p_value"),
+            "adjusted_p": marker.get("adjusted_p"),
+            "disease_mean": marker.get("mean_disease"),
+            "control_mean": marker.get("mean_control"),
+            "disease_prevalence": marker.get("prevalence_disease"),
+            "control_prevalence": marker.get("prevalence_control"),
+            "log2fc": marker.get("log2fc"),
+        }
+        for marker in payload.get("markers", [])
+    ]
+    export_payload = dict(payload)
+    export_payload["markers"] = rows
     return _download_response(
-        json_payload=payload,
+        json_payload=export_payload,
         rows=rows,
         fieldnames=[
             "taxon",
             "phylum",
-            "lda_score",
+            "effect_score",
             "p_value",
-            "p_adj",
+            "adjusted_p",
             "disease_mean",
             "control_mean",
             "disease_prevalence",
             "control_prevalence",
             "log2fc",
         ],
-        stem=f"biomarkers_{disease}_lda_{lda_threshold}",
+        stem=f"biomarkers_{disease}_effect_score_{lda_threshold}",
         format_name=format,
         rate_limit_note="20/minute",
     )
@@ -4077,7 +4093,7 @@ def download_lifecycle(
 
 @app.get("/api/biomarker-discovery",
          summary="Disease biomarker discovery",
-         description="Identifies significant biomarker taxa using Wilcoxon test with BH FDR correction and LDA effect size.")
+         description="Identifies significant biomarker taxa using Mann–Whitney U with BH FDR correction and a custom effect score.")
 @limiter.limit("60/minute")
 def biomarker_discovery(request: Request, disease: str, lda_threshold: float = 2.0, p_threshold: float = 0.05):
     """

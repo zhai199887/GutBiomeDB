@@ -11,7 +11,7 @@ An Integrated Human Gut Microbiome Database.
 - **GutBiomeDB Health Index (GBHI)** — Universal 9-disease softmax classifier health-score system (0–100), validated by leave-one-cohort-out across 168K samples
 - **Lifecycle Atlas** — Age-stratified microbiome composition across 7 life stages (unique feature)
 - **Species Profiling** — Genus-level abundance across diseases, countries, age groups, and sex
-- **Biomarker Discovery** — Wilcoxon + LDA effect size + BH FDR for differential taxa identification
+- **Biomarker Discovery** — Mann–Whitney U + custom effect score + BH FDR for differential taxa identification
 - **Co-occurrence Network** — Spearman correlation-based microbial interaction networks
 - **Chord Diagram** — Disease-microbe association visualization
 - **Sample Similarity Search** — Bray-Curtis / Jaccard distance-based sample matching
