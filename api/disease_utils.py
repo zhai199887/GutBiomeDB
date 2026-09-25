@@ -237,7 +237,8 @@ def compute_genus_statistics(
                 "control_mean": round(mean_c, 6),
                 "control_prevalence": round(prevalence_c, 4),
                 "log2fc": round(log2fc, 6),
-                "p_value": round(p_value, 8),
+                "p_value": p_value,
+                "p_value_underflow": p_value == 0.0,
                 "adjusted_p": 1.0,
                 "effect_size": round(effect_size, 6),
                 "enriched_in": "disease" if log2fc > 0 else ("control" if log2fc < 0 else "none"),
@@ -248,7 +249,8 @@ def compute_genus_statistics(
 
     adjusted = bh_correction(p_values)
     for idx, row in enumerate(rows):
-        row["adjusted_p"] = round(float(adjusted[idx]), 8)
+        row["adjusted_p"] = float(adjusted[idx])
+        row["adjusted_p_underflow"] = row["adjusted_p"] == 0.0
 
     rows.sort(key=lambda item: (item["adjusted_p"], -abs(item["log2fc"]), -item["disease_mean"]))
     return rows

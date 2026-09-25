@@ -2851,7 +2851,7 @@ def disease_profile(request: Request, disease: str, top_n: int = 40):
         raise HTTPException(400, "disease parameter is required")
     disease = disease.strip()
 
-    cache_key = f"disease_profile_v1:{disease}:{top_n}"
+    cache_key = f"disease_profile_v2:{disease}:{top_n}"
     cached = get_cached(cache_key)
     if cached:
         return cached
@@ -3412,7 +3412,7 @@ def batch_warmup(
             url = f"{api}/api/lifecycle-compare?disease={e(d)}&top_genera={t}"
             if c: url += f"&country={e(c)}"
             return url
-        if prefix == "disease_profile_v1":
+        if prefix in {"disease_profile_v1", "disease_profile_v2"}:
             return f"{api}/api/disease-profile?disease={e(parts[0])}&top_n={parts[1]}"
         if prefix == "disease_studies_v1":
             return f"{api}/api/disease-studies?disease={e(parts[0])}"
@@ -3824,6 +3824,8 @@ def download_disease_profile_data(request: Request, disease: str, format: str = 
             "enriched_in",
             "ci_low",
             "ci_high",
+            "p_value_underflow",
+            "adjusted_p_underflow",
         ],
         stem=f"disease_profile_{disease}",
         format_name=format,
@@ -3839,9 +3841,21 @@ def download_disease_profile_data(request: Request, disease: str, format: str = 
 @limiter.limit("30/minute")
 def download_species_profile_data(request: Request, genus: str, format: str = "csv"):
     """Download species profile data."""
+    genus = genus.strip()
+    if genus.casefold() not in {name.casefold() for name in get_genus_list()}:
+        raise HTTPException(400, "Select a valid genus from the genus list.")
     profile = species_profile(request, genus)
 
-    rows = profile.get("by_disease", [])
+    rows = [
+        {
+            "name": row.get("name", ""),
+            "abundance": row.get("mean_abundance"),
+            "prevalence": row.get("prevalence"),
+            "sample_count": row.get("sample_count"),
+            "phylum": profile.get("phylum", ""),
+        }
+        for row in profile.get("by_disease", [])
+    ]
     return _download_response(
         json_payload=profile,
         rows=rows,
