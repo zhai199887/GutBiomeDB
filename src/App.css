@@ -220,7 +220,7 @@ svg * {
     width var(--fast);
 }
 
-svg [data-tooltip]:hover {
+svg [data-tooltip]:not(.cell):hover {
   fill: var(--white);
 }
 
