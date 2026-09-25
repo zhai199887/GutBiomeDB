@@ -6,6 +6,12 @@ import "@/components/tooltip";
 import { cachedFetch } from "@/util/apiCache";
 import { exportPNG, exportSVG } from "@/util/chartExport";
 import { exportTable } from "@/util/export";
+import {
+  getAnalysisJob,
+  latestRememberedAnalysisJob,
+  submitAnalysisJob,
+  type AnalysisJobStatus,
+} from "@/util/analysisJobs";
 
 import classes from "./ComparePage.module.css";
 import AlphaBoxChart from "./compare/AlphaBoxChart";
@@ -46,6 +52,9 @@ const ComparePage = () => {
   const [loading, setLoading] = useState(false);
   const [spearmanLoading, setSpearmanLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [analysisJobId, setAnalysisJobId] = useState<string | null>(null);
+  const [analysisJobStatus, setAnalysisJobStatus] = useState<AnalysisJobStatus | null>(null);
+  const [spearmanJobId, setSpearmanJobId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<Tab>(
     searchParams.get("tab") === "crossstudy" ? "crossstudy" : "bar",
   );
@@ -56,6 +65,83 @@ const ComparePage = () => {
       .catch(() => setError(t("compare.backendError")))
       .finally(() => setFilterLoading(false));
   }, [t]);
+
+  useEffect(() => {
+    const remembered = latestRememberedAnalysisJob("diff-analysis");
+    if (remembered) setAnalysisJobId(remembered);
+    const rememberedSpearman = latestRememberedAnalysisJob("spearman-analysis");
+    if (rememberedSpearman) setSpearmanJobId(rememberedSpearman);
+  }, []);
+
+  useEffect(() => {
+    if (!analysisJobId) return;
+    setLoading(true);
+    let cancelled = false;
+    let timer: number | undefined;
+    const poll = async () => {
+      try {
+        const job = await getAnalysisJob<DiffResult>(analysisJobId);
+        if (cancelled) return;
+        setAnalysisJobStatus(job.status);
+        if (job.status === "completed") {
+          setResult(job.result ?? null);
+          setActiveTab("bar");
+          setLoading(false);
+          return;
+        }
+        if (job.status === "failed") {
+          setError(job.error ?? "Analysis job failed");
+          setLoading(false);
+          return;
+        }
+        timer = window.setTimeout(poll, 1000);
+      } catch (unknownError) {
+        if (!cancelled) {
+          setError(unknownError instanceof Error ? unknownError.message : String(unknownError));
+          setLoading(false);
+        }
+      }
+    };
+    void poll();
+    return () => {
+      cancelled = true;
+      if (timer !== undefined) window.clearTimeout(timer);
+    };
+  }, [analysisJobId]);
+
+  useEffect(() => {
+    if (!spearmanJobId) return;
+    setSpearmanLoading(true);
+    let cancelled = false;
+    let timer: number | undefined;
+    const poll = async () => {
+      try {
+        const job = await getAnalysisJob<SpearmanResult>(spearmanJobId);
+        if (cancelled) return;
+        if (job.status === "completed") {
+          setSpearman(job.result ?? null);
+          setSpearmanLoading(false);
+          return;
+        }
+        if (job.status === "failed") {
+          setError(job.error ?? "Spearman analysis failed");
+          setSpearmanLoading(false);
+          return;
+        }
+        timer = window.setTimeout(poll, 1000);
+      } catch (unknownError) {
+        if (!cancelled) {
+          setError(unknownError instanceof Error ? unknownError.message : String(unknownError));
+          setSpearmanLoading(false);
+        }
+      }
+    };
+    void poll();
+    return () => {
+      cancelled = true;
+      if (timer !== undefined) window.clearTimeout(timer);
+    };
+  }, [spearmanJobId]);
 
   useEffect(() => {
     if (searchParams.get("tab") === "crossstudy") {
@@ -106,45 +192,33 @@ const ComparePage = () => {
     setLoading(true);
     setError(null);
     setResult(null);
+    setAnalysisJobId(null);
+    setAnalysisJobStatus(null);
+    setSpearman(null);
+    setSpearmanJobId(null);
     try {
-      const response = await fetch(`${API_BASE}/api/diff-analysis`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          group_a_filter: groupA,
-          group_b_filter: groupB,
-          taxonomy_level: taxLevel,
-          method,
-        }),
-      });
-
-      if (!response.ok) {
-        const payload = await response.json();
-        throw new Error(payload.detail ?? "Analysis failed");
-      }
-
-      const data: DiffResult = await response.json();
-      setResult(data);
-      setWorkspaceTab("bar");
-
+      const diffPayload = {
+        group_a_filter: groupA,
+        group_b_filter: groupB,
+        taxonomy_level: taxLevel,
+        method,
+      };
+      const spearmanPayload = {
+        group_a_filter: groupA,
+        group_b_filter: groupB,
+        taxonomy_level: taxLevel,
+        max_taxa: 16,
+      };
+      const [job, spearmanJob] = await Promise.all([
+        submitAnalysisJob("diff-analysis", diffPayload),
+        submitAnalysisJob("spearman-analysis", spearmanPayload),
+      ]);
+      setAnalysisJobId(job.job_id);
+      setAnalysisJobStatus(job.status);
+      setSpearmanJobId(spearmanJob.job_id);
       setSpearmanLoading(true);
-      setSpearman(null);
-      const corrResponse = await fetch(`${API_BASE}/api/spearman-analysis`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          group_a_filter: groupA,
-          group_b_filter: groupB,
-          taxonomy_level: taxLevel,
-          max_taxa: 16,
-        }),
-      });
-      if (corrResponse.ok) {
-        setSpearman(await corrResponse.json());
-      }
     } catch (unknownError) {
       setError(unknownError instanceof Error ? unknownError.message : String(unknownError));
-    } finally {
       setLoading(false);
       setSpearmanLoading(false);
     }
@@ -315,6 +389,16 @@ const ComparePage = () => {
           <button className={classes.analyzeBtn} type="button" onClick={runAnalysis} disabled={loading}>
             {loading ? t("compare.analyzing") : t("compare.run")}
           </button>
+          {analysisJobId ? (
+            <span className={classes.meta} title={analysisJobId}>
+              {locale === "zh" ? "任务 ID" : "Job ID"}: <code>{analysisJobId}</code> · {analysisJobStatus ?? "queued"}
+            </span>
+          ) : null}
+          {spearmanJobId ? (
+            <span className={classes.meta} title={spearmanJobId}>
+              Spearman ID: <code>{spearmanJobId}</code>
+            </span>
+          ) : null}
         </div>
       </section>
 
