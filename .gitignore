@@ -50,6 +50,7 @@ public/favicon_refs/
 # Backend generated disk cache — regenerated at runtime from the 168,464-sample
 # matrix; single source of truth is the live platform, never commit snapshots
 api/_disk_cache/
+api/_analysis_jobs/
 
 # cache_audit runtime state
 api/_disk_cache/.endpoint_source_hashes.json

@@ -15,7 +15,7 @@ import threading
 from datetime import datetime, timedelta
 from functools import lru_cache
 from pathlib import Path
-from typing import Optional
+from typing import Any, Literal, Optional
 
 from fastapi import UploadFile, File
 
@@ -43,6 +43,7 @@ from analysis import (
     wilcoxon_marker_test,
 )
 from compare_utils import aggregate_by_level, relative_abundance_matrix, run_compare_analysis, run_spearman_analysis
+from analysis_jobs import AnalysisJobStore
 from disease_utils import (
     build_disease_profile,
     build_disease_studies,
@@ -171,6 +172,8 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         response.headers["X-Content-Type-Options"] = "nosniff"
         response.headers["X-Frame-Options"] = "DENY"
         response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+        if request.url.path.startswith("/api/analysis-jobs"):
+            response.headers["Cache-Control"] = "no-store"
         return response
 
 app.add_middleware(SecurityHeadersMiddleware)
@@ -1379,6 +1382,15 @@ class SpearmanAnalysisRequest(BaseModel):
     max_taxa: int = 18
 
 
+class PhenotypeAssociationRequest(BaseModel):
+    dim_type: Literal["sex", "age", "disease"] = "sex"
+    group_a: str = "female"
+    group_b: str = "male"
+    tax_level: Literal["genus", "phylum"] = "genus"
+    min_prevalence: float = 0.10
+    top_n: int = 100
+
+
 class HealthIndexRequest(BaseModel):
     """Microbiome health index request model."""
     abundances: dict[str, float]  # genus_name -> abundance_value
@@ -1387,6 +1399,39 @@ class HealthIndexRequest(BaseModel):
     iso: str = ""                 # ISO-2 country code (falls back to OTHER)
     sex: str = "unknown"          # female / male / unknown
     length: float | None = None   # sequencing read length (bp); falls back to training median
+
+
+class AnalysisJobRequest(BaseModel):
+    """Request envelope for asynchronous analysis jobs."""
+    kind: Literal["diff-analysis", "spearman-analysis", "cross-study", "phenotype-association"]
+    payload: dict[str, Any]
+
+
+_ANALYSIS_JOB_STORE = AnalysisJobStore()
+
+
+def _endpoint_implementation(endpoint):
+    """Unwrap rate-limit decorators before running an endpoint in a worker."""
+    while hasattr(endpoint, "__wrapped__"):
+        endpoint = endpoint.__wrapped__
+    return endpoint
+
+
+def _run_analysis_job(kind: str, payload: dict[str, Any]):
+    """Dispatch a validated job payload to the existing analysis implementation."""
+    if kind == "diff-analysis":
+        return _endpoint_implementation(diff_analysis)(None, DiffAnalysisRequest.model_validate(payload))
+    if kind == "spearman-analysis":
+        return _endpoint_implementation(spearman_analysis)(None, SpearmanAnalysisRequest.model_validate(payload))
+    if kind == "cross-study":
+        import asyncio
+        return asyncio.run(
+            _endpoint_implementation(cross_study_analysis)(None, CrossStudyRequest.model_validate(payload))
+        )
+    if kind == "phenotype-association":
+        phenotype_request = PhenotypeAssociationRequest.model_validate(payload)
+        return _endpoint_implementation(phenotype_association)(None, **phenotype_request.model_dump())
+    raise ValueError(f"Unsupported analysis job kind: {kind}")
 
 
 # ── Helper functions ────────────────────────────────────────────────────────────
@@ -1884,6 +1929,30 @@ def get_disease_display_names(request: Request):
     set_cached(cache_key, result)
     set_disk_cached(cache_key, result)
     return result
+
+
+@app.post("/api/analysis-jobs", status_code=202,
+          summary="Submit a trackable analysis job",
+          description="Submit a long-running analysis and receive a job ID for status polling after leaving the page.")
+@no_cache_tracking
+@limiter.limit("10/minute")
+def submit_analysis_job(request: Request, req: AnalysisJobRequest):
+    return _ANALYSIS_JOB_STORE.submit(
+        req.kind,
+        lambda: _run_analysis_job(req.kind, req.payload),
+    )
+
+
+@app.get("/api/analysis-jobs/{job_id}",
+         summary="Get analysis job status",
+         description="Return queued, running, completed, or failed status and the result for a known job ID.")
+@no_cache_tracking
+@limiter.limit("120/minute")
+def get_analysis_job(request: Request, job_id: str):
+    job = _ANALYSIS_JOB_STORE.get(job_id)
+    if job is None:
+        raise HTTPException(404, "Analysis job not found or expired")
+    return job
 
 
 @app.post("/api/estimate-sample-count",

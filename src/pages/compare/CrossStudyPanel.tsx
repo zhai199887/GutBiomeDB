@@ -5,6 +5,12 @@ import { cachedFetch } from "@/util/apiCache";
 import { exportPNG, exportSVG } from "@/util/chartExport";
 import { exportTable } from "@/util/export";
 import { diseaseDisplayNameI18n } from "@/util/diseaseNames";
+import {
+  getAnalysisJob,
+  latestRememberedAnalysisJob,
+  submitAnalysisJob,
+  type AnalysisJobStatus,
+} from "@/util/analysisJobs";
 
 import classes from "./CrossStudyPanel.module.css";
 import type { CrossStudyMarker, CrossStudyResult, ProjectInfo, TaxonomyLevel } from "./types";
@@ -38,11 +44,54 @@ const CrossStudyPanel = ({ taxonomyLevel }: { taxonomyLevel: TaxonomyLevel }) =>
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<CrossStudyResult | null>(null);
+  const [analysisJobId, setAnalysisJobId] = useState<string | null>(null);
+  const [analysisJobStatus, setAnalysisJobStatus] = useState<AnalysisJobStatus | null>(null);
 
   const forestRef = useRef<SVGSVGElement>(null);
   const heatmapRef = useRef<SVGSVGElement>(null);
   const consistencyRef = useRef<SVGSVGElement>(null);
   const bubbleRef = useRef<SVGSVGElement>(null);
+
+  useEffect(() => {
+    const remembered = latestRememberedAnalysisJob("cross-study");
+    if (remembered) setAnalysisJobId(remembered);
+  }, []);
+
+  useEffect(() => {
+    if (!analysisJobId) return;
+    setLoading(true);
+    let cancelled = false;
+    let timer: number | undefined;
+    const poll = async () => {
+      try {
+        const job = await getAnalysisJob<CrossStudyResult>(analysisJobId);
+        if (cancelled) return;
+        setAnalysisJobStatus(job.status);
+        if (job.status === "completed") {
+          setResult(job.result ?? null);
+          setView("forest");
+          setLoading(false);
+          return;
+        }
+        if (job.status === "failed") {
+          setError(job.error ?? "Cross-study analysis failed");
+          setLoading(false);
+          return;
+        }
+        timer = window.setTimeout(poll, 1000);
+      } catch (unknownError) {
+        if (!cancelled) {
+          setError(unknownError instanceof Error ? unknownError.message : String(unknownError));
+          setLoading(false);
+        }
+      }
+    };
+    void poll();
+    return () => {
+      cancelled = true;
+      if (timer !== undefined) window.clearTimeout(timer);
+    };
+  }, [analysisJobId]);
 
   useEffect(() => {
     Promise.all([
@@ -127,29 +176,18 @@ const CrossStudyPanel = ({ taxonomyLevel }: { taxonomyLevel: TaxonomyLevel }) =>
     setError(null);
     setResult(null);
     try {
-      const response = await fetch(`${API_BASE}/api/cross-study`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          project_ids: selectedProjects,
-          disease,
-          method,
-          taxonomy_level: taxonomyLevel,
-          p_threshold: 0.05,
-          min_studies: 2,
-        }),
+      const job = await submitAnalysisJob("cross-study", {
+        project_ids: selectedProjects,
+        disease,
+        method,
+        taxonomy_level: taxonomyLevel,
+        p_threshold: 0.05,
+        min_studies: 2,
       });
-
-      if (!response.ok) {
-        const payload = await response.json();
-        throw new Error(payload.detail ?? "Cross-study analysis failed");
-      }
-
-      setResult(await response.json());
-      setView("forest");
+      setAnalysisJobId(job.job_id);
+      setAnalysisJobStatus(job.status);
     } catch (unknownError) {
       setError(unknownError instanceof Error ? unknownError.message : String(unknownError));
-    } finally {
       setLoading(false);
     }
   };
@@ -249,8 +287,8 @@ const CrossStudyPanel = ({ taxonomyLevel }: { taxonomyLevel: TaxonomyLevel }) =>
         {selectedProjects.length > 12 ? (
           <p className={classes.softHint}>
             {locale === "zh"
-              ? "已选项目较多，同步元分析会更慢，但本轮不做硬限制。"
-              : "Large project sets will take longer under the synchronous meta-analysis path, but no hard cap is applied."}
+              ? "已选项目较多，计算可能需要更久；提交后可用任务 ID 查询状态。"
+              : "Large project sets may take longer; use the job ID to check status after navigating away."}
           </p>
         ) : null}
       </div>
@@ -273,6 +311,11 @@ const CrossStudyPanel = ({ taxonomyLevel }: { taxonomyLevel: TaxonomyLevel }) =>
         <button className={classes.runBtn} type="button" onClick={runAnalysis} disabled={loading}>
           {loading ? t("crossStudy.running") : t("crossStudy.run")}
         </button>
+        {analysisJobId ? (
+          <span className={classes.metaText} title={analysisJobId}>
+            {locale === "zh" ? "任务 ID" : "Job ID"}: <code>{analysisJobId}</code> · {analysisJobStatus ?? "queued"}
+          </span>
+        ) : null}
       </div>
 
       {error ? <div className={classes.error}>{error}</div> : null}

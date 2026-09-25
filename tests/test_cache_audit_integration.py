@@ -16,9 +16,9 @@ def test_main_app_startup_populates_cache_audit_report(tmp_path, monkeypatch):
     with TestClient(main.app) as client:
         assert main.app.state.cache_audit_report is not None
         report = main.app.state.cache_audit_report
-        assert report.total == 56
-        assert report.tracked == 20
-        assert len(report.seeded) == 20
+        assert report.total == 63
+        assert report.tracked == 28
+        assert len(report.seeded) == 28
         assert len(report.stale) == 0
         assert len(report.unknown) == 0
 
@@ -35,7 +35,7 @@ def test_health_omits_cache_audit_fields_when_clean(tmp_path, monkeypatch):
         body = r.json()
         assert body["status"] == "ok"
         assert "stale_cache_warnings" not in body
-        assert body.get("seeded_count") == 20
+        assert body.get("seeded_count") == 28
         assert "unknown_count" not in body
 
 
