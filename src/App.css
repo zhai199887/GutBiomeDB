@@ -358,9 +358,15 @@ svg rect {
 
 .tooltip-table {
   display: grid;
-  grid-template-columns: auto auto;
+  grid-template-columns: max-content minmax(0, 1fr);
   margin: 5px;
   gap: 5px 15px;
+}
+
+.tooltip-table > * {
+  min-width: 0;
+  word-break: break-word;
+  overflow-wrap: anywhere;
 }
 
 .tooltip-table > *:nth-child(odd) {

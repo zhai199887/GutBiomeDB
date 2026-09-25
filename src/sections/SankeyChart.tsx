@@ -1,13 +1,13 @@
 /**
- * SankeyChart.tsx
- * Taxonomy composition flow: Phylum → Genus (Top 20) with interactive highlighting
+ * SankeyChart.tsx Taxonomy composition flow: Phylum → Genus (Top 20) with
+ * interactive highlighting
  */
 import { useEffect, useRef, useState } from "react";
 import { renderToString } from "react-dom/server";
-import * as d3 from "d3";
 import { useNavigate } from "react-router-dom";
-import { useI18n } from "@/i18n";
+import * as d3 from "d3";
 import { useData } from "@/data";
+import { useI18n } from "@/i18n";
 import { getCssVariable } from "@/util/dom";
 import "@/components/tooltip";
 
@@ -130,7 +130,9 @@ const SankeyChart = () => {
     const nodePad = 1;
 
     svg.attr("viewBox", `0 0 ${W} ${H}`);
-    const g = svg.append("g").attr("transform", `translate(${margin.left},${margin.top})`);
+    const g = svg
+      .append("g")
+      .attr("transform", `translate(${margin.left},${margin.top})`);
 
     // ── Compute node positions ────────────────────────────────────────────
     const totalValue = d3.sum(Object.values(phylumTotals));
@@ -141,7 +143,15 @@ const SankeyChart = () => {
     for (const p of phyla) {
       const val = phylumTotals[p];
       const dy = Math.max((val / totalValue) * iH, 10);
-      phylumNodes.push({ id: `p_${p}`, label: p, level: "phylum", x: 0, y: py, dy, value: val });
+      phylumNodes.push({
+        id: `p_${p}`,
+        label: p,
+        level: "phylum",
+        x: 0,
+        y: py,
+        dy,
+        value: val,
+      });
       py += dy + nodePad;
     }
     // Center vertically
@@ -163,7 +173,15 @@ const SankeyChart = () => {
     for (const gen of sortedGenera) {
       const val = genusAbundance[gen] ?? 0;
       const dy = Math.max((val / totalValue) * iH, 8);
-      genusNodes.push({ id: `g_${gen}`, label: gen, level: "genus", x: iW - nodeW, y: gy, dy, value: val });
+      genusNodes.push({
+        id: `g_${gen}`,
+        label: gen,
+        level: "genus",
+        x: iW - nodeW,
+        y: gy,
+        dy,
+        value: val,
+      });
       gy += dy + nodePad;
     }
     const genusH = gy - nodePad;
@@ -213,21 +231,29 @@ const SankeyChart = () => {
         const pLabel = phylumNodes.find((n) => n.id === d.source)?.label ?? "";
         return PHYLUM_COLORS[pLabel] ?? "#666";
       })
-      .attr("opacity", (d) => {
-        if (!highlight) return 0.35;
-        const pLabel = phylumNodes.find((n) => n.id === d.source)?.label ?? "";
-        const gLabel = genusNodes.find((n) => n.id === d.target)?.label ?? "";
-        return highlight === pLabel || highlight === gLabel ? 0.7 : 0.08;
-      })
+      .attr("opacity", 0.35)
       .attr("role", "graphics-symbol")
+      .attr(
+        "data-phylum",
+        (d) => phylumNodes.find((n) => n.id === d.source)?.label ?? "",
+      )
+      .attr(
+        "data-genus",
+        (d) => genusNodes.find((n) => n.id === d.target)?.label ?? "",
+      )
       .attr("data-tooltip", (d) => {
         const pLabel = phylumNodes.find((n) => n.id === d.source)?.label ?? "";
         const gLabel = genusNodes.find((n) => n.id === d.target)?.label ?? "";
         return renderToString(
           <div className="tooltip-table">
-            <span>Phylum</span><span>{pLabel}</span>
-            <span>Genus</span><span><i>{gLabel}</i></span>
-            <span>Avg. Abundance</span><span>{(d.value * 100).toFixed(3)}%</span>
+            <span>Phylum</span>
+            <span>{pLabel}</span>
+            <span>Genus</span>
+            <span>
+              <i>{gLabel}</i>
+            </span>
+            <span>Avg. Abundance</span>
+            <span>{(d.value * 100).toFixed(3)}%</span>
           </div>,
         );
       })
@@ -247,7 +273,8 @@ const SankeyChart = () => {
       .attr("width", nodeW)
       .attr("height", (d) => d.dy)
       .attr("fill", (d) => PHYLUM_COLORS[d.label] ?? "#666")
-      .attr("opacity", (d) => (!highlight || highlight === d.label ? 0.9 : 0.3))
+      .attr("opacity", 0.9)
+      .attr("data-phylum", (d) => d.label)
       .attr("rx", 3)
       .style("cursor", "pointer")
       .on("mouseenter", (_, d) => setHighlight(d.label))
@@ -265,7 +292,8 @@ const SankeyChart = () => {
       .attr("fill", "currentColor")
       .attr("font-size", 11)
       .attr("font-weight", 600)
-      .attr("opacity", (d) => (!highlight || highlight === d.label ? 1 : 0.3))
+      .attr("opacity", 1)
+      .attr("data-phylum", (d) => d.label)
       .text((d) => d.label);
 
     // ── Draw genus nodes ─────────────────────────────────────────────────
@@ -278,11 +306,29 @@ const SankeyChart = () => {
       .attr("width", nodeW)
       .attr("height", (d) => d.dy)
       .attr("fill", (d) => PHYLUM_COLORS[phylumMap[d.label] ?? ""] ?? "#666")
-      .attr("opacity", (d) => (!highlight || highlight === d.label || highlight === phylumMap[d.label] ? 0.9 : 0.3))
+      .attr("opacity", 0.9)
+      .attr("data-phylum", (d) => phylumMap[d.label] ?? "")
+      .attr("data-genus", (d) => d.label)
       .attr("rx", 3)
       .style("cursor", "pointer")
       .on("mouseenter", (_, d) => setHighlight(d.label))
       .on("mouseleave", () => setHighlight(null));
+
+    // Keep labels readable when small nodes are closer than the text height.
+    const labelGap = 12;
+    const genusLabelY = new Map<string, number>();
+    let previousLabelY = -Infinity;
+    for (const node of genusNodes) {
+      const targetY = node.y + node.dy / 2;
+      const labelY = Math.max(targetY, previousLabelY + labelGap);
+      genusLabelY.set(node.id, labelY);
+      previousLabelY = labelY;
+    }
+    const maxLabelY = iH - 4;
+    const overflow = previousLabelY - maxLabelY;
+    if (overflow > 0) {
+      genusLabelY.forEach((y, id) => genusLabelY.set(id, y - overflow));
+    }
 
     // Genus labels
     g.selectAll(".genus-label")
@@ -290,12 +336,14 @@ const SankeyChart = () => {
       .join("text")
       .attr("class", "genus-label")
       .attr("x", (d) => d.x + nodeW + 6)
-      .attr("y", (d) => d.y + d.dy / 2)
+      .attr("y", (d) => genusLabelY.get(d.id) ?? d.y + d.dy / 2)
       .attr("dominant-baseline", "middle")
       .attr("fill", "currentColor")
       .attr("font-size", 10)
       .attr("font-style", "italic")
-      .attr("opacity", (d) => (!highlight || highlight === d.label || highlight === phylumMap[d.label] ? 1 : 0.3))
+      .attr("opacity", 1)
+      .attr("data-phylum", (d) => phylumMap[d.label] ?? "")
+      .attr("data-genus", (d) => d.label)
       .style("cursor", "pointer")
       .style("text-decoration", "underline")
       .style("text-decoration-color", getCssVariable("--accent"))
@@ -305,24 +353,95 @@ const SankeyChart = () => {
       .text((d) => `${d.label} (${(d.value * 100).toFixed(2)}%)`);
 
     // ── Column headers ───────────────────────────────────────────────────
-    g.append("text").attr("x", nodeW / 2).attr("y", -8)
-      .attr("text-anchor", "middle").attr("fill", "var(--light-gray)")
-      .attr("font-size", 12).attr("font-weight", 700).text("Phylum");
-    g.append("text").attr("x", iW - nodeW / 2).attr("y", -8)
-      .attr("text-anchor", "middle").attr("fill", "var(--light-gray)")
-      .attr("font-size", 12).attr("font-weight", 700).text("Genus");
+    g.append("text")
+      .attr("x", nodeW / 2)
+      .attr("y", -8)
+      .attr("text-anchor", "middle")
+      .attr("fill", "var(--light-gray)")
+      .attr("font-size", 12)
+      .attr("font-weight", 700)
+      .text("Phylum");
+    g.append("text")
+      .attr("x", iW - nodeW / 2)
+      .attr("y", -8)
+      .attr("text-anchor", "middle")
+      .attr("fill", "var(--light-gray)")
+      .attr("font-size", 12)
+      .attr("font-weight", 700)
+      .text("Genus");
 
-  }, [abundance, highlight]);
+    return () => {
+      svg.selectAll("[data-tooltip]").each(function () {
+        const element = this as Element & { _tippy?: { destroy: () => void } };
+        element._tippy?.destroy();
+      });
+      svg.selectAll("*").remove();
+    };
+  }, [abundance]);
+
+  useEffect(() => {
+    const svg = svgRef.current;
+    if (!svg) return;
+    const root = d3.select(svg);
+    const isActive = (phylum: string, genus?: string) =>
+      !highlight || highlight === phylum || highlight === genus;
+
+    root
+      .selectAll<SVGPathElement, unknown>(".links path")
+      .attr("opacity", function () {
+        const path = this as SVGPathElement;
+        const phylum = path.getAttribute("data-phylum") ?? "";
+        const genus = path.getAttribute("data-genus") ?? "";
+        return !highlight ? 0.35 : isActive(phylum, genus) ? 0.7 : 0.08;
+      });
+    root
+      .selectAll<SVGRectElement, unknown>(".phylum-node")
+      .attr("opacity", function () {
+        const phylum = this.getAttribute("data-phylum") ?? "";
+        return !highlight || highlight === phylum ? 0.9 : 0.3;
+      });
+    root
+      .selectAll<SVGTextElement, unknown>(".phylum-label")
+      .attr("opacity", function () {
+        const phylum = this.getAttribute("data-phylum") ?? "";
+        return !highlight || highlight === phylum ? 1 : 0.3;
+      });
+    root
+      .selectAll<SVGRectElement, unknown>(".genus-node")
+      .attr("opacity", function () {
+        const phylum = this.getAttribute("data-phylum") ?? "";
+        const genus = this.getAttribute("data-genus") ?? "";
+        return !highlight || isActive(phylum, genus) ? 0.9 : 0.3;
+      });
+    root
+      .selectAll<SVGTextElement, unknown>(".genus-label")
+      .attr("opacity", function () {
+        const phylum = this.getAttribute("data-phylum") ?? "";
+        const genus = this.getAttribute("data-genus") ?? "";
+        return !highlight || isActive(phylum, genus) ? 1 : 0.3;
+      });
+  }, [highlight]);
 
   if (!abundance) return null;
 
   return (
     <div className="sub-section" style={{ marginTop: "1.5rem" }}>
       <h3>{t("sankey.title")}</h3>
-      <p style={{ color: "var(--light-gray)", fontSize: "0.85rem", margin: "0.3rem 0 0.8rem" }}>
-        Hover to highlight connections. Width proportional to mean relative abundance.
+      <p
+        style={{
+          color: "var(--light-gray)",
+          fontSize: "0.85rem",
+          margin: "0.3rem 0 0.8rem",
+        }}
+      >
+        Hover to highlight connections. Width proportional to mean relative
+        abundance.
       </p>
-      <svg ref={svgRef} className="chart compare-chart" style={{ width: "100%", maxWidth: 880 }} />
+      <svg
+        ref={svgRef}
+        className="chart compare-chart"
+        style={{ width: "100%", maxWidth: 880 }}
+      />
     </div>
   );
 };
