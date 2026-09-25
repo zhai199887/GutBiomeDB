@@ -894,7 +894,9 @@ def count_unique_genera_resolved() -> int:
     cols = _abundance_data_columns()
     if not cols:
         return 0
-    return len({extract_genus(c).strip() for c in cols})
+    # Taxonomy columns with a trailing delimiter have no genus label and must
+    # not be counted as an additional genus.
+    return len({genus for genus in (extract_genus(c).strip() for c in cols) if genus})
 
 
 def count_unique_genera_from_abundance() -> int:
