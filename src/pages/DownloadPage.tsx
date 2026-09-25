@@ -11,6 +11,7 @@ import classes from "./DownloadPage.module.css";
 
 const ACTIVE_API_BASE = resolveApiBase();
 const FORMATS = ["csv", "tsv", "json"] as const;
+const ZENODO_RECORD_URL = "https://zenodo.org/records/22952317";
 
 type DownloadFormat = (typeof FORMATS)[number];
 
@@ -42,14 +43,17 @@ const copy = {
     back: "Back to Home",
     title: "Download",
     subtitle:
-      "Reference datasets and aggregated analysis outputs for reproducible reuse. Raw sample-level abundance data are not distributed through this page.",
+      "Sample metadata and the sample-level taxonomic count matrix are available from Zenodo. Summary statistics and analysis results can be exported below.",
     warning:
-      "All files exported here are aggregated statistics or analysis results generated from the main platform dataset. Use the original BioProject repositories for raw sequencing data.",
+      "Raw sequencing reads are available from the original BioProjects in NCBI SRA.",
     sections: {
+      datasetEyebrow: "Complete Dataset",
+      datasetTitle: "Sample-level data",
+      datasetText: "Download the existing data tables from Zenodo.",
       referenceEyebrow: "Reference Datasets",
-      referenceTitle: "Core database tables",
+      referenceTitle: "Summary tables and profiles",
       referenceText:
-        "Starter downloads for local analysis, cohort selection, and reproducible reporting.",
+        "Export database summaries and selected disease or genus profiles.",
       analysisEyebrow: "Analysis Results",
       analysisTitle: "Module-specific exports",
       analysisText:
@@ -60,14 +64,18 @@ const copy = {
         "Use the active site API to fetch aggregated outputs, exported files, and the OpenAPI specification.",
     },
     cards: {
+      metadataTitle: "Sample metadata",
+      metadataDesc: "Metadata for 168,464 samples. CSV format.",
+      countMatrixTitle: "Taxonomic count matrix",
+      countMatrixDesc: "Unfiltered sample-level counts. CSV in a ZIP archive.",
       summaryTitle: "Summary statistics",
       summaryDesc: "Country, disease, age-group, and sex counts for the full database.",
       genusListTitle: "Genus list",
-      genusListDesc: "Complete valid genus catalog for templates, validation, and batch workflows.",
+      genusListDesc: "Genus labels used by the platform for genus-level analyses.",
       diseaseProfileTitle: "Disease profile",
       diseaseProfileDesc: "Top disease-associated genera and control comparison for one disease context.",
       genusProfileTitle: "Genus profile",
-      genusProfileDesc: "Cross-disease descriptive profile for one genus entry point.",
+      genusProfileDesc: "Mean relative abundance (%), prevalence, and sample counts by disease.",
       diffTitle: "Differential results",
       diffDesc: "Disease-vs-control differential abundance table ready for downstream plotting or review.",
       biomarkerTitle: "Biomarker discovery",
@@ -95,6 +103,9 @@ const copy = {
       openDocs: "Open API docs",
       openSwagger: "Open Swagger UI",
       download: "Download",
+      downloadMetadata: "Download metadata (CSV)",
+      downloadCounts: "Download count matrix (ZIP)",
+      viewDataset: "View dataset on Zenodo",
       required: "Required",
       optional: "Optional",
     },
@@ -103,6 +114,7 @@ const copy = {
         "The examples below point to the current active site endpoint.",
       formatNote:
         "Every download response includes generation date, version, and citation guidance in HTTP headers.",
+      diseaseProfileNote: "p=0 with an underflow flag indicates numerical underflow.",
       diffNote: "Exports the statistically ranked result table, not raw abundance matrices.",
       biomarkerNote: "Current backend exports the same marker payload shown in Diseases and Species workspaces.",
       cooccurrenceNote: "Leave disease blank to export the strict-NC co-occurrence network.",
@@ -122,13 +134,16 @@ const copy = {
     back: "返回首页",
     title: "下载",
     subtitle:
-      "提供参考数据表和聚合分析结果，便于复现使用。本页不分发原始样本级丰度矩阵。",
+      "样本元数据和样本级分类计数矩阵可从 Zenodo 下载。汇总统计与分析结果可在下方导出。",
     warning:
-      "这里导出的都是聚合统计或分析结果，不包含原始样本数据。若需要原始测序数据，应回到对应 BioProject 或原始数据库获取。",
+      "原始测序 reads 可通过 NCBI SRA 中对应的 BioProject 获取。",
     sections: {
+      datasetEyebrow: "完整数据集",
+      datasetTitle: "样本级数据",
+      datasetText: "从 Zenodo 下载现有的数据表。",
       referenceEyebrow: "参考数据",
-      referenceTitle: "核心参考表",
-      referenceText: "用于本地分析、队列筛选和复现报告的基础下载入口。",
+      referenceTitle: "汇总统计与画像",
+      referenceText: "导出数据库汇总统计及所选疾病或菌属的画像。",
       analysisEyebrow: "分析结果",
       analysisTitle: "模块分析导出",
       analysisText: "直接下载 Compare、Network、Lifecycle 等模块已经计算好的聚合结果，而不是自己重跑一遍。",
@@ -138,14 +153,18 @@ const copy = {
         "以下示例演示如何通过当前站点接口获取聚合结果、导出文件和读取 OpenAPI 规范。",
     },
     cards: {
+      metadataTitle: "样本元数据",
+      metadataDesc: "168,464 份样本的元数据，CSV 格式。",
+      countMatrixTitle: "分类计数矩阵",
+      countMatrixDesc: "未过滤的样本级计数，ZIP 内为 CSV 文件。",
       summaryTitle: "汇总统计",
       summaryDesc: "导出全库的国家、疾病、年龄组和性别统计。",
       genusListTitle: "菌属列表",
-      genusListDesc: "导出完整有效菌属目录，适合模板校验和批量流程。",
+      genusListDesc: "导出平台用于菌属水平分析的名称列表。",
       diseaseProfileTitle: "疾病画像",
       diseaseProfileDesc: "导出单个疾病场景下的优势菌属与对照比较结果。",
       genusProfileTitle: "菌属画像",
-      genusProfileDesc: "导出单个菌属的跨疾病描述性画像表。",
+      genusProfileDesc: "按疾病导出平均相对丰度（%）、检出率和样本数。",
       diffTitle: "差异结果",
       diffDesc: "导出疾病 vs 对照的差异丰度统计表，便于复查和再作图。",
       biomarkerTitle: "标志物发现",
@@ -173,6 +192,9 @@ const copy = {
       openDocs: "打开 API 文档",
       openSwagger: "打开 Swagger UI",
       download: "下载",
+      downloadMetadata: "下载元数据（CSV）",
+      downloadCounts: "下载计数矩阵（ZIP）",
+      viewDataset: "在 Zenodo 查看数据集",
       required: "必填",
       optional: "可选",
     },
@@ -181,6 +203,7 @@ const copy = {
         "以下示例均指向当前站点接口地址。",
       formatNote:
         "所有下载响应都会在 HTTP 头里带上生成时间、版本号和引用提示。",
+      diseaseProfileNote: "带有 underflow 标记的 p=0 表示计算下溢，并非真实概率为零。",
       diffNote: "这里导出的是统计排序后的结果表，不是原始丰度矩阵。",
       biomarkerNote: "导出内容与 Diseases / Species 模块里看到的 marker 结果一致。",
       cooccurrenceNote: "疾病留空时，默认导出严格 NC 场景下的共现网络。",
@@ -368,7 +391,7 @@ const DownloadPage = () => {
   useEffect(() => {
     Promise.all([
       cachedFetch<DiseaseListResponse>(`${ACTIVE_API_BASE}/api/disease-list`),
-      cachedFetch<GenusNamesResponse>(`${ACTIVE_API_BASE}/api/genus-names`),
+      cachedFetch<GenusNamesResponse>(`${ACTIVE_API_BASE}/api/download/genus-list?format=json`),
       cachedFetch<FilterOptionsResponse>(`${ACTIVE_API_BASE}/api/filter-options`),
     ])
       .then(([diseasePayload, genusPayload, filterPayload]) => {
@@ -471,7 +494,44 @@ curl -s "${ACTIVE_API_BASE}/api/openapi.json" -o gut_microbiome_atlas_openapi.js
         <p>{text.subtitle}</p>
       </div>
 
-      <div className={classes.warningBanner}>{text.warning}</div>
+      <div className={classes.warningBanner}>
+        <a href="https://www.ncbi.nlm.nih.gov/sra" target="_blank" rel="noopener noreferrer">
+          {text.warning}
+        </a>
+      </div>
+
+      <section className={classes.section}>
+        <div className={classes.sectionHeader}>
+          <span>{text.sections.datasetEyebrow}</span>
+          <h2>{text.sections.datasetTitle}</h2>
+          <p>{text.sections.datasetText}</p>
+          <a className={classes.back} href={ZENODO_RECORD_URL} target="_blank" rel="noopener noreferrer">
+            {text.labels.viewDataset}
+          </a>
+        </div>
+        <div className={classes.grid}>
+          <CardShell title={text.cards.metadataTitle} description={text.cards.metadataDesc}>
+            <a
+              className={`${classes.downloadButton} ${classes.datasetDownload}`}
+              href={`${ZENODO_RECORD_URL}/files/metadata.csv?download=1`}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              {text.labels.downloadMetadata}
+            </a>
+          </CardShell>
+          <CardShell title={text.cards.countMatrixTitle} description={text.cards.countMatrixDesc}>
+            <a
+              className={`${classes.downloadButton} ${classes.datasetDownload}`}
+              href={`${ZENODO_RECORD_URL}/files/unfiltered_abundance.zip?download=1`}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              {text.labels.downloadCounts}
+            </a>
+          </CardShell>
+        </div>
+      </section>
 
       <section className={classes.section}>
         <div className={classes.sectionHeader}>
@@ -513,6 +573,7 @@ curl -s "${ACTIVE_API_BASE}/api/openapi.json" -o gut_microbiome_atlas_openapi.js
           <CardShell
             title={text.cards.diseaseProfileTitle}
             description={text.cards.diseaseProfileDesc}
+            helper={text.helper.diseaseProfileNote}
           >
             <label className={classes.field}>
               <span>{text.labels.disease} <em>{text.labels.required}</em></span>

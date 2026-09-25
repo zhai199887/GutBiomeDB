@@ -17,13 +17,14 @@
 .topBar h1 {
   margin: 0;
   font-size: clamp(2rem, 4vw, 2.8rem);
-  color: var(--download-ink);
+  color: inherit;
 }
 
 .topBar p {
   margin: 0;
   max-width: 72ch;
-  color: var(--download-subtle);
+  color: inherit;
+  opacity: 0.82;
   line-height: 1.7;
 }
 
@@ -52,6 +53,17 @@
   margin-top: 2.5rem;
 }
 
+.warningBanner a {
+  color: inherit;
+}
+
+.datasetDownload {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+}
+
 .sectionHeader {
   display: grid;
   gap: 0.45rem;
@@ -63,18 +75,19 @@
   font-weight: 700;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: #0f766e;
+  color: var(--accent);
 }
 
 .sectionHeader h2 {
   margin: 0;
   font-size: 1.55rem;
-  color: var(--download-ink);
+  color: inherit;
 }
 
 .sectionHeader p {
   margin: 0;
-  color: var(--download-subtle);
+  color: inherit;
+  opacity: 0.82;
   line-height: 1.7;
 }
 
