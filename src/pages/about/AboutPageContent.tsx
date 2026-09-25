@@ -357,8 +357,8 @@ const AboutPageContent = () => {
             <p className={classes.heroText}>{text.subtitle}</p>
           </div>
           <div className={classes.heroMeta}>
-            <span>{stats?.version ?? "2026 release"}</span>
-            <span>{stats?.last_updated ?? "2026-04-06"}</span>
+            <span>{stats?.version ?? "v1.0_20261002"}</span>
+            <span>{stats?.last_updated ?? "2026-10-02"}</span>
           </div>
         </header>
 
