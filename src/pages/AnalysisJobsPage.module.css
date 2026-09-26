@@ -1,0 +1,117 @@
+.page {
+  min-height: 100vh;
+  padding: 2.5rem clamp(1rem, 4vw, 4rem) 5rem;
+  background: var(--black);
+  color: var(--white);
+}
+
+.header,
+.list,
+.empty {
+  width: min(1100px, 100%);
+  margin: 0 auto;
+}
+
+.back {
+  color: var(--primary);
+  text-decoration: none;
+  font-size: 0.86rem;
+}
+
+.titleRow {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1rem;
+  margin: 1.5rem 0 2rem;
+}
+
+.titleRow h1 {
+  margin: 0;
+  font-size: clamp(1.8rem, 4vw, 3rem);
+}
+
+.titleRow p {
+  margin: 0.5rem 0 0;
+  color: var(--light-gray);
+}
+
+.refresh,
+.open {
+  border: 1px solid rgba(99, 225, 255, 0.4);
+  border-radius: 8px;
+  padding: 0.55rem 0.85rem;
+  color: var(--white);
+  background: rgba(99, 225, 255, 0.1);
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.refresh:hover,
+.open:hover {
+  background: rgba(99, 225, 255, 0.2);
+}
+
+.list {
+  display: grid;
+  gap: 0.8rem;
+}
+
+.card,
+.empty {
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 14px;
+  padding: 1rem 1.1rem;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.cardTop {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.card h2 {
+  margin: 0 0 0.45rem;
+  font-size: 1rem;
+}
+
+.card code {
+  color: #9eeeff;
+  font-size: 0.82rem;
+  word-break: break-all;
+}
+
+.status {
+  border-radius: 999px;
+  padding: 0.25rem 0.6rem;
+  font-size: 0.75rem;
+  white-space: nowrap;
+}
+
+.status_queued { color: #f8d477; background: rgba(248, 212, 119, 0.12); }
+.status_running { color: #7ee8ff; background: rgba(126, 232, 255, 0.12); }
+.status_completed { color: #8ae6a1; background: rgba(138, 230, 161, 0.12); }
+.status_failed { color: #ff9c9c; background: rgba(255, 156, 156, 0.12); }
+
+.meta {
+  margin: 0.7rem 0;
+  color: var(--light-gray);
+  font-size: 0.78rem;
+}
+
+.error {
+  margin: 0 0 0.7rem;
+  color: #ff9c9c;
+  font-size: 0.8rem;
+}
+
+@media (max-width: 640px) {
+  .titleRow,
+  .cardTop {
+    align-items: stretch;
+    flex-direction: column;
+  }
+}
+

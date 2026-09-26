@@ -36,6 +36,26 @@
   align-items: center;
 }
 
+.heroActions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.jobsLink {
+  border: 1px solid rgba(99, 225, 255, 0.35);
+  border-radius: 999px;
+  padding: 0.35rem 0.75rem;
+  color: #7ee8ff;
+  font-size: 0.8rem;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.jobsLink:hover {
+  background: rgba(99, 225, 255, 0.12);
+}
+
 .kicker {
   width: fit-content;
   border: 1px solid rgba(99, 225, 255, 0.35);

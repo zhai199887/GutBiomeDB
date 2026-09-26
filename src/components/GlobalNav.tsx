@@ -64,6 +64,7 @@ const GlobalNav = () => {
     { label: dataLabel, items: dataItems },
     { to: "/api-docs", label: t("nav.apiDocs"), match: (p) => p.startsWith("/api-docs") },
     { to: "/about", label: t("nav.cite"), match: (p) => p.startsWith("/about") },
+    { to: "/analysis-jobs", label: t("nav.jobs"), match: (p) => p.startsWith("/analysis-jobs") },
   ];
 
   return (

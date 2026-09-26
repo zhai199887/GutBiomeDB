@@ -39,6 +39,7 @@ const ApiDocsPage = lazy(() => import("@/pages/ApiDocsPage"));
 const CitePage = lazy(() => import("@/pages/CitePage"));
 const DownloadPage = lazy(() => import("@/pages/DownloadPage"));
 const StudiesPage = lazy(() => import("@/pages/StudiesPage"));
+const AnalysisJobsPage = lazy(() => import("@/pages/AnalysisJobsPage"));
 const NotFoundPage = lazy(() => import("@/pages/NotFoundPage"));
 
 /* ── Route-level document title ── */
@@ -56,6 +57,7 @@ const ROUTE_TITLES = {
     "/lifecycle": "Lifecycle Atlas",
     "/search": "Genus Search",
     "/studies": "Studies",
+    "/analysis-jobs": "Analysis Jobs",
     "/api-docs": "API Documentation",
     "/about": "About & Cite",
     "/download": "Download",
@@ -74,6 +76,7 @@ const ROUTE_TITLES = {
     "/lifecycle": "生命周期",
     "/search": "菌属检索",
     "/studies": "研究项目",
+    "/analysis-jobs": "分析任务",
     "/api-docs": "API 文档",
     "/about": "引用与关于",
     "/download": "下载",
@@ -181,6 +184,7 @@ const AppShell = () => {
           <Route path="/about" element={<CitePage />} />
           <Route path="/download" element={<DownloadPage />} />
           <Route path="/studies" element={<StudiesPage />} />
+          <Route path="/analysis-jobs" element={<AnalysisJobsPage />} />
           <Route path="/admin" element={<AdminPage />} />
           <Route path="*" element={<NotFoundPage />} />
         </Routes>
