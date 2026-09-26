@@ -4,6 +4,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { useI18n } from "@/i18n";
 import {
   getAnalysisJob,
+  forgetAnalysisJob,
   rememberedAnalysisJobs,
   rememberAnalysisJob,
   type AnalysisJob,
@@ -70,6 +71,7 @@ const AnalysisJobsPage = () => {
         const record = await getAnalysisJob(item.job_id) as TrackedJob;
         setJobs((current) => current.map((job) => job.job_id === item.job_id ? record : job));
       } catch {
+        forgetAnalysisJob(item.job_id);
         setJobs((current) => current.map((job) => job.job_id === item.job_id
           ? { ...job, status: "failed" as const, error: locale === "zh" ? "任务记录已失效，请重新提交分析" : "This task record is no longer available; submit a new analysis" }
           : job));

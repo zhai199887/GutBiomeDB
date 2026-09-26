@@ -67,6 +67,13 @@ export function rememberedAnalysisJobs(): RememberedAnalysisJob[] {
   return readRememberedJobs().slice(0, 10);
 }
 
+export function forgetAnalysisJob(job_id: string): void {
+  if (typeof window === "undefined") return;
+  const next = readRememberedJobs().filter((item) => item.job_id !== job_id);
+  window.localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+  window.dispatchEvent(new Event("gutbiomedb:analysis-job"));
+}
+
 export function latestRememberedAnalysisJob(kind: AnalysisJobKind, key?: string): string | null {
   return readRememberedJobs().find((item) => item.kind === kind && (!key || item.key === key))?.job_id ?? null;
 }
@@ -93,6 +100,6 @@ export async function getAnalysisJob<T = unknown>(job_id: string): Promise<Analy
     cache: "no-store",
   });
   const data = await response.json();
-  if (!response.ok) throw new Error(data.detail ?? "Could not read analysis job");
+  if (!response.ok) throw new Error(`${response.status}: ${data.detail ?? "Could not read analysis job"}`);
   return data as AnalysisJob<T>;
 }

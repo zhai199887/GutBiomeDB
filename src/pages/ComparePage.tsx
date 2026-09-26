@@ -197,6 +197,20 @@ const ComparePage = () => {
       next.delete("tab");
     }
     setSearchParams(next, { replace: true });
+    if (tab === "correlation" && !spearmanJobId) {
+      setSpearmanLoading(true);
+      void submitAnalysisJob("spearman-analysis", {
+        group_a_filter: groupA,
+        group_b_filter: groupB,
+        taxonomy_level: taxLevel,
+        max_taxa: 16,
+      })
+        .then((job) => setSpearmanJobId(job.job_id))
+        .catch((unknownError) => {
+          setError(unknownError instanceof Error ? unknownError.message : String(unknownError));
+          setSpearmanLoading(false);
+        });
+    }
   };
 
   const runAnalysis = async () => {
@@ -214,20 +228,9 @@ const ComparePage = () => {
         taxonomy_level: taxLevel,
         method,
       };
-      const spearmanPayload = {
-        group_a_filter: groupA,
-        group_b_filter: groupB,
-        taxonomy_level: taxLevel,
-        max_taxa: 16,
-      };
-      const [job, spearmanJob] = await Promise.all([
-        submitAnalysisJob("diff-analysis", diffPayload),
-        submitAnalysisJob("spearman-analysis", spearmanPayload),
-      ]);
+      const job = await submitAnalysisJob("diff-analysis", diffPayload);
       setAnalysisJobId(job.job_id);
       setAnalysisJobStatus(job.status);
-      setSpearmanJobId(spearmanJob.job_id);
-      setSpearmanLoading(true);
     } catch (unknownError) {
       setError(unknownError instanceof Error ? unknownError.message : String(unknownError));
       setLoading(false);
