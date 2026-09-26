@@ -1414,6 +1414,17 @@ class AnalysisJobRequest(BaseModel):
     payload: dict[str, Any]
 
 
+def _analysis_payload_digest(payload: BaseModel) -> str:
+    """Return a stable digest for a validated analysis request."""
+    canonical = json.dumps(
+        payload.model_dump(mode="json"),
+        ensure_ascii=True,
+        sort_keys=True,
+        separators=(",", ":"),
+    )
+    return hashlib.sha256(canonical.encode("utf-8")).hexdigest()[:16]
+
+
 _ANALYSIS_JOB_STORE = AnalysisJobStore()
 
 
@@ -2021,9 +2032,17 @@ def estimate_sample_count(request: Request, req: SampleCountRequest):
 @app.post("/api/spearman-analysis",
           summary="Spearman correlation analysis",
           description="Compute a top-taxa Spearman correlation matrix for the samples selected by the current Compare workspace filters.")
-@no_cache_tracking
 @limiter.limit("20/minute")
 def spearman_analysis(request: Request, req: SpearmanAnalysisRequest):
+    cache_key = f"spearman_analysis_v1:{_analysis_payload_digest(req)}"
+    cached = get_cached(cache_key)
+    if cached is not None:
+        return cached
+    disk = get_disk_cached_by_data(cache_key)
+    if disk is not None:
+        set_cached(cache_key, disk)
+        return disk
+
     meta = get_metadata()
     abund = get_abundance()
     abund_idx = set(abund.index)
@@ -2073,6 +2092,15 @@ def diff_analysis(request: Request, req: DiffAnalysisRequest):
     4. Apply BH correction
     5. Calculate alpha and beta diversity
     """
+    cache_key = f"diff_analysis_v1:{_analysis_payload_digest(req)}"
+    cached = get_cached(cache_key)
+    if cached is not None:
+        return cached
+    disk = get_disk_cached_by_data(cache_key)
+    if disk is not None:
+        set_cached(cache_key, disk)
+        return disk
+
     meta = get_metadata()
     abund = get_abundance()
 
@@ -2118,7 +2146,7 @@ def diff_analysis(request: Request, req: DiffAnalysisRequest):
             parts.append(f.sex.title())
         return "-".join(parts) if parts else "Group"
 
-    return run_compare_analysis(
+    result = run_compare_analysis(
         abundance_df=abund,
         valid_a=valid_a,
         valid_b=valid_b,
@@ -2127,6 +2155,9 @@ def diff_analysis(request: Request, req: DiffAnalysisRequest):
         group_a_name=filter_to_label(req.group_a_filter),
         group_b_name=filter_to_label(req.group_b_filter),
     )
+    set_cached(cache_key, result)
+    set_disk_cached(cache_key, result)
+    return result
 
 @app.get("/api/phenotype-groups",
          summary="List phenotype groups",
@@ -2962,7 +2993,9 @@ def disease_profile(request: Request, disease: str, top_n: int = 40):
         raise HTTPException(400, "disease parameter is required")
     disease = disease.strip()
 
-    cache_key = f"disease_profile_v2:{disease}:{top_n}"
+    # Keep the established v1 namespace: the production warm cache contains
+    # every disease under this key, and the response schema is unchanged.
+    cache_key = f"disease_profile_v1:{disease}:{top_n}"
     cached = get_cached(cache_key)
     if cached:
         return cached
