@@ -288,6 +288,25 @@ const ComparePage = () => {
       return <CrossStudyPanel taxonomyLevel={taxLevel} />;
     }
 
+    // Spearman is an independent analysis job.  A job opened from the task
+    // center can contain a Spearman result without a preceding differential
+    // result, so it must render before the generic `!result` guard below.
+    if (activeTab === "correlation") {
+      return spearmanLoading ? (
+        <div className={classes.emptyPanel}>
+          {locale === "zh" ? "正在计算 Spearman 结构…" : "Computing Spearman structure..."}
+        </div>
+      ) : spearman ? (
+        <SpearmanChart result={spearman} />
+      ) : (
+        <div className={classes.emptyPanel}>
+          {locale === "zh"
+            ? "暂无 Spearman 结果；请先运行分析或从任务中心打开已完成任务。"
+            : "No Spearman result yet; run the analysis or open a completed task from the Jobs center."}
+        </div>
+      );
+    }
+
     if (!result) {
       return (
         <div className={classes.emptyPanel}>
@@ -304,15 +323,6 @@ const ComparePage = () => {
     if (activeTab === "beta") return <BetaPCoAChart result={result} />;
     if (activeTab === "composition") return <StackedBarChart result={result} />;
     if (activeTab === "heatmap") return <DiffHeatmap result={result} />;
-    if (activeTab === "correlation") {
-      return spearmanLoading ? (
-        <div className={classes.emptyPanel}>
-          {locale === "zh" ? "正在计算 Spearman 结构…" : "Computing Spearman structure..."}
-        </div>
-      ) : (
-        <SpearmanChart result={spearman} />
-      );
-    }
     if (activeTab === "lefse") return <LefseResults result={result} />;
     if (activeTab === "permanova") return <PermanovaResults result={result} />;
     return null;
