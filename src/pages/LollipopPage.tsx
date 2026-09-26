@@ -7,7 +7,7 @@ import { Link, useSearchParams } from "react-router-dom";
 import * as d3 from "d3";
 import { useI18n } from "@/i18n";
 import { diseaseDisplayNameI18n, sortDiseaseItemsByName } from "@/util/diseaseNames";
-import { getAnalysisJob, latestRememberedAnalysisJob, submitAnalysisJob, type AnalysisJobStatus } from "@/util/analysisJobs";
+import { getAnalysisJob, submitAnalysisJob, type AnalysisJobStatus } from "@/util/analysisJobs";
 import classes from "./LollipopPage.module.css";
 
 const PHYLUM_COLORS: Record<string, string> = {
@@ -57,10 +57,7 @@ const LollipopPage = () => {
 
   useEffect(() => {
     const requested = searchParams.get("job_id");
-    const remembered = requested && searchParams.get("job_kind") === "lollipop-data"
-      ? requested
-      : latestRememberedAnalysisJob("lollipop-data");
-    if (remembered) setJobId(remembered);
+    if (requested && searchParams.get("job_kind") === "lollipop-data") setJobId(requested);
   }, [searchParams]);
 
   useEffect(() => {

@@ -7,7 +7,7 @@ import { Link, useSearchParams } from "react-router-dom";
 import * as d3 from "d3";
 import { useI18n } from "@/i18n";
 import { diseaseDisplayNameI18n, sortDiseaseItemsByName } from "@/util/diseaseNames";
-import { getAnalysisJob, latestRememberedAnalysisJob, submitAnalysisJob, type AnalysisJobStatus } from "@/util/analysisJobs";
+import { getAnalysisJob, submitAnalysisJob, type AnalysisJobStatus } from "@/util/analysisJobs";
 import classes from "./BiomarkerPage.module.css";
 
 interface Marker {
@@ -60,10 +60,7 @@ const BiomarkerPage = () => {
 
   useEffect(() => {
     const requested = searchParams.get("job_id");
-    const remembered = requested && searchParams.get("job_kind") === "biomarker-discovery"
-      ? requested
-      : latestRememberedAnalysisJob("biomarker-discovery");
-    if (remembered) setJobId(remembered);
+    if (requested && searchParams.get("job_kind") === "biomarker-discovery") setJobId(requested);
   }, [searchParams]);
 
   useEffect(() => {

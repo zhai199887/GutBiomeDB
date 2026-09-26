@@ -8,7 +8,6 @@ import { exportTable } from "@/util/export";
 import { diseaseDisplayNameI18n } from "@/util/diseaseNames";
 import {
   getAnalysisJob,
-  latestRememberedAnalysisJob,
   submitAnalysisJob,
   type AnalysisJobStatus,
 } from "@/util/analysisJobs";
@@ -57,10 +56,7 @@ const CrossStudyPanel = ({ taxonomyLevel }: { taxonomyLevel: TaxonomyLevel }) =>
   useEffect(() => {
     const requestedId = searchParams.get("job_id");
     const requestedKind = searchParams.get("job_kind");
-    const remembered = requestedKind === "cross-study" && requestedId
-      ? requestedId
-      : latestRememberedAnalysisJob("cross-study");
-    if (remembered) setAnalysisJobId(remembered);
+    if (requestedKind === "cross-study" && requestedId) setAnalysisJobId(requestedId);
   }, [searchParams]);
 
   useEffect(() => {

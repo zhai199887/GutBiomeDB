@@ -54,23 +54,24 @@ const AnalysisJobsPage = () => {
 
   const refresh = async () => {
     const remembered = rememberedAnalysisJobs();
-    const records = await Promise.all(
-      remembered.map(async (item) => {
-        try {
-          return await getAnalysisJob(item.job_id) as TrackedJob;
-        } catch {
-          return {
-            job_id: item.job_id,
-            kind: item.kind,
-            status: "failed" as const,
-            created_at: "",
-            updated_at: "",
-            error: locale === "zh" ? "任务记录暂时无法读取" : "Job record is currently unavailable",
-          };
-        }
-      }),
-    );
-    setJobs(records);
+    const placeholders = remembered.map((item) => ({
+      job_id: item.job_id,
+      kind: item.kind,
+      status: "queued" as const,
+      created_at: "",
+      updated_at: "",
+    }));
+    setJobs(placeholders);
+    remembered.forEach(async (item) => {
+      try {
+        const record = await getAnalysisJob(item.job_id) as TrackedJob;
+        setJobs((current) => current.map((job) => job.job_id === item.job_id ? record : job));
+      } catch {
+        setJobs((current) => current.map((job) => job.job_id === item.job_id
+          ? { ...job, status: "failed" as const, error: locale === "zh" ? "任务记录暂时无法读取" : "Job record is currently unavailable" }
+          : job));
+      }
+    });
   };
 
   useEffect(() => {
@@ -138,11 +139,10 @@ const AnalysisJobsPage = () => {
                     : (locale === "zh" ? "暂时无法读取服务端状态" : "Server status unavailable")}
                 </div>
                 {job.error ? <p className={classes.error}>{job.error}</p> : null}
-                {job.status === "completed" && job.result ? (
-                  <details className={classes.savedResult}>
-                    <summary>{locale === "zh" ? "查看已保存结果（不会重新运行）" : "View saved result (no rerun)"}</summary>
-                    <pre>{JSON.stringify(job.result, null, 2).slice(0, 12000)}</pre>
-                  </details>
+                {job.status === "completed" ? (
+                  <p className={classes.savedResult}>
+                    {locale === "zh" ? "结果已保存；打开对应分析页查看可视化结果，不会重新运行。" : "Result saved; open the analysis workspace to view the visualization without rerunning."}
+                  </p>
                 ) : null}
                 <button type="button" className={classes.open} onClick={() => openJob(job)}>
                   {locale === "zh" ? "打开对应分析页" : "Open analysis workspace"}

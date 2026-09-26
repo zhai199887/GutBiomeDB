@@ -8,7 +8,6 @@ import { exportPNG, exportSVG } from "@/util/chartExport";
 import { exportTable } from "@/util/export";
 import {
   getAnalysisJob,
-  latestRememberedAnalysisJob,
   submitAnalysisJob,
   type AnalysisJobKind,
   type AnalysisJobStatus,
@@ -83,10 +82,6 @@ const ComparePage = () => {
       return;
     }
     if (requestedKind === "cross-study") return;
-    const remembered = latestRememberedAnalysisJob("diff-analysis");
-    if (remembered) setAnalysisJobId(remembered);
-    const rememberedSpearman = latestRememberedAnalysisJob("spearman-analysis");
-    if (rememberedSpearman) setSpearmanJobId(rememberedSpearman);
   }, [searchParams]);
 
   useEffect(() => {
