@@ -12,7 +12,7 @@ import { cachedFetch } from "@/util/apiCache";
 import { API_BASE } from "@/util/apiBase";
 import { exportElementPNG } from "@/util/chartExport";
 import { exportTable } from "@/util/export";
-import { getAnalysisJob, latestRememberedAnalysisJob, submitAnalysisJob, type AnalysisJobStatus } from "@/util/analysisJobs";
+import { getAnalysisJob, submitAnalysisJob, type AnalysisJobStatus } from "@/util/analysisJobs";
 
 import ContributionChart from "./ContributionChart";
 import classes from "./HealthIndexPanel.module.css";
@@ -268,10 +268,7 @@ const HealthIndexPanel = () => {
 
   useEffect(() => {
     const requested = searchParams.get("job_id");
-    const remembered = requested && searchParams.get("job_kind") === "health-index"
-      ? requested
-      : latestRememberedAnalysisJob("health-index");
-    if (remembered) setJobId(remembered);
+    if (requested && searchParams.get("job_kind") === "health-index") setJobId(requested);
   }, [searchParams]);
 
   useEffect(() => {

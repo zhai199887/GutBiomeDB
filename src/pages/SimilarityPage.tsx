@@ -11,7 +11,7 @@ import { API_BASE } from "@/util/apiBase";
 import { countryName, AGE_GROUP_ZH } from "@/util/countries";
 import { diseaseDisplayNameI18n, sortDiseaseItemsByName } from "@/util/diseaseNames";
 import { exportTable } from "@/util/export";
-import { getAnalysisJob, latestRememberedAnalysisJob, submitAnalysisJob, type AnalysisJobStatus } from "@/util/analysisJobs";
+import { getAnalysisJob, submitAnalysisJob, type AnalysisJobStatus } from "@/util/analysisJobs";
 
 import HealthIndexPanel from "./similarity/HealthIndexPanel";
 import SimilarityPreviewHeatmap from "./similarity/SimilarityPreviewHeatmap";
@@ -93,10 +93,7 @@ const SimilarityPage = () => {
 
   useEffect(() => {
     const requested = searchParams.get("job_id");
-    const remembered = requested && searchParams.get("job_kind") === "similarity-search"
-      ? requested
-      : latestRememberedAnalysisJob("similarity-search");
-    if (remembered) setJobId(remembered);
+    if (requested && searchParams.get("job_kind") === "similarity-search") setJobId(requested);
   }, [searchParams]);
 
   useEffect(() => {

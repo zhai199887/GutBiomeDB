@@ -18,7 +18,6 @@ import { diseaseDisplayNameI18n } from "@/util/diseaseNames";
 import { AGE_GROUP_ZH, SEX_ZH } from "@/util/countries";
 import {
   getAnalysisJob,
-  latestRememberedAnalysisJob,
   submitAnalysisJob,
   type AnalysisJobKind,
   type AnalysisJobStatus,
@@ -60,10 +59,7 @@ const PhenotypePage = () => {
   useEffect(() => {
     const requestedId = searchParams.get("job_id");
     const requestedKind = searchParams.get("job_kind") as AnalysisJobKind | null;
-    const remembered = requestedKind === "phenotype-association" && requestedId
-      ? requestedId
-      : latestRememberedAnalysisJob("phenotype-association");
-    if (remembered) setAnalysisJobId(remembered);
+    if (requestedKind === "phenotype-association" && requestedId) setAnalysisJobId(requestedId);
   }, [searchParams]);
 
   useEffect(() => {
