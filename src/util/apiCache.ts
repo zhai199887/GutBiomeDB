@@ -2,13 +2,6 @@
  * apiCache.ts — High-performance API response cache with request deduplication
  */
 
-import {
-  getAnalysisJob,
-  latestRememberedAnalysisJob,
-  submitAnalysisJob,
-  type AnalysisJobKind,
-} from "./analysisJobs";
-
 interface CacheEntry {
   data: unknown;
   ts: number;
@@ -25,65 +18,6 @@ const STATIC_PATTERNS = [
 ];
 const STATIC_TTL = 30 * 60 * 1000; // 30 minutes
 const DYNAMIC_TTL = 10 * 60 * 1000; // 10 minutes
-
-const TRACKED_GET_KINDS: Array<[string, AnalysisJobKind]> = [
-  ["/api/biomarker-profile", "biomarker-profile"],
-  ["/api/biomarker-discovery", "biomarker-discovery"],
-  ["/api/lollipop-data", "lollipop-data"],
-  ["/api/network-compare", "network-compare"],
-  ["/api/network", "network"],
-  ["/api/cooccurrence", "cooccurrence"],
-  ["/api/chord-data", "chord-data"],
-  ["/api/species-cooccurrence", "species-cooccurrence"],
-  ["/api/phenotype-taxa-profile", "phenotype-taxa-profile"],
-  ["/api/disease-profile", "disease-profile"],
-  ["/api/disease-studies", "disease-studies"],
-  ["/api/lifecycle-compare", "lifecycle-compare"],
-  ["/api/lifecycle", "lifecycle"],
-  ["/api/metabolism-category-profile", "metabolism-category-profile"],
-  ["/api/metabolism-overview", "metabolism-overview"],
-];
-
-const NUMERIC_QUERY_KEYS = new Set([
-  "top_n", "top_genera", "top_diseases", "top_k", "min_r", "max_samples",
-  "fdr_threshold", "lda_threshold", "p_threshold", "min_samples",
-]);
-
-function trackedKind(url: string): AnalysisJobKind | null {
-  try {
-    const pathname = new URL(url, window.location.origin).pathname;
-    return TRACKED_GET_KINDS.find(([prefix]) => pathname === prefix)?.[1] ?? null;
-  } catch {
-    return null;
-  }
-}
-
-async function waitForTrackedJob<T>(jobId: string): Promise<T> {
-  for (;;) {
-    const job = await getAnalysisJob<T>(jobId);
-    if (job.status === "completed") return job.result as T;
-    if (job.status === "failed") throw new Error(job.error ?? "Analysis job failed");
-    await new Promise((resolve) => window.setTimeout(resolve, 700));
-  }
-}
-
-async function trackedGet<T>(url: string, kind: AnalysisJobKind): Promise<T> {
-  const previous = latestRememberedAnalysisJob(kind, url);
-  if (previous) {
-    try {
-      return await waitForTrackedJob<T>(previous);
-    } catch {
-      // Submit a fresh job if the previous snapshot expired or failed.
-    }
-  }
-  const parsed = new URL(url, window.location.origin);
-  const payload: Record<string, string | number> = {};
-  parsed.searchParams.forEach((value, key) => {
-    payload[key] = NUMERIC_QUERY_KEYS.has(key) ? Number(value) : value;
-  });
-  const job = await submitAnalysisJob(kind, payload, url);
-  return waitForTrackedJob<T>(job.job_id);
-}
 
 function getTTL(url: string): number {
   return STATIC_PATTERNS.some(p => url.includes(p)) ? STATIC_TTL : DYNAMIC_TTL;
@@ -109,16 +43,13 @@ export async function cachedFetch<T>(url: string): Promise<T> {
     return existing as Promise<T>;
   }
 
-  const tracked = trackedKind(url);
-  const promise = (tracked ? trackedGet<T>(url, tracked) : fetch(url)
+  const promise = fetch(url)
     .then(async (res) => {
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      return res.json();
-    }))
-    .then((data) => {
+      const data = await res.json();
       cache.set(url, { data, ts: Date.now() });
       inflight.delete(url);
-      return data as T;
+      return data;
     })
     .catch((err) => {
       inflight.delete(url);
