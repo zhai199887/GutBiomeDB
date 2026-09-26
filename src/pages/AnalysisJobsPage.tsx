@@ -68,7 +68,7 @@ const AnalysisJobsPage = () => {
         setJobs((current) => current.map((job) => job.job_id === item.job_id ? record : job));
       } catch {
         setJobs((current) => current.map((job) => job.job_id === item.job_id
-          ? { ...job, status: "failed" as const, error: locale === "zh" ? "任务记录暂时无法读取" : "Job record is currently unavailable" }
+          ? { ...job, status: "failed" as const, error: locale === "zh" ? "任务记录已失效，请重新提交分析" : "This task record is no longer available; submit a new analysis" }
           : job));
       }
     });
@@ -87,10 +87,7 @@ const AnalysisJobsPage = () => {
     };
   }, [locale]);
 
-  const sortedJobs = useMemo(
-    () => [...jobs].sort((a, b) => (b.updated_at || b.created_at).localeCompare(a.updated_at || a.created_at)),
-    [jobs],
-  );
+  const sortedJobs = useMemo(() => jobs, [jobs]);
 
   const openJob = (job: TrackedJob) => {
     rememberAnalysisJob(job.kind, job.job_id);
