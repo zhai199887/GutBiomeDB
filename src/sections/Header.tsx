@@ -48,7 +48,10 @@ const Header = () => {
         <section className={classes.heroCopy}>
           <div className={classes.heroTop}>
             <span className={classes.kicker}>{t("header.kicker")}</span>
-            <LangSwitch />
+            <div className={classes.heroActions}>
+              <Link to="/analysis-jobs" className={classes.jobsLink}>{t("nav.jobs")}</Link>
+              <LangSwitch />
+            </div>
           </div>
 
           <div className={classes.title}>
@@ -84,6 +87,9 @@ const Header = () => {
             {label}
           </Link>
         ))}
+        <Link to="/analysis-jobs" className={classes.navLink} onClick={() => setMenuOpen(false)}>
+          {t("nav.jobs")}
+        </Link>
         <LangSwitch />
       </nav>
     </header>

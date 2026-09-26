@@ -17,14 +17,14 @@ export type AnalysisJob<T = unknown> = {
   result?: T;
 };
 
-type RememberedJob = {
+export type RememberedAnalysisJob = {
   kind: AnalysisJobKind;
   job_id: string;
 };
 
 const STORAGE_KEY = "gutbiomedb.analysisJobs.v1";
 
-function readRememberedJobs(): RememberedJob[] {
+function readRememberedJobs(): RememberedAnalysisJob[] {
   if (typeof window === "undefined") return [];
   try {
     const parsed = JSON.parse(window.localStorage.getItem(STORAGE_KEY) ?? "[]");
@@ -38,9 +38,14 @@ export function rememberAnalysisJob(kind: AnalysisJobKind, job_id: string): void
   if (typeof window === "undefined") return;
   const next = [
     { kind, job_id },
-    ...readRememberedJobs().filter((item) => item.kind !== kind),
-  ].slice(0, 6);
+    ...readRememberedJobs().filter((item) => item.job_id !== job_id),
+  ].slice(0, 20);
   window.localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+  window.dispatchEvent(new Event("gutbiomedb:analysis-job"));
+}
+
+export function rememberedAnalysisJobs(): RememberedAnalysisJob[] {
+  return readRememberedJobs();
 }
 
 export function latestRememberedAnalysisJob(kind: AnalysisJobKind): string | null {
