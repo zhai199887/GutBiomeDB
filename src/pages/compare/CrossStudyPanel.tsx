@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type RefObject } from "react";
+import { useSearchParams } from "react-router-dom";
 
 import { useI18n } from "@/i18n";
 import { cachedFetch } from "@/util/apiCache";
@@ -34,6 +35,7 @@ function directionColor(direction: CrossStudyMarker["direction"]): string {
 
 const CrossStudyPanel = ({ taxonomyLevel }: { taxonomyLevel: TaxonomyLevel }) => {
   const { t, locale } = useI18n();
+  const [searchParams] = useSearchParams();
   const [projects, setProjects] = useState<ProjectInfo[]>([]);
   const [diseases, setDiseases] = useState<string[]>([]);
   const [selectedProjects, setSelectedProjects] = useState<string[]>([]);
@@ -53,9 +55,13 @@ const CrossStudyPanel = ({ taxonomyLevel }: { taxonomyLevel: TaxonomyLevel }) =>
   const bubbleRef = useRef<SVGSVGElement>(null);
 
   useEffect(() => {
-    const remembered = latestRememberedAnalysisJob("cross-study");
+    const requestedId = searchParams.get("job_id");
+    const requestedKind = searchParams.get("job_kind");
+    const remembered = requestedKind === "cross-study" && requestedId
+      ? requestedId
+      : latestRememberedAnalysisJob("cross-study");
     if (remembered) setAnalysisJobId(remembered);
-  }, []);
+  }, [searchParams]);
 
   useEffect(() => {
     if (!analysisJobId) return;

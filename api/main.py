@@ -1403,7 +1403,14 @@ class HealthIndexRequest(BaseModel):
 
 class AnalysisJobRequest(BaseModel):
     """Request envelope for asynchronous analysis jobs."""
-    kind: Literal["diff-analysis", "spearman-analysis", "cross-study", "phenotype-association"]
+    kind: Literal[
+        "diff-analysis", "spearman-analysis", "cross-study", "phenotype-association",
+        "biomarker-discovery", "lollipop-data", "network", "cooccurrence",
+        "network-compare", "lifecycle", "lifecycle-compare", "similarity-search",
+        "health-index", "health-score", "disease-profile", "disease-studies",
+        "biomarker-profile", "species-cooccurrence", "chord-data", "phenotype-taxa-profile",
+        "metabolism-overview", "metabolism-category-profile",
+    ]
     payload: dict[str, Any]
 
 
@@ -1431,6 +1438,39 @@ def _run_analysis_job(kind: str, payload: dict[str, Any]):
     if kind == "phenotype-association":
         phenotype_request = PhenotypeAssociationRequest.model_validate(payload)
         return _endpoint_implementation(phenotype_association)(None, **phenotype_request.model_dump())
+    if kind in {
+        "biomarker-discovery", "lollipop-data", "network", "cooccurrence", "network-compare",
+        "lifecycle", "lifecycle-compare", "disease-profile", "disease-studies", "biomarker-profile",
+        "species-cooccurrence", "chord-data", "phenotype-taxa-profile", "metabolism-overview",
+        "metabolism-category-profile",
+    }:
+        endpoint_names = {
+            "biomarker-discovery": biomarker_discovery,
+            "lollipop-data": lollipop_data,
+            "network": microbe_disease_network,
+            "cooccurrence": cooccurrence_network,
+            "network-compare": network_compare,
+            "lifecycle": lifecycle_atlas,
+            "lifecycle-compare": lifecycle_compare,
+            "disease-profile": disease_profile,
+            "disease-studies": disease_studies,
+            "biomarker-profile": biomarker_profile,
+            "species-cooccurrence": species_cooccurrence,
+            "chord-data": chord_data,
+            "phenotype-taxa-profile": phenotype_taxa_profile,
+            "metabolism-overview": metabolism_overview,
+            "metabolism-category-profile": metabolism_category_profile,
+        }
+        return _endpoint_implementation(endpoint_names[kind])(None, **payload)
+    if kind == "similarity-search":
+        import asyncio
+        return asyncio.run(_endpoint_implementation(similarity_search)(None, SimilarityRequest.model_validate(payload)))
+    if kind == "health-index":
+        import asyncio
+        return asyncio.run(_endpoint_implementation(health_index)(None, HealthIndexRequest.model_validate(payload)))
+    if kind == "health-score":
+        import asyncio
+        return asyncio.run(_endpoint_implementation(health_score)(None, HealthScoreRequest.model_validate(payload)))
     raise ValueError(f"Unsupported analysis job kind: {kind}")
 
 

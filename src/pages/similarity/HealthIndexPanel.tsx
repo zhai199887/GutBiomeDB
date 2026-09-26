@@ -3,6 +3,7 @@
  * Gut Microbiome Health Index (GMHI) — population distribution + user scoring workbench
  */
 import { useEffect, useRef, useState, type DragEvent } from "react";
+import { useSearchParams } from "react-router-dom";
 
 import * as d3 from "d3";
 
@@ -11,6 +12,7 @@ import { cachedFetch } from "@/util/apiCache";
 import { API_BASE } from "@/util/apiBase";
 import { exportElementPNG } from "@/util/chartExport";
 import { exportTable } from "@/util/export";
+import { getAnalysisJob, latestRememberedAnalysisJob, submitAnalysisJob, type AnalysisJobStatus } from "@/util/analysisJobs";
 
 import ContributionChart from "./ContributionChart";
 import classes from "./HealthIndexPanel.module.css";
@@ -245,6 +247,7 @@ const PopHistogram = ({
 
 const HealthIndexPanel = () => {
   const { t, locale } = useI18n();
+  const [searchParams] = useSearchParams();
   const [refData, setRefData] = useState<ReferenceData | null>(null);
   const [refLoading, setRefLoading] = useState(true);
   const [referenceError, setReferenceError] = useState("");
@@ -255,11 +258,42 @@ const HealthIndexPanel = () => {
   const [result, setResult] = useState<HealthResult | null>(null);
   const [gbhi, setGbhi] = useState<GbhiResult | null>(null);
   const [sortMode, setSortMode] = useState<"diff" | "user" | "nc">("diff");
+  const [jobId, setJobId] = useState<string | null>(null);
+  const [jobStatus, setJobStatus] = useState<AnalysisJobStatus | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const gaugeRef = useRef<SVGSVGElement>(null);
   const summaryExportRef = useRef<HTMLDivElement>(null);
   const contributionExportRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const requested = searchParams.get("job_id");
+    const remembered = requested && searchParams.get("job_kind") === "health-index"
+      ? requested
+      : latestRememberedAnalysisJob("health-index");
+    if (remembered) setJobId(remembered);
+  }, [searchParams]);
+
+  useEffect(() => {
+    if (!jobId) return;
+    setLoading(true);
+    let cancelled = false;
+    let timer: number | undefined;
+    const poll = async () => {
+      try {
+        const job = await getAnalysisJob<HealthResult>(jobId);
+        if (cancelled) return;
+        setJobStatus(job.status);
+        if (job.status === "completed") { setResult(job.result ?? null); setLoading(false); return; }
+        if (job.status === "failed") { setError(job.error ?? "Health index failed"); setLoading(false); return; }
+        timer = window.setTimeout(poll, 700);
+      } catch (unknownError) {
+        if (!cancelled) { setError(unknownError instanceof Error ? unknownError.message : String(unknownError)); setLoading(false); }
+      }
+    };
+    void poll();
+    return () => { cancelled = true; if (timer !== undefined) window.clearTimeout(timer); };
+  }, [jobId]);
 
   useEffect(() => {
     let cancelled = false;
@@ -316,33 +350,11 @@ const HealthIndexPanel = () => {
     }
 
     setLoading(true);
+    setJobId(null);
     try {
-      const resp = await fetch(`${API_BASE}/api/health-index`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ abundances }),
-      });
-      if (!resp.ok) {
-        const errData = await resp.json().catch(() => ({}));
-        throw new Error(errData.detail || `HTTP ${resp.status}`);
-      }
-      const payload: HealthResult = await resp.json();
-      setResult(payload);
-
-      // Also call the universal multinomial softmax GBHI endpoint
-      try {
-        const gResp = await fetch(`${API_BASE}/api/health_score`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ abundances }),
-        });
-        if (gResp.ok) {
-          const gPayload: GbhiResult = await gResp.json();
-          setGbhi(gPayload);
-        }
-      } catch {
-        // non-fatal: GBHI endpoint optional
-      }
+      const job = await submitAnalysisJob("health-index", { abundances });
+      setJobId(job.job_id);
+      setJobStatus(job.status);
     } catch (err: unknown) {
       const detail = err instanceof Error ? err.message : "";
       setError(detail ? `${t("healthIndex.requestFailed")}: ${detail}` : t("healthIndex.calculateFailed"));
@@ -654,6 +666,7 @@ const HealthIndexPanel = () => {
         <button className={classes.calcBtn} onClick={calculate} disabled={!hasInput || loading}>
           {loading ? t("healthIndex.calculating") : t("healthIndex.calculate")}
         </button>
+        {jobId ? <span style={{ color: "var(--light-gray)", fontSize: "0.78rem" }}>Job ID: <code>{jobId}</code> · {jobStatus ?? "queued"}</span> : null}
       </div>
 
       {error && <div className={classes.error}>{error}</div>}
