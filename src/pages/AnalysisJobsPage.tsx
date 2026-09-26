@@ -138,6 +138,12 @@ const AnalysisJobsPage = () => {
                     : (locale === "zh" ? "暂时无法读取服务端状态" : "Server status unavailable")}
                 </div>
                 {job.error ? <p className={classes.error}>{job.error}</p> : null}
+                {job.status === "completed" && job.result ? (
+                  <details className={classes.savedResult}>
+                    <summary>{locale === "zh" ? "查看已保存结果（不会重新运行）" : "View saved result (no rerun)"}</summary>
+                    <pre>{JSON.stringify(job.result, null, 2).slice(0, 12000)}</pre>
+                  </details>
+                ) : null}
                 <button type="button" className={classes.open} onClick={() => openJob(job)}>
                   {locale === "zh" ? "打开对应分析页" : "Open analysis workspace"}
                 </button>
