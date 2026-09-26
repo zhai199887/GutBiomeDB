@@ -61,7 +61,10 @@ const AnalysisJobsPage = () => {
       created_at: "",
       updated_at: "",
     }));
-    setJobs(placeholders);
+    setJobs((current) => {
+      const existing = new Map(current.map((job) => [job.job_id, job]));
+      return placeholders.map((placeholder) => existing.get(placeholder.job_id) ?? placeholder);
+    });
     remembered.forEach(async (item) => {
       try {
         const record = await getAnalysisJob(item.job_id) as TrackedJob;
