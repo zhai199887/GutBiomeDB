@@ -58,13 +58,13 @@ export function rememberAnalysisJob(kind: AnalysisJobKind, job_id: string, key?:
   const next = [
     { kind, job_id, ...(key ? { key } : {}) },
     ...readRememberedJobs().filter((item) => item.job_id !== job_id),
-  ].slice(0, 20);
+  ].slice(0, 10);
   window.localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
   window.dispatchEvent(new Event("gutbiomedb:analysis-job"));
 }
 
 export function rememberedAnalysisJobs(): RememberedAnalysisJob[] {
-  return readRememberedJobs();
+  return readRememberedJobs().slice(0, 10);
 }
 
 export function latestRememberedAnalysisJob(kind: AnalysisJobKind, key?: string): string | null {
