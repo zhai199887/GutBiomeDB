@@ -3,11 +3,11 @@
  * Wilcoxon + BH-FDR + LDA + forest plot
  */
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import * as d3 from "d3";
 import { useI18n } from "@/i18n";
-import { API_BASE } from "@/util/apiBase";
 import { diseaseDisplayNameI18n, sortDiseaseItemsByName } from "@/util/diseaseNames";
+import { getAnalysisJob, latestRememberedAnalysisJob, submitAnalysisJob, type AnalysisJobStatus } from "@/util/analysisJobs";
 import classes from "./BiomarkerPage.module.css";
 
 interface Marker {
@@ -37,12 +37,15 @@ interface DiseaseItem { name: string; sample_count: number; }
 
 const BiomarkerPage = () => {
   const { t, locale } = useI18n();
+  const [searchParams] = useSearchParams();
   const [diseases, setDiseases] = useState<DiseaseItem[]>([]);
   const [diseaseZh, setDiseaseZh] = useState<Record<string, string>>({});
   const [selected, setSelected] = useState("");
   const [ldaThreshold, setLdaThreshold] = useState(2.0);
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<BiomarkerResult | null>(null);
+  const [jobId, setJobId] = useState<string | null>(null);
+  const [jobStatus, setJobStatus] = useState<AnalysisJobStatus | null>(null);
   const forestRef = useRef<SVGSVGElement>(null);
   const ldaRef = useRef<SVGSVGElement>(null);
 
@@ -55,17 +58,52 @@ const BiomarkerPage = () => {
       .then(setDiseaseZh).catch(() => {});
   }, []);
 
+  useEffect(() => {
+    const requested = searchParams.get("job_id");
+    const remembered = requested && searchParams.get("job_kind") === "biomarker-discovery"
+      ? requested
+      : latestRememberedAnalysisJob("biomarker-discovery");
+    if (remembered) setJobId(remembered);
+  }, [searchParams]);
+
+  useEffect(() => {
+    if (!jobId) return;
+    setLoading(true);
+    let cancelled = false;
+    let timer: number | undefined;
+    const poll = async () => {
+      try {
+        const job = await getAnalysisJob<BiomarkerResult>(jobId);
+        if (cancelled) return;
+        setJobStatus(job.status);
+        if (job.status === "completed") {
+          setResult(job.result ?? null);
+          setLoading(false);
+          return;
+        }
+        if (job.status === "failed") {
+          setLoading(false);
+          return;
+        }
+        timer = window.setTimeout(poll, 700);
+      } catch {
+        if (!cancelled) setLoading(false);
+      }
+    };
+    void poll();
+    return () => { cancelled = true; if (timer !== undefined) window.clearTimeout(timer); };
+  }, [jobId]);
+
   const sortedDiseases = useMemo(() => sortDiseaseItemsByName(diseases), [diseases]);
 
   const runAnalysis = () => {
     if (!selected) return;
     setLoading(true);
     setResult(null);
-    fetch(`${API_BASE}/api/biomarker-discovery?disease=${encodeURIComponent(selected)}&lda_threshold=${ldaThreshold}`)
-      .then(r => { if (!r.ok) throw new Error(); return r.json(); })
-      .then((data: BiomarkerResult) => setResult(data))
-      .catch(() => {})
-      .finally(() => setLoading(false));
+    setJobId(null);
+    void submitAnalysisJob("biomarker-discovery", { disease: selected, lda_threshold: ldaThreshold, p_threshold: 0.05 })
+      .then((job) => { setJobId(job.job_id); setJobStatus(job.status); })
+      .catch(() => setLoading(false));
   };
 
   useEffect(() => {
@@ -108,6 +146,7 @@ const BiomarkerPage = () => {
         <button className={classes.runBtn} onClick={runAnalysis} disabled={!selected || loading}>
           {loading ? t("biomarker.running") : t("biomarker.runAnalysis")}
         </button>
+        {jobId ? <span style={{ color: "var(--light-gray)", fontSize: "0.78rem" }}>Job ID: <code>{jobId}</code> · {jobStatus ?? "queued"}</span> : null}
       </div>
 
       {loading && <div className={classes.loading}>{t("biomarker.running")}</div>}

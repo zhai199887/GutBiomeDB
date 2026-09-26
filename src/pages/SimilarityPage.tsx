@@ -3,7 +3,7 @@
  * Retrieves the most similar samples from the database based on a user-submitted genus-level abundance vector
  */
 import { useEffect, useMemo, useRef, useState, type DragEvent } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 
 import { useI18n } from "@/i18n";
 import { cachedFetch } from "@/util/apiCache";
@@ -11,6 +11,7 @@ import { API_BASE } from "@/util/apiBase";
 import { countryName, AGE_GROUP_ZH } from "@/util/countries";
 import { diseaseDisplayNameI18n, sortDiseaseItemsByName } from "@/util/diseaseNames";
 import { exportTable } from "@/util/export";
+import { getAnalysisJob, latestRememberedAnalysisJob, submitAnalysisJob, type AnalysisJobStatus } from "@/util/analysisJobs";
 
 import HealthIndexPanel from "./similarity/HealthIndexPanel";
 import SimilarityPreviewHeatmap from "./similarity/SimilarityPreviewHeatmap";
@@ -69,6 +70,7 @@ function parseAbundanceText(text: string): Record<string, number> {
 
 const SimilarityPage = () => {
   const { t, locale } = useI18n();
+  const [searchParams] = useSearchParams();
   const [activeTab, setActiveTab] = useState<"similarity" | "health">("similarity");
 
   const [file, setFile] = useState<File | null>(null);
@@ -84,8 +86,43 @@ const SimilarityPage = () => {
   const [optionsLoading, setOptionsLoading] = useState(true);
   const [result, setResult] = useState<SearchResponse | null>(null);
   const [error, setError] = useState("");
+  const [jobId, setJobId] = useState<string | null>(null);
+  const [jobStatus, setJobStatus] = useState<AnalysisJobStatus | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    const requested = searchParams.get("job_id");
+    const remembered = requested && searchParams.get("job_kind") === "similarity-search"
+      ? requested
+      : latestRememberedAnalysisJob("similarity-search");
+    if (remembered) setJobId(remembered);
+  }, [searchParams]);
+
+  useEffect(() => {
+    if (!jobId) return;
+    setLoading(true);
+    let cancelled = false;
+    let timer: number | undefined;
+    const poll = async () => {
+      try {
+        const job = await getAnalysisJob<SearchResponse>(jobId);
+        if (cancelled) return;
+        setJobStatus(job.status);
+        if (job.status === "completed") {
+          setResult(job.result ?? null);
+          setLoading(false);
+          return;
+        }
+        if (job.status === "failed") { setError(job.error ?? "Similarity search failed"); setLoading(false); return; }
+        timer = window.setTimeout(poll, 700);
+      } catch (unknownError) {
+        if (!cancelled) { setError(unknownError instanceof Error ? unknownError.message : String(unknownError)); setLoading(false); }
+      }
+    };
+    void poll();
+    return () => { cancelled = true; if (timer !== undefined) window.clearTimeout(timer); };
+  }, [jobId]);
 
   useEffect(() => {
     Promise.all([
@@ -173,29 +210,21 @@ const SimilarityPage = () => {
     }
 
     setLoading(true);
+    setJobId(null);
     try {
-      const resp = await fetch(`${API_BASE}/api/similarity-search`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          abundances,
-          metric,
-          top_k: topK,
-          filter_disease: filterDisease,
-          filter_country: filterCountry,
-          filter_age_group: filterAgeGroup,
-        }),
+      const job = await submitAnalysisJob("similarity-search", {
+        abundances,
+        metric,
+        top_k: topK,
+        filter_disease: filterDisease,
+        filter_country: filterCountry,
+        filter_age_group: filterAgeGroup,
       });
-      if (!resp.ok) {
-        const errData = await resp.json().catch(() => ({}));
-        throw new Error(errData.detail || `HTTP ${resp.status}`);
-      }
-      const payload: SearchResponse = await resp.json();
-      setResult(payload);
+      setJobId(job.job_id);
+      setJobStatus(job.status);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : (locale === "zh" ? "搜索失败" : "Search failed"));
     } finally {
-      setLoading(false);
     }
   };
 
@@ -351,6 +380,7 @@ const SimilarityPage = () => {
             <button className={classes.runBtn} onClick={runSearch} disabled={!hasInput || loading}>
               {loading ? t("similarity.searching") : t("similarity.search")}
             </button>
+            {jobId ? <span style={{ color: "var(--light-gray)", fontSize: "0.78rem" }}>Job ID: <code>{jobId}</code> · {jobStatus ?? "queued"}</span> : null}
           </div>
 
           {loading && <div className={classes.loading}>{t("similarity.searching")}</div>}

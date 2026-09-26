@@ -12,7 +12,7 @@
  *   PhenotypeExport      → CSV / SVG / PNG export
  */
 import { useState, useCallback, useEffect } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { useI18n } from "@/i18n";
 import { diseaseDisplayNameI18n } from "@/util/diseaseNames";
 import { AGE_GROUP_ZH, SEX_ZH } from "@/util/countries";
@@ -20,6 +20,7 @@ import {
   getAnalysisJob,
   latestRememberedAnalysisJob,
   submitAnalysisJob,
+  type AnalysisJobKind,
   type AnalysisJobStatus,
 } from "@/util/analysisJobs";
 
@@ -38,6 +39,7 @@ import {
 
 const PhenotypePage = () => {
   const { t, locale } = useI18n();
+  const [searchParams] = useSearchParams();
 
   // ── Control state ─────────────────────────────────────────────────────────
   const [dimType, setDimType] = useState<DimType>("sex");
@@ -56,9 +58,13 @@ const PhenotypePage = () => {
   const [analysisJobStatus, setAnalysisJobStatus] = useState<AnalysisJobStatus | null>(null);
 
   useEffect(() => {
-    const remembered = latestRememberedAnalysisJob("phenotype-association");
+    const requestedId = searchParams.get("job_id");
+    const requestedKind = searchParams.get("job_kind") as AnalysisJobKind | null;
+    const remembered = requestedKind === "phenotype-association" && requestedId
+      ? requestedId
+      : latestRememberedAnalysisJob("phenotype-association");
     if (remembered) setAnalysisJobId(remembered);
-  }, []);
+  }, [searchParams]);
 
   useEffect(() => {
     if (!analysisJobId) return;

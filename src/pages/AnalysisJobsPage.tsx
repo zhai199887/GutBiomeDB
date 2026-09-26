@@ -20,6 +20,24 @@ const KIND_LABELS: Record<AnalysisJobKind, { en: string; zh: string; route: stri
   "spearman-analysis": { en: "Spearman analysis", zh: "Spearman 分析", route: "/compare" },
   "cross-study": { en: "Cross-study meta-analysis", zh: "跨研究元分析", route: "/compare?tab=crossstudy" },
   "phenotype-association": { en: "Phenotype association", zh: "表型关联分析", route: "/phenotype" },
+  "biomarker-discovery": { en: "Biomarker discovery", zh: "生物标志物发现", route: "/disease" },
+  "lollipop-data": { en: "Lollipop analysis", zh: "棒棒糖图分析", route: "/disease" },
+  network: { en: "Network analysis", zh: "网络分析", route: "/network" },
+  cooccurrence: { en: "Co-occurrence analysis", zh: "共现分析", route: "/network" },
+  "network-compare": { en: "Network comparison", zh: "网络比较", route: "/network" },
+  lifecycle: { en: "Lifecycle atlas", zh: "生命周期图谱", route: "/lifecycle" },
+  "lifecycle-compare": { en: "Lifecycle comparison", zh: "生命周期比较", route: "/lifecycle" },
+  "similarity-search": { en: "Similarity search", zh: "相似性检索", route: "/similarity" },
+  "health-index": { en: "Health index", zh: "健康指数", route: "/similarity" },
+  "health-score": { en: "Health score", zh: "健康评分", route: "/similarity" },
+  "disease-profile": { en: "Disease profile", zh: "疾病画像", route: "/disease" },
+  "disease-studies": { en: "Disease studies", zh: "疾病研究", route: "/disease" },
+  "biomarker-profile": { en: "Biomarker profile", zh: "标志物画像", route: "/species" },
+  "species-cooccurrence": { en: "Species co-occurrence", zh: "菌属共现", route: "/species" },
+  "chord-data": { en: "Chord analysis", zh: "弦图分析", route: "/network" },
+  "phenotype-taxa-profile": { en: "Phenotype taxa profile", zh: "表型菌群画像", route: "/phenotype" },
+  "metabolism-overview": { en: "Metabolism overview", zh: "代谢总览", route: "/metabolism" },
+  "metabolism-category-profile": { en: "Metabolism category", zh: "代谢类别", route: "/metabolism" },
 };
 
 const STATUS_LABELS: Record<AnalysisJobStatus, { en: string; zh: string }> = {
@@ -75,7 +93,8 @@ const AnalysisJobsPage = () => {
 
   const openJob = (job: TrackedJob) => {
     rememberAnalysisJob(job.kind, job.job_id);
-    navigate(KIND_LABELS[job.kind].route);
+    const separator = KIND_LABELS[job.kind].route.includes("?") ? "&" : "?";
+    navigate(`${KIND_LABELS[job.kind].route}${separator}job_id=${encodeURIComponent(job.job_id)}&job_kind=${encodeURIComponent(job.kind)}`);
   };
 
   return (
@@ -132,4 +151,3 @@ const AnalysisJobsPage = () => {
 };
 
 export default AnalysisJobsPage;
-

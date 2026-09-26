@@ -10,6 +10,7 @@ import {
   getAnalysisJob,
   latestRememberedAnalysisJob,
   submitAnalysisJob,
+  type AnalysisJobKind,
   type AnalysisJobStatus,
 } from "@/util/analysisJobs";
 
@@ -67,11 +68,26 @@ const ComparePage = () => {
   }, [t]);
 
   useEffect(() => {
+    const requestedId = searchParams.get("job_id");
+    const requestedKind = searchParams.get("job_kind") as AnalysisJobKind | null;
+    if (requestedId && requestedKind === "spearman-analysis") {
+      setAnalysisJobId(null);
+      setSpearmanJobId(requestedId);
+      setActiveTab("correlation");
+      return;
+    }
+    if (requestedId && requestedKind === "diff-analysis") {
+      setSpearmanJobId(null);
+      setAnalysisJobId(requestedId);
+      setActiveTab("bar");
+      return;
+    }
+    if (requestedKind === "cross-study") return;
     const remembered = latestRememberedAnalysisJob("diff-analysis");
     if (remembered) setAnalysisJobId(remembered);
     const rememberedSpearman = latestRememberedAnalysisJob("spearman-analysis");
     if (rememberedSpearman) setSpearmanJobId(rememberedSpearman);
-  }, []);
+  }, [searchParams]);
 
   useEffect(() => {
     if (!analysisJobId) return;

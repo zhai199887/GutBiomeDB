@@ -4,7 +4,25 @@ export type AnalysisJobKind =
   | "diff-analysis"
   | "spearman-analysis"
   | "cross-study"
-  | "phenotype-association";
+  | "phenotype-association"
+  | "biomarker-discovery"
+  | "lollipop-data"
+  | "network"
+  | "cooccurrence"
+  | "network-compare"
+  | "lifecycle"
+  | "lifecycle-compare"
+  | "similarity-search"
+  | "health-index"
+  | "health-score"
+  | "disease-profile"
+  | "disease-studies"
+  | "biomarker-profile"
+  | "species-cooccurrence"
+  | "chord-data"
+  | "phenotype-taxa-profile"
+  | "metabolism-overview"
+  | "metabolism-category-profile";
 export type AnalysisJobStatus = "queued" | "running" | "completed" | "failed";
 
 export type AnalysisJob<T = unknown> = {
@@ -20,6 +38,7 @@ export type AnalysisJob<T = unknown> = {
 export type RememberedAnalysisJob = {
   kind: AnalysisJobKind;
   job_id: string;
+  key?: string;
 };
 
 const STORAGE_KEY = "gutbiomedb.analysisJobs.v1";
@@ -34,10 +53,10 @@ function readRememberedJobs(): RememberedAnalysisJob[] {
   }
 }
 
-export function rememberAnalysisJob(kind: AnalysisJobKind, job_id: string): void {
+export function rememberAnalysisJob(kind: AnalysisJobKind, job_id: string, key?: string): void {
   if (typeof window === "undefined") return;
   const next = [
-    { kind, job_id },
+    { kind, job_id, ...(key ? { key } : {}) },
     ...readRememberedJobs().filter((item) => item.job_id !== job_id),
   ].slice(0, 20);
   window.localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
@@ -48,13 +67,14 @@ export function rememberedAnalysisJobs(): RememberedAnalysisJob[] {
   return readRememberedJobs();
 }
 
-export function latestRememberedAnalysisJob(kind: AnalysisJobKind): string | null {
-  return readRememberedJobs().find((item) => item.kind === kind)?.job_id ?? null;
+export function latestRememberedAnalysisJob(kind: AnalysisJobKind, key?: string): string | null {
+  return readRememberedJobs().find((item) => item.kind === kind && (!key || item.key === key))?.job_id ?? null;
 }
 
 export async function submitAnalysisJob(
   kind: AnalysisJobKind,
   payload: unknown,
+  key?: string,
 ): Promise<AnalysisJob> {
   const response = await fetch(`${API_BASE}/api/analysis-jobs`, {
     method: "POST",
@@ -64,7 +84,7 @@ export async function submitAnalysisJob(
   });
   const data = await response.json();
   if (!response.ok) throw new Error(data.detail ?? "Could not submit analysis job");
-  rememberAnalysisJob(kind, data.job_id);
+  rememberAnalysisJob(kind, data.job_id, key);
   return data as AnalysisJob;
 }
 
