@@ -3,11 +3,11 @@
  * log2FC + significance + phylum-level coloring
  */
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Link, useSearchParams } from "react-router-dom";
+import { Link } from "react-router-dom";
 import * as d3 from "d3";
 import { useI18n } from "@/i18n";
+import { API_BASE } from "@/util/apiBase";
 import { diseaseDisplayNameI18n, sortDiseaseItemsByName } from "@/util/diseaseNames";
-import { getAnalysisJob, submitAnalysisJob, type AnalysisJobStatus } from "@/util/analysisJobs";
 import classes from "./LollipopPage.module.css";
 
 const PHYLUM_COLORS: Record<string, string> = {
@@ -36,14 +36,11 @@ interface DiseaseItem { name: string; sample_count: number; }
 
 const LollipopPage = () => {
   const { t, locale } = useI18n();
-  const [searchParams] = useSearchParams();
   const [diseases, setDiseases] = useState<DiseaseItem[]>([]);
   const [diseaseZh, setDiseaseZh] = useState<Record<string, string>>({});
   const [selected, setSelected] = useState("");
   const [data, setData] = useState<LollipopItem[]>([]);
   const [loading, setLoading] = useState(false);
-  const [jobId, setJobId] = useState<string | null>(null);
-  const [jobStatus, setJobStatus] = useState<AnalysisJobStatus | null>(null);
   const svgRef = useRef<SVGSVGElement>(null);
 
   const dName = (n: string) => (locale === "zh" && diseaseZh[n]) ? diseaseZh[n] : diseaseDisplayNameI18n(n, locale);
@@ -55,43 +52,16 @@ const LollipopPage = () => {
       .then(setDiseaseZh).catch(() => {});
   }, []);
 
-  useEffect(() => {
-    const requested = searchParams.get("job_id");
-    if (requested && searchParams.get("job_kind") === "lollipop-data") setJobId(requested);
-  }, [searchParams]);
-
-  useEffect(() => {
-    if (!jobId) return;
-    setLoading(true);
-    let cancelled = false;
-    let timer: number | undefined;
-    const poll = async () => {
-      try {
-        const job = await getAnalysisJob<{ data?: LollipopItem[] }>(jobId);
-        if (cancelled) return;
-        setJobStatus(job.status);
-        if (job.status === "completed") {
-          setData(job.result?.data ?? []);
-          setLoading(false);
-          return;
-        }
-        if (job.status === "failed") { setLoading(false); return; }
-        timer = window.setTimeout(poll, 700);
-      } catch { if (!cancelled) setLoading(false); }
-    };
-    void poll();
-    return () => { cancelled = true; if (timer !== undefined) window.clearTimeout(timer); };
-  }, [jobId]);
-
   const sortedDiseases = useMemo(() => sortDiseaseItemsByName(diseases), [diseases]);
 
   useEffect(() => {
     if (!selected) return;
     setLoading(true);
-    setJobId(null);
-    void submitAnalysisJob("lollipop-data", { disease: selected, top_n: 40 })
-      .then((job) => { setJobId(job.job_id); setJobStatus(job.status); })
-      .catch(() => setLoading(false));
+    fetch(`${API_BASE}/api/lollipop-data?disease=${encodeURIComponent(selected)}`)
+      .then(r => r.json())
+      .then(d => setData(d.data ?? []))
+      .catch(() => {})
+      .finally(() => setLoading(false));
   }, [selected]);
 
   useEffect(() => {
@@ -120,7 +90,6 @@ const LollipopPage = () => {
           </select>
         </div>
       </div>
-      {jobId ? <div style={{ color: "var(--light-gray)", fontSize: "0.78rem" }}>Job ID: <code>{jobId}</code> · {jobStatus ?? "queued"}</div> : null}
 
       {loading && <div className={classes.loading}>{t("biomarker.running")}</div>}
 
