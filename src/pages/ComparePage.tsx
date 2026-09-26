@@ -221,6 +221,13 @@ const ComparePage = () => {
     setAnalysisJobStatus(null);
     setSpearman(null);
     setSpearmanJobId(null);
+    // A task opened from Jobs carries a deep-link query.  Starting a new
+    // analysis must leave that historical job behind; otherwise a later tab
+    // navigation can re-apply the old query and hijack the new workspace.
+    const nextSearchParams = new URLSearchParams(searchParams);
+    nextSearchParams.delete("job_id");
+    nextSearchParams.delete("job_kind");
+    setSearchParams(nextSearchParams, { replace: true });
     try {
       const diffPayload = {
         group_a_filter: groupA,
