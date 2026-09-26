@@ -48,13 +48,17 @@ const STATUS_LABELS: Record<AnalysisJobStatus, { en: string; zh: string }> = {
   failed: { en: "Failed", zh: "失败" },
 };
 
+// Spearman is a visualization produced inside the differential-analysis
+// workspace, so it is intentionally not shown as a separate task-center card.
+const HIDDEN_FROM_JOB_CENTER = new Set<AnalysisJobKind>(["spearman-analysis"]);
+
 const AnalysisJobsPage = () => {
   const { locale } = useI18n();
   const navigate = useNavigate();
   const [jobs, setJobs] = useState<TrackedJob[]>([]);
 
   const refresh = async () => {
-    const remembered = rememberedAnalysisJobs();
+    const remembered = rememberedAnalysisJobs().filter((item) => !HIDDEN_FROM_JOB_CENTER.has(item.kind));
     const placeholders = remembered.map((item) => ({
       job_id: item.job_id,
       kind: item.kind,
@@ -92,7 +96,10 @@ const AnalysisJobsPage = () => {
     };
   }, [locale]);
 
-  const sortedJobs = useMemo(() => jobs, [jobs]);
+  const sortedJobs = useMemo(
+    () => jobs.filter((job) => !HIDDEN_FROM_JOB_CENTER.has(job.kind)),
+    [jobs],
+  );
 
   const openJob = (job: TrackedJob) => {
     rememberAnalysisJob(job.kind, job.job_id);
