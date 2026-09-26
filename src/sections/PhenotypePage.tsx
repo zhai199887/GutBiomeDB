@@ -1,5 +1,6 @@
 /**
  * PhenotypePage — Phenotype Association Analysis
+ * 表型关联分析页面（容器组件）
  *
  * Architecture:
  *   PhenotypeControls → dimension/group/tax-level selectors (with n= sample counts)
@@ -11,17 +12,11 @@
  *   PhenotypeResultTable → sortable/filterable full results table
  *   PhenotypeExport      → CSV / SVG / PNG export
  */
-import { useState, useCallback, useEffect } from "react";
-import { Link, useSearchParams } from "react-router-dom";
+import { useState, useCallback } from "react";
+import { Link } from "react-router-dom";
 import { useI18n } from "@/i18n";
 import { diseaseDisplayNameI18n } from "@/util/diseaseNames";
 import { AGE_GROUP_ZH, SEX_ZH } from "@/util/countries";
-import {
-  getAnalysisJob,
-  submitAnalysisJob,
-  type AnalysisJobKind,
-  type AnalysisJobStatus,
-} from "@/util/analysisJobs";
 
 import PhenotypeControls from "@/pages/phenotype/PhenotypeControls";
 import PhenotypeStats from "@/pages/phenotype/PhenotypeStats";
@@ -32,13 +27,13 @@ import PhenotypeResultTable from "@/pages/phenotype/PhenotypeResultTable";
 import PhenotypeExport from "@/pages/phenotype/PhenotypeExport";
 
 import {
+  API_BASE,
   type DimType, type TaxLevel, type ViewMode,
   type PhenotypeAssociationResponse,
 } from "@/pages/phenotype/types";
 
 const PhenotypePage = () => {
   const { t, locale } = useI18n();
-  const [searchParams] = useSearchParams();
 
   // ── Control state ─────────────────────────────────────────────────────────
   const [dimType, setDimType] = useState<DimType>("sex");
@@ -53,50 +48,6 @@ const PhenotypePage = () => {
   const [error, setError] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>("butterfly");
   const [showOnlySig, setShowOnlySig] = useState(false);
-  const [analysisJobId, setAnalysisJobId] = useState<string | null>(null);
-  const [analysisJobStatus, setAnalysisJobStatus] = useState<AnalysisJobStatus | null>(null);
-
-  useEffect(() => {
-    const requestedId = searchParams.get("job_id");
-    const requestedKind = searchParams.get("job_kind") as AnalysisJobKind | null;
-    if (requestedKind === "phenotype-association" && requestedId) setAnalysisJobId(requestedId);
-  }, [searchParams]);
-
-  useEffect(() => {
-    if (!analysisJobId) return;
-    setLoading(true);
-    let cancelled = false;
-    let timer: number | undefined;
-    const poll = async () => {
-      try {
-        const job = await getAnalysisJob<PhenotypeAssociationResponse>(analysisJobId);
-        if (cancelled) return;
-        setAnalysisJobStatus(job.status);
-        if (job.status === "completed") {
-          setResult(job.result ?? null);
-          setViewMode("butterfly");
-          setLoading(false);
-          return;
-        }
-        if (job.status === "failed") {
-          setError(job.error ?? "Phenotype analysis failed");
-          setLoading(false);
-          return;
-        }
-        timer = window.setTimeout(poll, 1000);
-      } catch (unknownError) {
-        if (!cancelled) {
-          setError(unknownError instanceof Error ? unknownError.message : String(unknownError));
-          setLoading(false);
-        }
-      }
-    };
-    void poll();
-    return () => {
-      cancelled = true;
-      if (timer !== undefined) window.clearTimeout(timer);
-    };
-  }, [analysisJobId]);
 
   const labelOf = useCallback((g: string) => {
     if (dimType === "disease") return diseaseDisplayNameI18n(g, locale);
@@ -123,22 +74,26 @@ const PhenotypePage = () => {
     setLoading(true);
     setError(null);
     setResult(null);
-    setAnalysisJobId(null);
-    setAnalysisJobStatus(null);
     try {
-      const payload = {
+      const params = new URLSearchParams({
         dim_type: dimType,
         group_a: groupA,
         group_b: groupB,
         tax_level: taxLevel,
-        min_prevalence: minPrevalence,
-        top_n: 100,
-      };
-      const job = await submitAnalysisJob("phenotype-association", payload);
-      setAnalysisJobId(job.job_id);
-      setAnalysisJobStatus(job.status);
+        min_prevalence: String(minPrevalence),
+        top_n: "100",
+      });
+      const res = await fetch(`${API_BASE}/api/phenotype-association?${params}`);
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ detail: res.statusText }));
+        throw new Error(err.detail ?? res.statusText);
+      }
+      const data: PhenotypeAssociationResponse = await res.json();
+      setResult(data);
+      setViewMode("butterfly");
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : String(e));
+    } finally {
       setLoading(false);
     }
   };
@@ -183,12 +138,6 @@ const PhenotypePage = () => {
         onMinPrevalenceChange={setMinPrevalence}
         onAnalyze={handleAnalyze}
       />
-
-      {analysisJobId && (
-        <div style={{ color: "var(--light-gray)", fontSize: "0.8rem", marginTop: "0.8rem" }} title={analysisJobId}>
-          {locale === "zh" ? "任务 ID" : "Job ID"}: <code>{analysisJobId}</code> · {analysisJobStatus ?? "queued"}
-        </div>
-      )}
 
       {/* Loading state */}
       {loading && (
@@ -310,8 +259,8 @@ const PhenotypePage = () => {
           </div>
           <div style={{ fontSize: "0.8rem", opacity: 0.7 }}>
             {locale === "zh"
-              ? "支持性别、年龄、疾病维度；Mann-Whitney U + BH-FDR；返回全部显著属"
-              : "Supports sex, age, disease dimensions · Mann-Whitney U + BH-FDR · Returns all significant genera"}
+              ? "支持性别、年龄、疾病维度；Mann-Whitney U + BH-FDR；返回全部显著分类群"
+              : "Supports sex, age, disease dimensions · Mann-Whitney U + BH-FDR · Returns all significant taxa"}
           </div>
         </div>
       )}
