@@ -385,8 +385,9 @@ def warmup_data():
         # and public API probes can recover immediately after code updates.
         try:
             if METADATA_PATH:
-                get_metadata()
-                logging.info("Metadata pre-loaded into cache")
+                _preloaded_meta = get_metadata()
+                _disease_option_masks(_preloaded_meta)
+                logging.info("Metadata and disease facet masks pre-loaded into cache")
             if ABUNDANCE_PATH:
                 get_abundance()
                 logging.info("Abundance pre-loaded into cache")
@@ -1596,6 +1597,8 @@ def _group_filter_options(
     lets the UI disable options that cannot produce any samples while keeping
     the currently selected field's alternatives available.
     """
+    if not any(getattr(group_filter, field) for field in _GROUP_FILTER_FIELDS):
+        return {}
     options: dict[str, list[dict[str, int | str]]] = {}
     for field in _GROUP_FILTER_FIELDS:
         base_mask = _group_filter_mask(meta, group_filter, exclude=field)
