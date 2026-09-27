@@ -1509,7 +1509,11 @@ def _group_filter_field_mask(df: pd.DataFrame, field: str, value: str) -> pd.Ser
     if field == "country" and "country" in df.columns:
         return df["country"].fillna("").astype(str).str.lower().eq(value.lower())
     if field == "disease":
-        return _inform_label_mask(df, value)
+        normalized = _normalize_inform_label(value).lower()
+        for label, mask in _disease_option_masks(df).items():
+            if label.lower() == normalized:
+                return mask
+        return pd.Series(False, index=df.index, dtype=bool)
     if field == "age_group" and "age_group" in df.columns:
         return df["age_group"].fillna("").astype(str).str.lower().eq(value.lower())
     if field == "sex" and "sex" in df.columns:
@@ -1533,29 +1537,52 @@ def _group_filter_mask(
     return mask
 
 
-def _disease_option_counts(meta: pd.DataFrame) -> dict[str, int]:
-    """Count distinct sample memberships for disease facet options efficiently."""
+_DISEASE_MASK_CACHE_META_ID: int | None = None
+_DISEASE_MASK_CACHE: dict[str, pd.Series] = {}
+
+
+def _disease_option_masks(meta: pd.DataFrame) -> dict[str, pd.Series]:
+    """Build one vectorized membership mask per disease label and cache it."""
+    global _DISEASE_MASK_CACHE_META_ID, _DISEASE_MASK_CACHE
+    if _DISEASE_MASK_CACHE_META_ID == id(meta):
+        return _DISEASE_MASK_CACHE
+
     inform_cols = [f"inform{i}" for i in range(12) if f"inform{i}" in meta.columns]
+    masks: dict[str, pd.Series] = {}
     if not inform_cols or meta.empty:
-        return {}
+        _DISEASE_MASK_CACHE_META_ID = id(meta)
+        _DISEASE_MASK_CACHE = masks
+        return masks
 
-    labels = meta[inform_cols].fillna("").astype(str)
-    labels.index = range(len(labels))
-    stacked = labels.stack()
-    stacked = stacked[(stacked != "") & (stacked.str.lower() != "nc")]
-    if not stacked.empty:
-        pairs = stacked.rename("label").reset_index()
-        pairs.columns = ["row", "column", "label"]
-        pairs = pairs.drop_duplicates(["row", "label"])
-        counts = {str(label): int(count) for label, count in pairs["label"].value_counts().items()}
-    else:
-        counts = {}
+    normalized_columns = []
+    canonical_names: dict[str, str] = {}
+    for col in inform_cols:
+        raw = meta[col].fillna("").astype(str).str.strip()
+        normalized = raw.str.lower()
+        normalized_columns.append(normalized)
+        for value in raw.unique().tolist():
+            key = str(value).strip().lower()
+            if key and key not in {"nan", "nc"}:
+                canonical_names.setdefault(key, str(value).strip())
 
-    strict_nc = _strict_nc_mask(meta, inform_cols)
-    nc_count = int(strict_nc.sum())
-    if nc_count:
-        counts["NC"] = nc_count
-    return counts
+    for normalized, key in ((key, key) for key in canonical_names):
+        mask = pd.Series(False, index=meta.index, dtype=bool)
+        for column in normalized_columns:
+            mask |= column.eq(normalized)
+        masks[canonical_names[key]] = mask
+    masks["NC"] = _strict_nc_mask(meta, inform_cols)
+    _DISEASE_MASK_CACHE_META_ID = id(meta)
+    _DISEASE_MASK_CACHE = masks
+    return masks
+
+
+def _disease_option_counts(meta: pd.DataFrame, row_mask: pd.Series) -> dict[str, int]:
+    """Count distinct sample memberships for disease facet options efficiently."""
+    return {
+        label: int((row_mask & mask).sum())
+        for label, mask in _disease_option_masks(meta).items()
+        if int((row_mask & mask).sum()) > 0
+    }
 
 
 def _group_filter_options(
@@ -1573,14 +1600,15 @@ def _group_filter_options(
     for field in _GROUP_FILTER_FIELDS:
         base_mask = _group_filter_mask(meta, group_filter, exclude=field)
         base = meta.loc[base_mask]
-        valid_base = base[base["sample_key"].isin(abundance_index)]
         if field == "disease":
-            abundance_counts = _disease_option_counts(valid_base)
+            valid_mask = base_mask & meta["sample_key"].isin(abundance_index)
+            abundance_counts = _disease_option_counts(meta, valid_mask)
             # Facet choices are restricted to samples with abundance rows;
             # use the same count for the displayed metadata/abundance pair.
             metadata_counts = abundance_counts
             values = sorted(abundance_counts.keys(), key=_disease_sort_key)
         elif field in base.columns:
+            valid_base = base[base["sample_key"].isin(abundance_index)]
             metadata_counts = {
                 str(value): int(count)
                 for value, count in base[field].dropna().astype(str).str.strip().value_counts().items()
