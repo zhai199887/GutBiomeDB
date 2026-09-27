@@ -48,7 +48,7 @@ const GroupFilterPanel = ({
   const diseaseOptions = facet("disease", options?.diseases ?? []);
   const ageOptions = facet("age_group", options?.age_groups ?? []);
   const sexOptions = facet("sex", options?.sexes ?? []);
-  const hasDynamicOptions = Boolean(dynamicOptions);
+  const hasDynamicOptions = Boolean(dynamicOptions && Object.keys(dynamicOptions).length > 0);
   const optionLabel = (option: FacetOption, label: string) =>
     hasDynamicOptions ? `${label} (${option.abundance_n.toLocaleString()})` : label;
   const optionDisabled = (option: FacetOption, current: string) =>
@@ -89,22 +89,18 @@ const GroupFilterPanel = ({
 
       <div className={classes.fieldRow}>
         <label>{t("compare.disease")}</label>
-        <input
-          list={`disease-list-${label}`}
-          value={value.disease}
-          onChange={setSelect("disease")}
-          className={classes.select}
-          placeholder={t("filter.searchDisease")}
-        />
-        <datalist id={`disease-list-${label}`}>
+        <select value={value.disease} onChange={setSelect("disease")} className={classes.select}>
+          <option value="">{t("compare.any")}</option>
           {visibleDiseaseOptions.map((option) => (
             <option
               key={option.value}
               value={option.value}
-              label={optionLabel(option, diseaseDisplayNameI18n(option.value, locale))}
-            />
+              disabled={optionDisabled(option, value.disease)}
+            >
+              {optionLabel(option, diseaseDisplayNameI18n(option.value, locale))}
+            </option>
           ))}
-        </datalist>
+        </select>
       </div>
 
       <div className={classes.fieldRow}>
