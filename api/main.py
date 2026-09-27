@@ -1622,7 +1622,7 @@ def _group_filter_options(
             }
             values = sorted(abundance_counts.keys())
             if field == "sex":
-                values = [value for value in values if value in {"male", "female"}]
+                values = [value for value in values if value in {"male", "female", "unknown"}]
         else:
             metadata_counts = {}
             abundance_counts = {}
@@ -1933,7 +1933,7 @@ def filter_options(request: Request):
         sexes = sorted(
             value
             for value in meta["sex"].dropna().astype(str).str.strip().unique().tolist()
-            if value in {"male", "female"}
+            if value in {"male", "female", "unknown"}
         )
 
     result = {
