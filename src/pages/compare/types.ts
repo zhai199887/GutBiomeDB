@@ -10,7 +10,21 @@ export interface GroupFilter {
 export interface GroupSampleCount {
   metadata_n: number;
   abundance_n: number;
+  options?: GroupFilterOptions;
 }
+
+export type FacetOption = {
+  value: string;
+  metadata_n: number;
+  abundance_n: number;
+};
+
+export type GroupFilterOptions = {
+  country: FacetOption[];
+  disease: FacetOption[];
+  age_group: FacetOption[];
+  sex: FacetOption[];
+};
 
 export interface SampleCountResult {
   group_a: GroupSampleCount;

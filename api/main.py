@@ -1501,6 +1501,88 @@ def apply_filter(df: pd.DataFrame, f: GroupFilter) -> pd.DataFrame:
     return result
 
 
+_GROUP_FILTER_FIELDS = ("country", "disease", "age_group", "sex")
+
+
+def _group_filter_field_mask(df: pd.DataFrame, field: str, value: str) -> pd.Series:
+    """Build a boolean mask for one filter field without copying the frame."""
+    if field == "country" and "country" in df.columns:
+        return df["country"].fillna("").astype(str).str.lower().eq(value.lower())
+    if field == "disease":
+        return _inform_label_mask(df, value)
+    if field == "age_group" and "age_group" in df.columns:
+        return df["age_group"].fillna("").astype(str).str.lower().eq(value.lower())
+    if field == "sex" and "sex" in df.columns:
+        return df["sex"].fillna("").astype(str).str.lower().eq(value.lower())
+    return pd.Series(False, index=df.index)
+
+
+def _group_filter_mask(
+    df: pd.DataFrame,
+    group_filter: GroupFilter,
+    exclude: str | None = None,
+) -> pd.Series:
+    """Build the AND mask for selected fields, optionally leaving one open."""
+    mask = pd.Series(True, index=df.index)
+    for field in _GROUP_FILTER_FIELDS:
+        if field == exclude:
+            continue
+        value = getattr(group_filter, field)
+        if value:
+            mask &= _group_filter_field_mask(df, field, value)
+    return mask
+
+
+def _group_filter_options(
+    meta: pd.DataFrame,
+    group_filter: GroupFilter,
+    abundance_index: set[str],
+) -> dict[str, list[dict[str, int | str]]]:
+    """Return leave-one-out option counts for a group filter.
+
+    Each field is evaluated after applying the other selected fields. This
+    lets the UI disable options that cannot produce any samples while keeping
+    the currently selected field's alternatives available.
+    """
+    options: dict[str, list[dict[str, int | str]]] = {}
+    for field in _GROUP_FILTER_FIELDS:
+        base_mask = _group_filter_mask(meta, group_filter, exclude=field)
+        base = meta.loc[base_mask]
+        valid_base = base[base["sample_key"].isin(abundance_index)]
+        if field == "disease":
+            metadata_counts = _inform_label_counts(base, include_nc=True)
+            abundance_counts = _inform_label_counts(valid_base, include_nc=True)
+            values = sorted(abundance_counts.keys(), key=_disease_sort_key)
+        elif field in base.columns:
+            metadata_counts = {
+                str(value): int(count)
+                for value, count in base[field].dropna().astype(str).str.strip().value_counts().items()
+            }
+            abundance_counts = {
+                str(value): int(count)
+                for value, count in valid_base[field].dropna().astype(str).str.strip().value_counts().items()
+            }
+            values = sorted(abundance_counts.keys())
+            if field == "sex":
+                values = [value for value in values if value in {"male", "female"}]
+        else:
+            metadata_counts = {}
+            abundance_counts = {}
+            values = []
+        current = getattr(group_filter, field)
+        if current and current not in values:
+            values.append(current)
+        field_options: list[dict[str, int | str]] = []
+        for value in values:
+            field_options.append({
+                "value": value,
+                "metadata_n": metadata_counts.get(value, 0),
+                "abundance_n": abundance_counts.get(value, 0),
+            })
+        options[field] = field_options
+    return options
+
+
 def bh_correction(p_values: list[float]) -> list[float]:
     """
     Benjamini-Hochberg FDR correction.
@@ -2017,10 +2099,11 @@ def estimate_sample_count(request: Request, req: SampleCountRequest):
 
     def summarize(group_filter: GroupFilter) -> dict:
         group_meta = apply_filter(meta, group_filter)
-        valid = [key for key in group_meta["sample_key"].values if key in abund_idx]
+        valid = group_meta["sample_key"].isin(abund_idx)
         return {
             "metadata_n": int(len(group_meta)),
-            "abundance_n": int(len(valid)),
+            "abundance_n": int(valid.sum()),
+            "options": _group_filter_options(meta, group_filter, abund_idx),
         }
 
     return {

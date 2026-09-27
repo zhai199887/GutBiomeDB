@@ -5,7 +5,7 @@ import { AGE_GROUP_ZH, SEX_ZH, countryName } from "@/util/countries";
 import { diseaseDisplayNameI18n } from "@/util/diseaseNames";
 
 import classes from "../ComparePage.module.css";
-import type { FilterOptions, GroupFilter, GroupSampleCount } from "./types";
+import type { FacetOption, FilterOptions, GroupFilter, GroupFilterOptions, GroupSampleCount } from "./types";
 
 interface Props {
   label: string;
@@ -13,6 +13,7 @@ interface Props {
   value: GroupFilter;
   onChange: (filter: GroupFilter) => void;
   options: FilterOptions | null;
+  dynamicOptions?: GroupFilterOptions | null;
   sampleCount: GroupSampleCount | null;
 }
 
@@ -22,6 +23,7 @@ const GroupFilterPanel = ({
   value,
   onChange,
   options,
+  dynamicOptions,
   sampleCount,
 }: Props) => {
   const { t, locale } = useI18n();
@@ -34,6 +36,33 @@ const GroupFilterPanel = ({
     locale === "zh" ? (AGE_GROUP_ZH[name] ?? name.replace(/_/g, " ")) : name.replace(/_/g, " ")
   );
   const sexName = (name: string) => (locale === "zh" ? (SEX_ZH[name] ?? name) : name);
+
+  const fallback = (values: string[]): FacetOption[] => values.map((option) => ({
+    value: option,
+    metadata_n: 0,
+    abundance_n: 0,
+  }));
+  const facet = (field: keyof GroupFilterOptions, values: string[]) =>
+    dynamicOptions?.[field] ?? fallback(values);
+  const countryOptions = facet("country", options?.countries ?? []);
+  const diseaseOptions = facet("disease", options?.diseases ?? []);
+  const ageOptions = facet("age_group", options?.age_groups ?? []);
+  const sexOptions = facet("sex", options?.sexes ?? []);
+  const hasDynamicOptions = Boolean(dynamicOptions);
+  const optionLabel = (option: FacetOption, label: string) =>
+    hasDynamicOptions ? `${label} (${option.abundance_n.toLocaleString()})` : label;
+  const optionDisabled = (option: FacetOption, current: string) =>
+    Boolean(hasDynamicOptions && option.abundance_n === 0 && option.value !== current);
+  const keepCurrent = (items: FacetOption[], current: string) =>
+    current && !items.some((item) => item.value === current)
+      ? [...items, { value: current, metadata_n: 0, abundance_n: 0 }]
+      : items;
+  const visibleDiseaseOptions = hasDynamicOptions
+    ? keepCurrent(diseaseOptions, value.disease).filter(
+      (option) => option.abundance_n > 0 || option.value === value.disease,
+    )
+    : diseaseOptions;
+  const noMatchingSamples = Boolean(sampleCount && sampleCount.abundance_n === 0);
 
   return (
     <div className={classes.groupPanel}>
@@ -50,9 +79,9 @@ const GroupFilterPanel = ({
         <label>{t("compare.country")}</label>
         <select value={value.country} onChange={setSelect("country")} className={classes.select}>
           <option value="">{t("compare.any")}</option>
-          {options?.countries.map((country) => (
-            <option key={country} value={country}>
-              {countryName(country, locale)}
+          {keepCurrent(countryOptions, value.country).map((option) => (
+            <option key={option.value} value={option.value} disabled={optionDisabled(option, value.country)}>
+              {optionLabel(option, countryName(option.value, locale))}
             </option>
           ))}
         </select>
@@ -68,11 +97,11 @@ const GroupFilterPanel = ({
           placeholder={t("filter.searchDisease")}
         />
         <datalist id={`disease-list-${label}`}>
-          {options?.diseases.map((disease) => (
+          {visibleDiseaseOptions.map((option) => (
             <option
-              key={disease}
-              value={disease}
-              label={diseaseDisplayNameI18n(disease, locale)}
+              key={option.value}
+              value={option.value}
+              label={optionLabel(option, diseaseDisplayNameI18n(option.value, locale))}
             />
           ))}
         </datalist>
@@ -82,9 +111,9 @@ const GroupFilterPanel = ({
         <label>{t("compare.ageGroup")}</label>
         <select value={value.age_group} onChange={setSelect("age_group")} className={classes.select}>
           <option value="">{t("compare.any")}</option>
-          {options?.age_groups.map((age) => (
-            <option key={age} value={age}>
-              {ageName(age)}
+          {keepCurrent(ageOptions, value.age_group).map((option) => (
+            <option key={option.value} value={option.value} disabled={optionDisabled(option, value.age_group)}>
+              {optionLabel(option, ageName(option.value))}
             </option>
           ))}
         </select>
@@ -94,17 +123,22 @@ const GroupFilterPanel = ({
         <label>{t("compare.sex")}</label>
         <select value={value.sex} onChange={setSelect("sex")} className={classes.select}>
           <option value="">{t("compare.any")}</option>
-          {options?.sexes.map((sex) => (
-            <option key={sex} value={sex}>
-              {sexName(sex)}
+          {keepCurrent(sexOptions, value.sex).map((option) => (
+            <option key={option.value} value={option.value} disabled={optionDisabled(option, value.sex)}>
+              {optionLabel(option, sexName(option.value))}
             </option>
           ))}
         </select>
       </div>
 
       <div className={classes.groupMeta}>
-        {sampleCount ? `${sampleCount.metadata_n} metadata / ${sampleCount.abundance_n} abundance` : t("compare.previewing")}
+        {sampleCount ? `${sampleCount.metadata_n.toLocaleString()} metadata / ${sampleCount.abundance_n.toLocaleString()} abundance` : t("compare.previewing")}
       </div>
+      {noMatchingSamples ? (
+        <div className={classes.error} role="status">
+          {locale === "zh" ? "当前筛选组合没有可用样本，请清除一个条件。" : "No samples match this filter combination. Clear one condition."}
+        </div>
+      ) : null}
     </div>
   );
 };

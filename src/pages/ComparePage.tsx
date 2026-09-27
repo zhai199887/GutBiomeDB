@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 
 import { useI18n } from "@/i18n";
@@ -43,6 +43,7 @@ const ComparePage = () => {
   const [filterLoading, setFilterLoading] = useState(true);
   const [groupA, setGroupA] = useState<GroupFilter>({ country: "", disease: "", age_group: "", sex: "" });
   const [groupB, setGroupB] = useState<GroupFilter>({ country: "", disease: "", age_group: "", sex: "" });
+  const sampleCountRequestRef = useRef(0);
   const [sampleCounts, setSampleCounts] = useState<SampleCountResult | null>(null);
   const [sampleCountLoading, setSampleCountLoading] = useState(false);
   const [taxLevel, setTaxLevel] = useState<TaxonomyLevel>("genus");
@@ -166,6 +167,8 @@ const ComparePage = () => {
 
   useEffect(() => {
     if (filterLoading) return;
+    const requestId = ++sampleCountRequestRef.current;
+    let cancelled = false;
     setSampleCountLoading(true);
     const timer = window.setTimeout(async () => {
       try {
@@ -178,15 +181,42 @@ const ComparePage = () => {
           }),
         });
         if (!response.ok) return;
-        setSampleCounts(await response.json());
+        const nextCounts = await response.json();
+        if (!cancelled && requestId === sampleCountRequestRef.current) {
+          setSampleCounts(nextCounts);
+        }
       } catch {
         // keep workspace usable even if preview requests fail
       } finally {
-        setSampleCountLoading(false);
+        if (!cancelled && requestId === sampleCountRequestRef.current) {
+          setSampleCountLoading(false);
+        }
       }
     }, 250);
-    return () => window.clearTimeout(timer);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
   }, [filterLoading, groupA, groupB]);
+
+  useEffect(() => {
+    if (!sampleCounts) return;
+    const normalize = (group: GroupFilter, options: typeof sampleCounts.group_a.options) => {
+      if (!options) return group;
+      const next = { ...group };
+      (Object.keys(next) as (keyof GroupFilter)[]).forEach((field) => {
+        const selected = next[field];
+        if (!selected) return;
+        const option = options[field].find((item) => item.value === selected);
+        if (option && option.abundance_n === 0) next[field] = "";
+      });
+      return next;
+    };
+    const nextA = normalize(groupA, sampleCounts.group_a.options);
+    const nextB = normalize(groupB, sampleCounts.group_b.options);
+    if (JSON.stringify(nextA) !== JSON.stringify(groupA)) setGroupA(nextA);
+    if (JSON.stringify(nextB) !== JSON.stringify(groupB)) setGroupB(nextB);
+  }, [groupA, groupB, sampleCounts]);
 
   const setWorkspaceTab = (tab: Tab) => {
     setActiveTab(tab);
@@ -358,6 +388,7 @@ const ComparePage = () => {
               value={groupA}
               onChange={setGroupA}
               options={filterOptions}
+              dynamicOptions={sampleCounts?.group_a.options ?? null}
               sampleCount={sampleCounts?.group_a ?? null}
             />
             <GroupFilterPanel
@@ -366,6 +397,7 @@ const ComparePage = () => {
               value={groupB}
               onChange={setGroupB}
               options={filterOptions}
+              dynamicOptions={sampleCounts?.group_b.options ?? null}
               sampleCount={sampleCounts?.group_b ?? null}
             />
           </div>
