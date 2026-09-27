@@ -1533,6 +1533,31 @@ def _group_filter_mask(
     return mask
 
 
+def _disease_option_counts(meta: pd.DataFrame) -> dict[str, int]:
+    """Count distinct sample memberships for disease facet options efficiently."""
+    inform_cols = [f"inform{i}" for i in range(12) if f"inform{i}" in meta.columns]
+    if not inform_cols or meta.empty:
+        return {}
+
+    labels = meta[inform_cols].fillna("").astype(str)
+    labels.index = range(len(labels))
+    stacked = labels.stack()
+    stacked = stacked[(stacked != "") & (stacked.str.lower() != "nc")]
+    if not stacked.empty:
+        pairs = stacked.rename("label").reset_index()
+        pairs.columns = ["row", "column", "label"]
+        pairs = pairs.drop_duplicates(["row", "label"])
+        counts = {str(label): int(count) for label, count in pairs["label"].value_counts().items()}
+    else:
+        counts = {}
+
+    strict_nc = _strict_nc_mask(meta, inform_cols)
+    nc_count = int(strict_nc.sum())
+    if nc_count:
+        counts["NC"] = nc_count
+    return counts
+
+
 def _group_filter_options(
     meta: pd.DataFrame,
     group_filter: GroupFilter,
@@ -1550,8 +1575,10 @@ def _group_filter_options(
         base = meta.loc[base_mask]
         valid_base = base[base["sample_key"].isin(abundance_index)]
         if field == "disease":
-            metadata_counts = _inform_label_counts(base, include_nc=True)
-            abundance_counts = _inform_label_counts(valid_base, include_nc=True)
+            abundance_counts = _disease_option_counts(valid_base)
+            # Facet choices are restricted to samples with abundance rows;
+            # use the same count for the displayed metadata/abundance pair.
+            metadata_counts = abundance_counts
             values = sorted(abundance_counts.keys(), key=_disease_sort_key)
         elif field in base.columns:
             metadata_counts = {
