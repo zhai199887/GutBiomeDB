@@ -202,12 +202,12 @@ const ComparePage = () => {
   useEffect(() => {
     if (!sampleCounts) return;
     const normalize = (group: GroupFilter, options: typeof sampleCounts.group_a.options) => {
-      if (!options) return group;
+      if (!options || Object.keys(options).length === 0) return group;
       const next = { ...group };
       (Object.keys(next) as (keyof GroupFilter)[]).forEach((field) => {
         const selected = next[field];
         if (!selected) return;
-        const option = options[field].find((item) => item.value === selected);
+        const option = options[field]?.find((item) => item.value === selected);
         if (option && option.abundance_n === 0) next[field] = "";
       });
       return next;
