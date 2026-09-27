@@ -1909,7 +1909,7 @@ def filter_options(request: Request):
     """
     Return available filter option values from metadata.
     """
-    cache_key = "filter_options_v1"
+    cache_key = "filter_options_v2"
     cached = get_cached(cache_key)
     if cached:
         return cached
