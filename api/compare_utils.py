@@ -1,4 +1,9 @@
 import math
+import os
+import shutil
+import subprocess
+import tempfile
+from pathlib import Path
 from typing import Sequence
 
 import numpy as np
@@ -458,6 +463,151 @@ def permanova_test(
     }
 
 
+def _resolve_lmm_rscript() -> str:
+    """Resolve the Rscript executable used by the batch-aware LMM runner."""
+    configured = os.getenv("LMM_RSCRIPT", "").strip()
+    candidates = [
+        configured,
+        shutil.which("Rscript") or "",
+        r"E:\Rhome\bin\Rscript.exe",
+        "/usr/bin/Rscript",
+    ]
+    for candidate in candidates:
+        if candidate and (Path(candidate).exists() if os.path.isabs(candidate) else True):
+            return candidate
+    raise RuntimeError(
+        "LMM requires Rscript with lme4, lmerTest, emmeans, and data.table installed."
+    )
+
+
+def _read_lmm_summary(path: str) -> dict[str, str]:
+    summary: dict[str, str] = {}
+    with open(path, "r", encoding="utf-8") as handle:
+        for line in handle:
+            key, _, value = line.rstrip("\n").partition("\t")
+            if key:
+                summary[key] = value
+    return summary
+
+
+def run_lmm_analysis(
+    abundance_df: pd.DataFrame,
+    metadata_df: pd.DataFrame,
+    valid_a: Sequence[str],
+    valid_b: Sequence[str],
+    taxonomy_level: str,
+) -> dict:
+    """Run the reference-style CLR + four-random-intercept LMM pipeline.
+
+    The R runner mirrors the supplied reference workflow. ``disease`` is the
+    binary Group A/Group B contrast because the Compare page accepts arbitrary
+    group filters; A is the estimated contrast against B. Existing baseline
+    methods remain in ``run_compare_analysis`` unchanged.
+    """
+    keys_a = list(dict.fromkeys(str(key) for key in valid_a))
+    keys_b = list(dict.fromkeys(str(key) for key in valid_b))
+    overlap = sorted(set(keys_a).intersection(keys_b))
+    if overlap:
+        raise ValueError(
+            "LMM requires non-overlapping Group A and Group B; "
+            f"{len(overlap)} samples are present in both groups."
+        )
+    combined_keys = keys_a + keys_b
+    if not combined_keys:
+        raise ValueError("LMM requires at least one sample in each group")
+
+    if "sample_key" not in metadata_df.columns:
+        raise ValueError("LMM metadata is missing sample_key")
+    meta_indexed = metadata_df.set_index("sample_key", drop=False)
+    missing_meta = [key for key in combined_keys if key not in meta_indexed.index]
+    if missing_meta:
+        raise ValueError(f"LMM metadata is missing {len(missing_meta)} selected samples")
+
+    raw = abundance_df.loc[combined_keys].to_numpy(dtype=float)
+    columns = abundance_df.columns.tolist()
+    raw_agg, taxa, _ = aggregate_by_level(raw, columns, taxonomy_level)
+    rel = relative_abundance_matrix(raw_agg)
+    mean_abundance = rel.mean(axis=0)
+    prevalence = (rel > 0).mean(axis=0)
+    taxon_mask = (mean_abundance >= 0.01) & (prevalence >= 0.05)
+    if not np.any(taxon_mask):
+        raise ValueError("LMM filtering retained no taxa")
+    selected_reads = raw_agg[:, taxon_mask].sum(axis=1)
+    sample_mask = selected_reads >= 1000
+    if int(sample_mask.sum()) < 20:
+        raise ValueError("LMM filtering retained fewer than 20 samples")
+
+    raw_selected = raw_agg[sample_mask][:, taxon_mask]
+    rel = rel[sample_mask][:, taxon_mask]
+    selected_taxa = [str(taxon) for taxon, keep in zip(taxa, taxon_mask) if keep]
+    selected_keys = [key for key, keep in zip(combined_keys, sample_mask) if keep]
+    selected_meta = meta_indexed.loc[selected_keys].copy()
+    selected_meta["disease"] = ["A" if key in set(keys_a) else "B" for key in selected_keys]
+    selected_meta["project"] = selected_meta["project"].fillna("Unknown").astype(str)
+    selected_meta["amplicon"] = selected_meta["AMPLICON"].fillna("Unknown").astype(str)
+    selected_meta["length"] = selected_meta["length"].fillna("Unknown").astype(str)
+    selected_meta["instrument"] = selected_meta["instrument"].fillna("Unknown").astype(str)
+
+    runner = Path(__file__).with_name("lmm_runner.R")
+    if not runner.exists():
+        raise RuntimeError(f"LMM runner not found: {runner}")
+
+    with tempfile.TemporaryDirectory(prefix="gutbiomedb_lmm_") as temp_dir:
+        temp_root = Path(temp_dir)
+        safe_taxa = [f"taxon_{index:05d}" for index in range(len(selected_taxa))]
+        # The R runner performs the reference relative-abundance conversion,
+        # read-depth filter, CLR transform, and taxon-wise scaling itself.
+        abundance_out = pd.DataFrame(raw_selected, columns=safe_taxa)
+        abundance_out.insert(0, "sample_key", selected_keys)
+        metadata_out = selected_meta[["sample_key", "disease", "project", "amplicon", "length", "instrument"]]
+        abundance_path = temp_root / "abundance.tsv.gz"
+        metadata_path = temp_root / "metadata.tsv"
+        results_path = temp_root / "results.tsv"
+        summary_path = temp_root / "summary.tsv"
+        abundance_out.to_csv(abundance_path, sep="\t", index=False, compression="gzip", float_format="%.10g")
+        metadata_out.to_csv(metadata_path, sep="\t", index=False)
+
+        rscript = _resolve_lmm_rscript()
+        timeout_seconds = int(os.getenv("LMM_TIMEOUT_SECONDS", "7200"))
+        completed = subprocess.run(
+            [rscript, str(runner), str(abundance_path), str(metadata_path), str(results_path), str(summary_path)],
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            timeout=timeout_seconds,
+            check=False,
+        )
+        if completed.returncode != 0:
+            detail = (completed.stderr or completed.stdout or "Rscript failed").strip()
+            raise RuntimeError(detail[-4000:])
+        if not results_path.exists() or not summary_path.exists():
+            raise RuntimeError("Rscript completed without producing LMM result files")
+
+        results = pd.read_csv(results_path, sep="\t")
+        summary = _read_lmm_summary(str(summary_path))
+
+    safe_to_taxon = dict(zip(safe_taxa, selected_taxa))
+    if not results.empty:
+        results["taxon"] = results["taxon"].map(safe_to_taxon).fillna(results["taxon"])
+        results = results.replace({np.nan: None})
+        rows = results.to_dict(orient="records")
+    else:
+        rows = []
+    return {
+        "formula": summary.get("formula", "y ~ disease + (1|project) + (1|amplicon) + (1|length) + (1|instrument)"),
+        "n_samples": int(summary.get("n_samples", len(selected_keys))),
+        "n_taxa_tested": int(summary.get("n_taxa_tested", len(selected_taxa))),
+        "n_fitted": int(summary.get("n_fitted", len(rows))),
+        "n_failed": int(summary.get("n_failed", 0)),
+        "n_singular": int(summary.get("n_singular", 0)),
+        "n_significant": int(summary.get("n_significant", 0)),
+        "filter": summary.get("filter", ""),
+        "transform": summary.get("transform", ""),
+        "results": rows,
+    }
+
+
 def run_compare_analysis(
     abundance_df: pd.DataFrame,
     valid_a: Sequence[str],
@@ -466,6 +616,7 @@ def run_compare_analysis(
     method: str,
     group_a_name: str,
     group_b_name: str,
+    metadata_df: pd.DataFrame | None = None,
     max_diff_taxa: int | None = None,
 ) -> dict:
     columns = abundance_df.columns.tolist()
@@ -479,6 +630,18 @@ def run_compare_analysis(
     rel_agg_b, _, _ = aggregate_by_level(rel_b, columns, taxonomy_level)
     raw_agg_a, _, _ = aggregate_by_level(raw_a, columns, taxonomy_level)
     raw_agg_b, _, _ = aggregate_by_level(raw_b, columns, taxonomy_level)
+
+    lmm_payload: dict | None = None
+    if method == "lmm":
+        if metadata_df is None:
+            raise ValueError("LMM requires metadata with project, AMPLICON, length, and instrument")
+        lmm_payload = run_lmm_analysis(
+            abundance_df=abundance_df,
+            metadata_df=metadata_df,
+            valid_a=valid_a,
+            valid_b=valid_b,
+            taxonomy_level=taxonomy_level,
+        )
 
     base_method = method if method in {"wilcoxon", "t-test"} else "wilcoxon"
     diff_results: list[dict] = []
@@ -532,6 +695,30 @@ def run_compare_analysis(
         stable_adjusted_p = _stable_p_value(adjusted[idx], adjusted_neg_log10[idx])
         row["adjusted_p"] = _adaptive_round_p_value(stable_adjusted_p)
         row["neg_log10_adjusted_p"] = round(adjusted_neg_log10[idx], 4)
+
+    if lmm_payload is not None:
+        lmm_by_taxon = {item["taxon"]: item for item in lmm_payload["results"]}
+        for row in diff_results:
+            lmm_row = lmm_by_taxon.get(row["taxon"])
+            if lmm_row is None:
+                row["p_value"] = 1.0
+                row["adjusted_p"] = 1.0
+                row["neg_log10_p"] = 0.0
+                row["neg_log10_adjusted_p"] = 0.0
+                row["lmm_tested"] = False
+                continue
+            p_value = float(lmm_row.get("p_value", 1.0))
+            adjusted_p = float(lmm_row.get("adjusted_p", 1.0))
+            row["p_value"] = _adaptive_round_p_value(p_value)
+            row["adjusted_p"] = _adaptive_round_p_value(adjusted_p)
+            row["neg_log10_p"] = round(_neg_log10_from_p_value(p_value), 4)
+            row["neg_log10_adjusted_p"] = round(_neg_log10_from_p_value(adjusted_p), 4)
+            row["effect_size"] = round(float(lmm_row.get("estimate", 0.0)), 6)
+            row["lmm_estimate"] = float(lmm_row.get("estimate", 0.0))
+            row["lmm_std_error"] = float(lmm_row.get("std_error", 0.0))
+            row["lmm_df"] = float(lmm_row.get("df", 0.0))
+            row["lmm_singular_fit"] = bool(lmm_row.get("singular_fit", False))
+            row["lmm_tested"] = True
 
     diff_results.sort(key=lambda item: (item["adjusted_p"], -abs(item["effect_size"])))
 
@@ -598,6 +785,9 @@ def run_compare_analysis(
         "beta_diversity": beta_diversity,
         "phylum_composition": build_phylum_composition(rel_a, rel_b, columns, group_a_name, group_b_name),
     }
+
+    if lmm_payload is not None:
+        response["lmm_results"] = lmm_payload
 
     if method == "lefse":
         response["lefse_results"] = lefse_analysis(rel_agg_a, rel_agg_b, taxa)

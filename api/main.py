@@ -18,6 +18,7 @@ from pathlib import Path
 from typing import Any, Literal, Optional
 
 from fastapi import UploadFile, File
+from fastapi.middleware.gzip import GZipMiddleware
 
 import numpy as np
 import pandas as pd
@@ -118,6 +119,15 @@ If you use this API in your research, please cite:
 
 ## Contact
 - Correspondence: cdai@cmu.edu.cn
+
+## Terms of Use
+- **Academic use**: Free, with the requirement to cite the GutBiomeDB paper above.
+- **Derivative analyses / re-publication of API-derived statistics**: Please cite GutBiomeDB and notify the corresponding author of the intended use case.
+- **Commercial redistribution / mirroring of API outputs**: Not permitted without prior written consent.
+- **No raw sample-level data is exposed**: All endpoints return aggregate statistics only. User-uploaded query payloads (e.g. `/api/similarity-search`) are processed in memory and not persisted.
+- **Rate limits** are applied per endpoint to maintain service quality. For high-throughput needs, please contact the corresponding author.
+
+By calling this API you acknowledge these terms.
 """,
     docs_url="/api/docs",
     redoc_url="/api/redoc",
@@ -135,6 +145,7 @@ If you use this API in your research, please cite:
         {"name": "Admin", "description": "Administration endpoints"},
     ],
 )
+app.add_middleware(GZipMiddleware, minimum_size=1000)
 
 # ── Rate limiting ─────────────────────────────────────────────────────────────
 limiter = Limiter(key_func=get_remote_address)
@@ -1348,7 +1359,7 @@ class DiffAnalysisRequest(BaseModel):
     group_a_filter: GroupFilter
     group_b_filter: GroupFilter
     taxonomy_level: str = "genus"   # genus / family / phylum
-    method: str = "wilcoxon"        # wilcoxon / t-test / lefse / permanova
+    method: str = "wilcoxon"        # wilcoxon / t-test / lefse / lmm / permanova
 
 
 class SimilarityRequest(BaseModel):
@@ -1909,7 +1920,7 @@ def filter_options(request: Request):
     """
     Return available filter option values from metadata.
     """
-    cache_key = "filter_options_v2"
+    cache_key = "filter_options_v1"
     cached = get_cached(cache_key)
     if cached:
         return cached
@@ -2209,18 +2220,20 @@ def spearman_analysis(request: Request, req: SpearmanAnalysisRequest):
             _rng.choice(len(selected_keys), MAX_SPEARMAN_SAMPLES, replace=False).tolist()
         )]
 
-    return run_spearman_analysis(
+    result = run_spearman_analysis(
         abundance_df=abund,
         sample_keys=selected_keys,
         taxonomy_level=req.taxonomy_level,
         max_taxa=max(8, min(int(req.max_taxa), 24)),
     )
+    set_cached(cache_key, result)
+    set_disk_cached(cache_key, result)
+    return result
 
 
 @app.post("/api/diff-analysis",
           summary="Differential analysis",
-          description="Compare microbiome between two groups using Wilcoxon, t-test, LEfSe, or PERMANOVA.")
-@no_cache_tracking
+          description="Compare microbiome between two groups using Wilcoxon, t-test, LEfSe, LMM, or PERMANOVA.")
 @limiter.limit("20/minute")
 def diff_analysis(request: Request, req: DiffAnalysisRequest):
     """
@@ -2295,6 +2308,7 @@ def diff_analysis(request: Request, req: DiffAnalysisRequest):
         method=req.method,
         group_a_name=filter_to_label(req.group_a_filter),
         group_b_name=filter_to_label(req.group_b_filter),
+        metadata_df=meta,
     )
     set_cached(cache_key, result)
     set_disk_cached(cache_key, result)

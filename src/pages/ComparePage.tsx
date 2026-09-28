@@ -316,9 +316,10 @@ const ComparePage = () => {
       ["crossstudy", t("compare.tab.crossStudy")],
     ];
     if (result?.lefse_results) nextTabs.push(["lefse", t("compare.tab.lefse")]);
+    if (result?.lmm_results) nextTabs.push(["lmm", "LMM"]);
     if (result?.permanova) nextTabs.push(["permanova", t("compare.tab.permanova")]);
     return nextTabs;
-  }, [locale, result?.lefse_results, result?.permanova, t]);
+  }, [locale, result?.lefse_results, result?.lmm_results, result?.permanova, t]);
 
   const renderActivePanel = () => {
     if (activeTab === "crossstudy") {
@@ -361,6 +362,7 @@ const ComparePage = () => {
     if (activeTab === "composition") return <StackedBarChart result={result} />;
     if (activeTab === "heatmap") return <DiffHeatmap result={result} />;
     if (activeTab === "lefse") return <LefseResults result={result} />;
+    if (activeTab === "lmm") return <LmmResults result={result} />;
     if (activeTab === "permanova") return <PermanovaResults result={result} />;
     return null;
   };
@@ -432,7 +434,7 @@ const ComparePage = () => {
                   data-active={method === item}
                   onClick={() => setMethod(item)}
                 >
-                  {item === "lefse" ? "LEfSe" : item === "permanova" ? "PERMANOVA" : item}
+                  {item === "lefse" ? "LEfSe" : item === "lmm" ? "LMM" : item === "permanova" ? "PERMANOVA" : item}
                 </button>
               ))}
             </div>
@@ -556,6 +558,56 @@ const LefseResults = ({ result }: { result: DiffResult }) => {
               <td>{row.lda_score.toFixed(2)}</td>
               <td>{row.p_value.toExponential(2)}</td>
               <td>{row.enriched_group}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+};
+
+const LmmResults = ({ result }: { result: DiffResult }) => {
+  const { locale } = useI18n();
+  const payload = result.lmm_results;
+  if (!payload) {
+    return <div className={classes.emptyPanel}>{locale === "zh" ? "没有 LMM 结果" : "No LMM result available"}</div>;
+  }
+
+  return (
+    <div className={classes.simpleTableWrap}>
+      <div className={classes.groupMeta}>
+        <div>{locale === "zh" ? "模型" : "Model"}: <code>{payload.formula}</code></div>
+        <div>
+          {locale === "zh" ? "样本" : "Samples"}: {payload.n_samples.toLocaleString()} · {locale === "zh" ? "拟合" : "Fitted"}: {payload.n_fitted.toLocaleString()} · {locale === "zh" ? "显著" : "Significant"}: {payload.n_significant.toLocaleString()}
+        </div>
+        {payload.n_singular > 0 ? (
+          <div className={classes.error} role="status">
+            {locale === "zh"
+              ? `有 ${payload.n_singular} 个 taxa 出现 singular fit，请谨慎解释。`
+              : `${payload.n_singular} taxa had singular fits; interpret with caution.`}
+          </div>
+        ) : null}
+      </div>
+      <table className={classes.simpleTable}>
+        <thead>
+          <tr>
+            <th>{locale === "zh" ? "分类单元" : "Taxon"}</th>
+            <th>Estimate</th>
+            <th>SE</th>
+            <th>p</th>
+            <th>BH-FDR</th>
+            <th>{locale === "zh" ? "富集组" : "Enriched in"}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {payload.results.slice(0, 200).map((row) => (
+            <tr key={row.taxon}>
+              <td>{row.taxon}</td>
+              <td>{row.estimate.toFixed(4)}</td>
+              <td>{row.std_error.toFixed(4)}</td>
+              <td>{row.p_value.toExponential(2)}</td>
+              <td>{row.adjusted_p.toExponential(2)}</td>
+              <td>{row.enriched_in ?? (row.estimate > 0 ? "A" : "B")}</td>
             </tr>
           ))}
         </tbody>

@@ -64,6 +64,31 @@ export interface PermanovaResult {
   n_b: number;
 }
 
+export interface LmmFeature {
+  taxon: string;
+  estimate: number;
+  std_error: number;
+  df: number;
+  t_ratio: number;
+  p_value: number;
+  adjusted_p: number;
+  singular_fit: boolean;
+  enriched_in?: "A" | "B";
+}
+
+export interface LmmResults {
+  formula: string;
+  n_samples: number;
+  n_taxa_tested: number;
+  n_fitted: number;
+  n_failed: number;
+  n_singular: number;
+  n_significant: number;
+  filter: string;
+  transform: string;
+  results: LmmFeature[];
+}
+
 export interface AlphaStats {
   median: number;
   q1: number;
@@ -131,6 +156,7 @@ export interface DiffResult {
     rows: PhylumCompositionRow[];
   };
   lefse_results?: LefseFeature[];
+  lmm_results?: LmmResults;
   permanova?: PermanovaResult;
 }
 
@@ -220,7 +246,7 @@ export interface ProjectInfo {
 }
 
 export const TAXONOMY_LEVELS = ["genus", "family", "phylum"] as const;
-export const METHODS = ["wilcoxon", "t-test", "lefse", "permanova"] as const;
+export const METHODS = ["wilcoxon", "t-test", "lefse", "lmm", "permanova"] as const;
 export const BETA_METRICS = ["braycurtis", "aitchison"] as const;
 export type TaxonomyLevel = (typeof TAXONOMY_LEVELS)[number];
 export type BetaMetric = (typeof BETA_METRICS)[number];
@@ -234,4 +260,5 @@ export type Tab =
   | "correlation"
   | "crossstudy"
   | "lefse"
+  | "lmm"
   | "permanova";
