@@ -43,18 +43,14 @@ const VolcanoChart = ({ result }: { result: DiffResult }) => {
 
     svg.attr("viewBox", `0 0 ${width} ${height}`);
 
-    const xExtent = d3.max(data, (taxon) => Math.abs(taxon.log2fc)) ?? 1;
+    const xExtent = Math.max(d3.max(data, (taxon) => Math.abs(taxon.log2fc)) ?? 0, 1) * 1.08;
     const negLogP = data.map(getNegLog10AdjustedP);
     const pThreshold = -Math.log10(0.05);
-    const yMax = Math.max(
-      d3.max(negLogP) ?? 5,
-      pThreshold * 1.7,
-      4,
-    ) * 1.08;
+    const observedYMax = d3.max(negLogP) ?? 0;
+    const yMax = Math.max(observedYMax, pThreshold) * 1.15;
 
     const xScale = d3.scaleLinear().domain([-xExtent, xExtent]).range([0, innerWidth]);
-    // Cube-root power scale: compresses extreme values, spreads mid-range
-    const yScale = d3.scalePow().exponent(1 / 3).domain([0, yMax]).range([innerHeight, 0]);
+    const yScale = d3.scaleLinear().domain([0, yMax]).nice().range([innerHeight, 0]);
 
     const getColor = (taxon: DiffTaxon) => {
       const significant = taxon.adjusted_p < 0.05 && Math.abs(taxon.log2fc) > 1;
@@ -144,9 +140,8 @@ const VolcanoChart = ({ result }: { result: DiffResult }) => {
       .call(d3.axisBottom(xScale).ticks(6))
       .attr("font-size", 12);
 
-    const yTickValues = [0, 1, 2, 5, 10, 20, 50, 100, 200, 300, 400, 500].filter((v) => v <= yMax * 1.02);
     group.append("g")
-      .call(d3.axisLeft(yScale).tickValues(yTickValues))
+      .call(d3.axisLeft(yScale).ticks(6))
       .attr("font-size", 12);
 
     const legend = svg.append("g").attr("transform", `translate(${width - 178},${margin.top + 6})`);

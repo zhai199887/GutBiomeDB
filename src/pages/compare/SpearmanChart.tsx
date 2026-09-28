@@ -22,8 +22,12 @@ const SpearmanChart = ({ result }: { result: SpearmanResult | null }) => {
 
   const edges = result.edges.slice(0, 8);
   const cellSize = 34;
-  const width = 920;
-  const height = 220 + result.taxa.length * cellSize;
+  const matrixX = 280;
+  const matrixY = 126;
+  const width = Math.max(920, matrixX + result.taxa.length * cellSize + 40);
+  const height = matrixY + result.taxa.length * cellSize + 34;
+  const shortTaxon = (taxon: string, maxLength: number) =>
+    taxon.length > maxLength ? `${taxon.slice(0, maxLength - 1)}…` : taxon;
 
   return (
     <svg viewBox={`0 0 ${width} ${height}`} className={`compare-chart ${classes.chart}`}>
@@ -39,35 +43,35 @@ const SpearmanChart = ({ result }: { result: SpearmanResult | null }) => {
       {result.taxa.map((taxon, index) => (
         <text
           key={`head-${taxon.taxon}`}
-          x={250 + index * cellSize + cellSize / 2}
-          y={78}
-          transform={`rotate(-45, ${250 + index * cellSize + cellSize / 2}, 78)`}
+          x={matrixX + index * cellSize + cellSize / 2}
+          y={104}
+          transform={`rotate(-45, ${matrixX + index * cellSize + cellSize / 2}, 104)`}
           fill="var(--light-gray)"
           fontSize="9"
           textAnchor="end"
         >
-          {taxon.taxon.slice(0, 10)}
+          {shortTaxon(taxon.taxon, 11)}
         </text>
       ))}
 
       {result.matrix.map((row, rowIndex) => (
         <g key={result.taxa[rowIndex]?.taxon ?? rowIndex}>
-          <text x={230} y={106 + rowIndex * cellSize + 6} textAnchor="end" fill="currentColor" fontSize="10">
-            {result.taxa[rowIndex]?.taxon.slice(0, 18)}
+          <text x={matrixX - 12} y={matrixY + rowIndex * cellSize + 21} textAnchor="end" fill="currentColor" fontSize="10">
+            {shortTaxon(result.taxa[rowIndex]?.taxon ?? "", 24)}
           </text>
           {row.map((value, colIndex) => (
             <g key={`${rowIndex}-${colIndex}`}>
               <rect
-                x={250 + colIndex * cellSize}
-                y={92 + rowIndex * cellSize}
+                x={matrixX + colIndex * cellSize}
+                y={matrixY + rowIndex * cellSize}
                 width={cellSize - 2}
                 height={cellSize - 2}
                 rx={5}
                 fill={correlationColor(value)}
               />
               <text
-                x={250 + colIndex * cellSize + (cellSize - 2) / 2}
-                y={92 + rowIndex * cellSize + 20}
+                x={matrixX + colIndex * cellSize + (cellSize - 2) / 2}
+                y={matrixY + rowIndex * cellSize + 20}
                 textAnchor="middle"
                 fill="currentColor"
                 fontSize="9"

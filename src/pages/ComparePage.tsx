@@ -96,8 +96,29 @@ const ComparePage = () => {
         if (cancelled) return;
         setAnalysisJobStatus(job.status);
         if (job.status === "completed") {
-          setResult(job.result ?? null);
-          setActiveTab("bar");
+          const loaded = job.result ?? null;
+          setResult(loaded);
+          if (loaded) {
+            const restoredMethod = loaded.summary.method as (typeof METHODS)[number];
+            if (METHODS.includes(restoredMethod)) {
+              setMethod(restoredMethod);
+              setActiveTab(
+                restoredMethod === "lmm"
+                  ? "lmm"
+                  : restoredMethod === "lefse"
+                    ? "lefse"
+                    : restoredMethod === "permanova"
+                      ? "permanova"
+                      : "bar",
+              );
+            } else {
+              setActiveTab("bar");
+            }
+            const restoredTaxLevel = loaded.summary.taxonomy_level as TaxonomyLevel;
+            if (TAXONOMY_LEVELS.includes(restoredTaxLevel)) setTaxLevel(restoredTaxLevel);
+          } else {
+            setActiveTab("bar");
+          }
           setLoading(false);
           return;
         }
