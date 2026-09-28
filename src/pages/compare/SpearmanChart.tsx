@@ -23,9 +23,11 @@ const SpearmanChart = ({ result }: { result: SpearmanResult | null }) => {
   const edges = result.edges.slice(0, 8);
   const cellSize = 34;
   const matrixX = 280;
-  const matrixY = 126;
+  const matrixY = 150;
+  const matrixBottom = matrixY + result.taxa.length * cellSize;
+  const edgeBlockY = matrixBottom + 28;
   const width = Math.max(920, matrixX + result.taxa.length * cellSize + 40);
-  const height = matrixY + result.taxa.length * cellSize + 34;
+  const height = edgeBlockY + 28 + edges.length * 18 + 20;
   const shortTaxon = (taxon: string, maxLength: number) =>
     taxon.length > maxLength ? `${taxon.slice(0, maxLength - 1)}…` : taxon;
 
@@ -83,17 +85,19 @@ const SpearmanChart = ({ result }: { result: SpearmanResult | null }) => {
         </g>
       ))}
 
-      <text x={30} y={120} fill="currentColor" fontSize="12">
-        {locale === "zh" ? "最强相关边" : "Strongest edges"}
-      </text>
-      {edges.map((edge, index) => (
-        <g key={`${edge.source}-${edge.target}`}>
-          <circle cx={36} cy={144 + index * 18} r={4} fill={edge.type === "positive" ? "#22c55e" : "#ef4444"} />
-          <text x={48} y={148 + index * 18} fill="var(--light-gray)" fontSize="10">
-            {edge.source} {edge.type === "positive" ? "+" : "-"} {edge.target} (r={edge.r.toFixed(2)})
-          </text>
-        </g>
-      ))}
+      <g transform={`translate(30,${edgeBlockY})`}>
+        <text x={0} y={0} fill="currentColor" fontSize="12">
+          {locale === "zh" ? "最强相关边" : "Strongest edges"}
+        </text>
+        {edges.map((edge, index) => (
+          <g key={`${edge.source}-${edge.target}`}>
+            <circle cx={6} cy={24 + index * 18} r={4} fill={edge.type === "positive" ? "#22c55e" : "#ef4444"} />
+            <text x={18} y={28 + index * 18} fill="var(--light-gray)" fontSize="10">
+              {shortTaxon(edge.source, 16)} {edge.type === "positive" ? "+" : "-"} {shortTaxon(edge.target, 16)} (r={edge.r.toFixed(2)})
+            </text>
+          </g>
+        ))}
+      </g>
     </svg>
   );
 };

@@ -103,13 +103,11 @@ const ComparePage = () => {
             if (METHODS.includes(restoredMethod)) {
               setMethod(restoredMethod);
               setActiveTab(
-                restoredMethod === "lmm"
-                  ? "lmm"
-                  : restoredMethod === "lefse"
-                    ? "lefse"
-                    : restoredMethod === "permanova"
-                      ? "permanova"
-                      : "bar",
+                restoredMethod === "lefse"
+                  ? "lefse"
+                  : restoredMethod === "permanova"
+                    ? "permanova"
+                    : "bar",
               );
             } else {
               setActiveTab("bar");

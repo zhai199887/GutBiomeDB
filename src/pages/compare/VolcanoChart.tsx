@@ -47,10 +47,11 @@ const VolcanoChart = ({ result }: { result: DiffResult }) => {
     const negLogP = data.map(getNegLog10AdjustedP);
     const pThreshold = -Math.log10(0.05);
     const observedYMax = d3.max(negLogP) ?? 0;
-    const yMax = Math.max(observedYMax, pThreshold) * 1.15;
+    const yMax = Math.max(observedYMax, pThreshold, 4) * 1.08;
 
     const xScale = d3.scaleLinear().domain([-xExtent, xExtent]).range([0, innerWidth]);
-    const yScale = d3.scaleLinear().domain([0, yMax]).nice().range([innerHeight, 0]);
+    // Compress extreme adjusted-p values while keeping the significance region readable.
+    const yScale = d3.scalePow().exponent(1 / 3).domain([0, yMax]).range([innerHeight, 0]);
 
     const getColor = (taxon: DiffTaxon) => {
       const significant = taxon.adjusted_p < 0.05 && Math.abs(taxon.log2fc) > 1;
@@ -130,7 +131,7 @@ const VolcanoChart = ({ result }: { result: DiffResult }) => {
       .join("text")
       .attr("class", "label")
       .attr("x", (taxon) => xScale(taxon.log2fc) + 6)
-      .attr("y", (taxon) => yScale(Math.min(getNegLog10AdjustedP(taxon), yMax)) - 4)
+      .attr("y", (taxon) => Math.max(10, yScale(Math.min(getNegLog10AdjustedP(taxon), yMax)) - 4))
       .attr("font-size", 10)
       .attr("fill", "var(--white)")
       .text((taxon) => (taxon.taxon.length > 22 ? `${taxon.taxon.slice(0, 20)}...` : taxon.taxon));
