@@ -599,13 +599,6 @@ const LmmResults = ({ result }: { result: DiffResult }) => {
         <div>
           {locale === "zh" ? "样本" : "Samples"}: {payload.n_samples.toLocaleString()} · {locale === "zh" ? "拟合" : "Fitted"}: {payload.n_fitted.toLocaleString()} · {locale === "zh" ? "显著" : "Significant"}: {payload.n_significant.toLocaleString()}
         </div>
-        {payload.n_singular > 0 ? (
-          <div className={classes.error} role="status">
-            {locale === "zh"
-              ? `有 ${payload.n_singular} 个 taxa 出现 singular fit，请谨慎解释。`
-              : `${payload.n_singular} taxa had singular fits; interpret with caution.`}
-          </div>
-        ) : null}
       </div>
       <table className={classes.simpleTable}>
         <thead>
