@@ -111,21 +111,43 @@ for (i in seq_along(taxa)) {
   if (is_singular) singular <- singular + 1L
 
   contrast <- tryCatch({
-    means <- emmeans(fit, ~ disease)
+    # Large cohorts exceed emmeans' default 3,000-observation df limits.
+    # Asymptotic inference avoids the expensive small-sample df correction
+    # while retaining the same disease contrast and fixed/random effects.
+    means <- emmeans(fit, ~ disease, lmer.df = "asymptotic")
     as.data.frame(summary(contrast(means, method = list("A-B" = c(-1, 1)), adjust = "none")))
   }, error = function(e) NULL)
-  if (is.null(contrast) || nrow(contrast) < 1L) {
+  if (is.null(contrast) || nrow(contrast) < 1L || !"estimate" %in% names(contrast)) {
+    failed <- failed + 1L
+    next
+  }
+
+  ratio_column <- if ("t.ratio" %in% names(contrast)) "t.ratio" else "z.ratio"
+  required_contrast_columns <- c("estimate", "SE", "df", ratio_column, "p.value")
+  if (!all(required_contrast_columns %in% names(contrast))) {
+    failed <- failed + 1L
+    next
+  }
+  estimate_value <- suppressWarnings(as.numeric(contrast$estimate[[1]]))
+  se_value <- suppressWarnings(as.numeric(contrast$SE[[1]]))
+  df_value <- suppressWarnings(as.numeric(contrast$df[[1]]))
+  ratio_value <- suppressWarnings(as.numeric(contrast[[ratio_column]][[1]]))
+  p_value <- suppressWarnings(as.numeric(contrast$p.value[[1]]))
+  if (length(estimate_value) != 1L || length(se_value) != 1L ||
+      length(df_value) != 1L || length(ratio_value) != 1L ||
+      length(p_value) != 1L || !is.finite(estimate_value) ||
+      !is.finite(se_value) || !is.finite(p_value)) {
     failed <- failed + 1L
     next
   }
 
   result_rows[[i]] <- data.frame(
     taxon = taxa[[i]],
-    estimate = as.numeric(contrast$estimate[[1]]),
-    std_error = as.numeric(contrast$SE[[1]]),
-    df = as.numeric(contrast$df[[1]]),
-    t_ratio = as.numeric(contrast$t.ratio[[1]]),
-    p_value = as.numeric(contrast$p.value[[1]]),
+    estimate = estimate_value,
+    std_error = se_value,
+    df = df_value,
+    t_ratio = ratio_value,
+    p_value = p_value,
     singular_fit = is_singular,
     stringsAsFactors = FALSE
   )
