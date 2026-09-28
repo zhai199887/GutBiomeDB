@@ -103,3 +103,12 @@ export async function getAnalysisJob<T = unknown>(job_id: string): Promise<Analy
   if (!response.ok) throw new Error(`${response.status}: ${data.detail ?? "Could not read analysis job"}`);
   return data as AnalysisJob<T>;
 }
+
+export async function getRecentAnalysisJobs(limit = 20): Promise<AnalysisJob[]> {
+  const response = await fetch(`${API_BASE}/api/analysis-jobs/recent?limit=${limit}`, {
+    cache: "no-store",
+  });
+  const data = await response.json();
+  if (!response.ok) throw new Error(`${response.status}: ${data.detail ?? "Could not read recent analysis jobs"}`);
+  return Array.isArray(data) ? (data as AnalysisJob[]) : [];
+}

@@ -15,6 +15,7 @@ interface Props {
   options: FilterOptions | null;
   dynamicOptions?: GroupFilterOptions | null;
   sampleCount: GroupSampleCount | null;
+  optionsLoading?: boolean;
 }
 
 const GroupFilterPanel = ({
@@ -25,6 +26,7 @@ const GroupFilterPanel = ({
   options,
   dynamicOptions,
   sampleCount,
+  optionsLoading = false,
 }: Props) => {
   const { t, locale } = useI18n();
 
@@ -77,7 +79,7 @@ const GroupFilterPanel = ({
 
       <div className={classes.fieldRow}>
         <label>{t("compare.country")}</label>
-        <select value={value.country} onChange={setSelect("country")} className={classes.select}>
+        <select value={value.country} onChange={setSelect("country")} className={classes.select} disabled={optionsLoading}>
           <option value="">{t("compare.any")}</option>
           {keepCurrent(countryOptions, value.country).map((option) => (
             <option key={option.value} value={option.value} disabled={optionDisabled(option, value.country)}>
@@ -89,7 +91,7 @@ const GroupFilterPanel = ({
 
       <div className={classes.fieldRow}>
         <label>{t("compare.disease")}</label>
-        <select value={value.disease} onChange={setSelect("disease")} className={classes.select}>
+        <select value={value.disease} onChange={setSelect("disease")} className={classes.select} disabled={optionsLoading}>
           <option value="">{t("compare.any")}</option>
           {visibleDiseaseOptions.map((option) => (
             <option
@@ -105,7 +107,7 @@ const GroupFilterPanel = ({
 
       <div className={classes.fieldRow}>
         <label>{t("compare.ageGroup")}</label>
-        <select value={value.age_group} onChange={setSelect("age_group")} className={classes.select}>
+        <select value={value.age_group} onChange={setSelect("age_group")} className={classes.select} disabled={optionsLoading}>
           <option value="">{t("compare.any")}</option>
           {keepCurrent(ageOptions, value.age_group).map((option) => (
             <option key={option.value} value={option.value} disabled={optionDisabled(option, value.age_group)}>
@@ -117,7 +119,7 @@ const GroupFilterPanel = ({
 
       <div className={classes.fieldRow}>
         <label>{t("compare.sex")}</label>
-        <select value={value.sex} onChange={setSelect("sex")} className={classes.select}>
+        <select value={value.sex} onChange={setSelect("sex")} className={classes.select} disabled={optionsLoading}>
           <option value="">{t("compare.any")}</option>
           {keepCurrent(sexOptions, value.sex).map((option) => (
             <option key={option.value} value={option.value} disabled={optionDisabled(option, value.sex)}>

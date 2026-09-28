@@ -411,6 +411,7 @@ const ComparePage = () => {
               options={filterOptions}
               dynamicOptions={sampleCounts?.group_a.options ?? null}
               sampleCount={sampleCounts?.group_a ?? null}
+              optionsLoading={sampleCountLoading}
             />
             <GroupFilterPanel
               label={t("compare.groupB")}
@@ -420,6 +421,7 @@ const ComparePage = () => {
               options={filterOptions}
               dynamicOptions={sampleCounts?.group_b.options ?? null}
               sampleCount={sampleCounts?.group_b ?? null}
+              optionsLoading={sampleCountLoading}
             />
           </div>
         )}

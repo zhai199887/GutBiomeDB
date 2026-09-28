@@ -4,7 +4,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { useI18n } from "@/i18n";
 import {
   getAnalysisJob,
-  forgetAnalysisJob,
+  getRecentAnalysisJobs,
   rememberedAnalysisJobs,
   rememberAnalysisJob,
   type AnalysisJob,
@@ -58,7 +58,15 @@ const AnalysisJobsPage = () => {
   const [jobs, setJobs] = useState<TrackedJob[]>([]);
 
   const refresh = async () => {
-    const remembered = rememberedAnalysisJobs().filter((item) => !HIDDEN_FROM_JOB_CENTER.has(item.kind));
+    let remembered = rememberedAnalysisJobs().filter((item) => !HIDDEN_FROM_JOB_CENTER.has(item.kind));
+    if (remembered.length === 0) {
+      try {
+        const recent = await getRecentAnalysisJobs();
+        remembered = recent.filter((item) => !HIDDEN_FROM_JOB_CENTER.has(item.kind));
+      } catch {
+        // Keep the empty state when the optional server-side recovery list is unavailable.
+      }
+    }
     const placeholders = remembered.map((item) => ({
       job_id: item.job_id,
       kind: item.kind,
@@ -75,7 +83,8 @@ const AnalysisJobsPage = () => {
         const record = await getAnalysisJob(item.job_id) as TrackedJob;
         setJobs((current) => current.map((job) => job.job_id === item.job_id ? record : job));
       } catch {
-        forgetAnalysisJob(item.job_id);
+        // Keep the Job ID visible so a transient API error or server restart
+        // cannot erase the browser's task history on refresh.
         setJobs((current) => current.map((job) => job.job_id === item.job_id
           ? { ...job, status: "failed" as const, error: locale === "zh" ? "任务记录已失效，请重新提交分析" : "This task record is no longer available; submit a new analysis" }
           : job));
