@@ -140,6 +140,9 @@ for (i in seq_along(taxa)) {
     failed <- failed + 1L
     next
   }
+  # Asymptotic emmeans reports df = Inf.  Keep the field, but encode it as
+  # missing so the JSON API remains strict-JSON compliant.
+  if (!is.finite(df_value)) df_value <- NA_real_
 
   result_rows[[i]] <- data.frame(
     taxon = taxa[[i]],

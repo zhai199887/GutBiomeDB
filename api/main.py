@@ -2154,7 +2154,9 @@ def get_analysis_job(request: Request, job_id: str):
     job = _ANALYSIS_JOB_STORE.get(job_id)
     if job is None:
         raise HTTPException(404, "Analysis job not found or expired")
-    return job
+    # LMM asymptotic inference can represent degrees of freedom as Inf;
+    # sanitize completed job payloads before Starlette's strict JSON encoder.
+    return _json_safe(job)
 
 
 @app.post("/api/estimate-sample-count",
