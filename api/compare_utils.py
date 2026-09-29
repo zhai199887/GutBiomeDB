@@ -603,7 +603,10 @@ def run_lefse_analysis(
     p_adjust_method = os.getenv("LEFSE_P_ADJUST", "none").strip().lower() or "none"
     if p_adjust_method not in {"none", "fdr", "BH", "bonferroni", "holm"}:
         raise ValueError("LEFSE_P_ADJUST must be a valid R p.adjust method")
-    boots = int(os.getenv("LEFSE_BOOTS", "30"))
+    # Keep the official bootstrap LDA procedure while using a production-safe
+    # default for the database's large sample groups. Set LEFSE_BOOTS=30 to
+    # reproduce the upstream default exactly for smaller analyses.
+    boots = int(os.getenv("LEFSE_BOOTS", "5"))
     nresam = float(os.getenv("LEFSE_NRESAM", "0.6667"))
     # Figure 3 did not call set.seed() before microeco::trans_diff; keep the
     # source behavior by default. Set LEFSE_SEED explicitly for deterministic
