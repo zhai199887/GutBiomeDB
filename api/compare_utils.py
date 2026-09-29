@@ -600,7 +600,9 @@ def run_lefse_analysis(
 
     rscript = _resolve_lefse_rscript()
     alpha = float(os.getenv("LEFSE_ALPHA", "0.05"))
-    p_adjust_method = os.getenv("LEFSE_P_ADJUST", "none").strip().lower() or "none"
+    # Use Benjamini-Hochberg FDR for the platform's multi-feature screening.
+    # Set LEFSE_P_ADJUST=none to reproduce the original LEfSe strict=0 mode.
+    p_adjust_method = os.getenv("LEFSE_P_ADJUST", "fdr").strip().lower() or "fdr"
     if p_adjust_method not in {"none", "fdr", "BH", "bonferroni", "holm"}:
         raise ValueError("LEFSE_P_ADJUST must be a valid R p.adjust method")
     # Match the official LEfSe default: 30 bootstrap LDA iterations and a
