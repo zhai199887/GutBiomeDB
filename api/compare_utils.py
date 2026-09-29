@@ -584,8 +584,14 @@ def run_lefse_analysis(
         raise ValueError("LEfSe taxa and matrix columns are misaligned")
     if matrix_a.shape[0] < 2 or matrix_b.shape[0] < 2:
         raise ValueError("LEfSe requires at least two samples in each group")
-    if set(map(str, taxa)) & {"", "nan", "NA"}:
-        raise ValueError("LEfSe received an empty taxon label")
+    # Some database rows have missing rank labels. Keep those features in the
+    # input matrix, but mark them as Unknown so the R runner's
+    # ``remove_unknown=TRUE`` path can exclude them without aborting the whole
+    # comparison.
+    taxa = [
+        ("Unknown" if str(taxon).strip().lower() in {"", "nan", "na", "n/a", "none"} else str(taxon))
+        for taxon in taxa
+    ]
 
     runner = Path(__file__).with_name("lefse_runner.R")
     if not runner.exists():
