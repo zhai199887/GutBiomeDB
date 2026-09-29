@@ -66,10 +66,12 @@ summary_lines <- c(
   paste0("taxa_level\t", taxa_level),
   paste0("alpha\t", format(alpha, scientific = TRUE)),
   paste0("p_adjust_method\t", p_adjust_method),
+  paste0("kw_filter\t", "p_adjusted < alpha"),
   paste0("lefse_norm\t", "1e6"),
   paste0("boots\t", boots),
   paste0("nresam\t", format(nresam, digits = 12)),
   paste0("n_input_features\t", nrow(otu)),
+  paste0("n_kw_passed\t", nrow(result$res_diff)),
   paste0("n_output_rows\t", nrow(result$res_diff)),
   paste0("hierarchical_wilcoxon\t", "not_run_without_lefse_subgroup")
 )
