@@ -1,0 +1,14 @@
+# Frontend deployment does not ship local documentation, backend sources, or test assets.
+docs/
+api/
+tests/
+tools/
+superpowers/
+warmup/
+portal-server/
+.claude/
+.pytest_cache/
+.git/
+.vercel/
+node_modules/
+dist/

@@ -1,0 +1,31 @@
+.page { max-width: 1000px; margin: 0 auto; padding: 2rem; }
+.topBar { margin-bottom: 2rem; }
+.topBar h1 { font-size: 1.8rem; margin: 0.5rem 0; }
+.topBar p { color: var(--gray); font-size: 0.95rem; }
+.back { color: var(--accent); text-decoration: none; font-size: 0.9rem; }
+
+.controls { display: flex; gap: 1rem; align-items: flex-end; margin-bottom: 2rem; }
+.field { display: flex; flex-direction: column; gap: 0.3rem; }
+.field label { font-size: 0.8rem; color: var(--gray); }
+.select {
+  padding: 0.5rem 0.8rem;
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 6px;
+  color: inherit;
+  min-width: 180px;
+}
+
+.chartCard {
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 12px;
+  padding: 1.5rem;
+}
+.chart { width: 100%; min-height: 500px; }
+
+.legend { display: flex; gap: 1rem; flex-wrap: wrap; margin-top: 1rem; }
+.legendItem { display: flex; align-items: center; gap: 0.3rem; font-size: 0.8rem; }
+.legendDot { width: 10px; height: 10px; border-radius: 50%; }
+
+.loading { text-align: center; padding: 3rem; color: var(--gray); }

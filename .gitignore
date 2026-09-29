@@ -1,0 +1,82 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+node_modules
+dist
+dist-ssr
+*.local
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+compile/downloaded
+
+# Temp/local scripts
+C:/Users/
+*.tmp
+
+# Environment variables
+.env
+.env.local
+.env.production
+
+# Raw/sensitive data — never commit sample-level metadata
+public/data/metadata.json
+
+# Keep public/data/ tracked (our generated data files)
+.vercel
+
+# Plans and internal docs - local only
+docs/
+api/__pycache__/
+api/analytics.jsonl
+public/favicon_refs/
+
+# Claude Code local settings (contains permission bypass - never commit)
+.claude/
+
+# Backend generated disk cache — regenerated at runtime from the 168,464-sample
+# matrix; single source of truth is the live platform, never commit snapshots
+api/_disk_cache/
+api/_analysis_jobs/
+
+# cache_audit runtime state
+api/_disk_cache/.endpoint_source_hashes.json
+
+# Windows shell redirection artefact (`> null` accidentally writes a literal file)
+api/null
+
+# Pickled model artefacts — distribute via release assets, not git
+*.pkl
+
+# Runtime access log — leaks visitor IP/UA, never commit
+api/api_access.jsonl
+
+# Local plans/tools/test caches — never commit
+superpowers/
+tools/
+**/__pycache__/
+*.pyc
+
+# Sydney runtime: venv, raw data dump, admin sessions, warmup state/logs
+.venv/
+data/
+portal-server/sessions/
+warmup/DONE.*
+warmup/logs/
+
+# Warmup ad-hoc run records and orchestrator state -- regenerable
+warmup/.manual/
+warmup/.orchestrator/

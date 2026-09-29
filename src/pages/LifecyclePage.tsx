@@ -1,0 +1,880 @@
+/**
+ * LifecyclePage.tsx — Lifecycle Microbiome Atlas workspace
+ */
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Link } from "react-router-dom";
+
+import * as d3 from "d3";
+
+import { useI18n } from "@/i18n";
+import { API_BASE } from "@/util/apiBase";
+import { diseaseDisplayNameI18n, sortDiseaseItemsByName } from "@/util/diseaseNames";
+import { countryName, AGE_GROUP_ZH } from "@/util/countries";
+import { cachedFetch } from "@/util/apiCache";
+import { exportElementPNG, exportElementSVG, exportPNG, exportSVG } from "@/util/chartExport";
+import { exportTable } from "@/util/export";
+import { phylumColor } from "@/util/phylumColors";
+
+import { AlphaDiversityChart } from "./lifecycle/AlphaDiversityChart";
+import { TransitionPanel } from "./lifecycle/TransitionPanel";
+import classes from "./LifecyclePage.module.css";
+
+export interface LifecycleRow {
+  age_group: string;
+  sample_count: number;
+  shannon_mean: number;
+  shannon_sd: number;
+  simpson_mean: number;
+  simpson_sd: number;
+  [genus: string]: number | string;
+}
+
+export interface LifecycleTopChange {
+  genus: string;
+  change: number;
+  direction: "increase" | "decrease";
+  pvalue?: number | null;
+  adjusted_p?: number | null;
+}
+
+export interface LifecycleTransition {
+  from: string;
+  to: string;
+  top_changes: LifecycleTopChange[];
+}
+
+export interface LifecycleKruskal {
+  genus: string;
+  kruskal_h: number;
+  kruskal_p: number;
+  adjusted_p: number;
+  significant: boolean;
+  eta_squared?: number;
+}
+
+export interface LifecycleSpearman {
+  genus: string;
+  rho: number;
+  pval: number;
+  adjusted_p: number;
+  significant: boolean;
+}
+
+export interface LifecyclePERMANOVA {
+  r_squared: number;
+  pseudo_f: number;
+  p_value: number;
+  n_permutations: number;
+  n_samples_used: number;
+  n_groups: number;
+  df_between: number;
+  df_within: number;
+}
+
+export interface LifecycleAlphaStats {
+  shannon_kw_h: number;
+  shannon_kw_p: number;
+  shannon_eta_squared: number;
+  shannon_spearman_rho: number;
+  shannon_spearman_p: number;
+  simpson_kw_h: number;
+  simpson_kw_p: number;
+  simpson_eta_squared: number;
+  simpson_spearman_rho: number;
+  simpson_spearman_p: number;
+}
+
+export interface LifecycleData {
+  disease: string;
+  country: string;
+  total_samples: number;
+  total_samples_all?: number;
+  unknown_count?: number;
+  genera: string[];
+  phylum_map: Record<string, string>;
+  data: LifecycleRow[];
+  transitions: LifecycleTransition[];
+  kruskal_results: LifecycleKruskal[];
+  spearman_results?: LifecycleSpearman[];
+  permanova?: LifecyclePERMANOVA;
+  alpha_diversity_stats?: LifecycleAlphaStats;
+}
+
+export interface LifecycleDualData {
+  disease_data: LifecycleData;
+  nc_data: LifecycleData;
+}
+
+interface DiseaseItem {
+  name: string;
+  sample_count: number;
+}
+
+const AGE_GROUP_ZH_MAP: Record<string, string> = {
+  Infant: "婴儿",
+  Child: "儿童",
+  Adolescent: "青少年",
+  Adult: "成人",
+  Older_Adult: "老年人",
+  Oldest_Old: "高龄老人",
+  Centenarian: "百岁老人",
+  Unknown: "未知",
+};
+
+const fmtP = (value?: number | null) => {
+  if (value == null || Number.isNaN(value)) return "NA";
+  if (value < 0.001) return value.toExponential(2);
+  return value.toFixed(4);
+};
+
+const LifecyclePage = () => {
+  const { t, locale } = useI18n();
+  const [diseases, setDiseases] = useState<DiseaseItem[]>([]);
+  const [diseaseZh, setDiseaseZh] = useState<Record<string, string>>({});
+  const [countries, setCountries] = useState<string[]>([]);
+  const [disease, setDisease] = useState("");
+  const [country, setCountry] = useState("");
+  const [topN, setTopN] = useState(15);
+  const [viewMode, setViewMode] = useState<"area" | "compare">("area");
+  const [diversityMetric, setDiversityMetric] = useState<"shannon" | "simpson">("shannon");
+  const [isolatedGenus, setIsolatedGenus] = useState<string | null>(null);
+  const [data, setData] = useState<LifecycleData | null>(null);
+  const [dualData, setDualData] = useState<LifecycleDualData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  const singleSvgRef = useRef<SVGSVGElement>(null);
+  const singleFigureRef = useRef<HTMLDivElement>(null);
+  const compareDiseaseSvgRef = useRef<SVGSVGElement>(null);
+  const compareNcSvgRef = useRef<SVGSVGElement>(null);
+
+  const diseaseLabel = (name: string) => {
+    if (!name || !name.trim() || name === "All Samples (Global)") {
+      return t("lifecycle.allDiseases");
+    }
+    if (name === "Healthy (NC)" || name === "NC") {
+      return locale === "zh" ? "健康对照 (NC)" : "Healthy (NC)";
+    }
+    return (locale === "zh" && diseaseZh[name]) ? diseaseZh[name] : diseaseDisplayNameI18n(name, locale);
+  };
+
+  const ageLabel = (name: string) => (
+    locale === "zh"
+      ? (AGE_GROUP_ZH_MAP[name] ?? AGE_GROUP_ZH[name] ?? name.replace(/_/g, " "))
+      : name.replace(/_/g, " ")
+  );
+
+  const underpoweredMessage = (d: LifecycleData | null | undefined): string | null => {
+    if (!d?.data || d.data.length >= 3) return null;
+    const stageList = d.data.map((r) => ageLabel(r.age_group)).join(" / ")
+      || (locale === "zh" ? "未知" : "unknown");
+    const n = d.total_samples ?? 0;
+    if (locale === "zh") {
+      return `该队列已知年龄样本仅落在「${stageList}」阶段（n=${n.toLocaleString()}），覆盖年龄段少于 3 个，跨阶段统计（Kruskal–Wallis / Spearman / 阶段转换）与 α 多样性趋势不可用。下方仅展示当前阶段的组成与均值。`;
+    }
+    return `Cohort with known age is concentrated in ${stageList} (n=${n.toLocaleString()}); fewer than 3 age stages, so cross-stage statistics (Kruskal–Wallis / Spearman / transitions) and α-diversity trend are unavailable. Only the composition and means for this stage are shown below.`;
+  };
+
+  useEffect(() => {
+    cachedFetch<{ diseases: DiseaseItem[] }>(`${API_BASE}/api/disease-list`)
+      .then((payload) => setDiseases(payload.diseases ?? []))
+      .catch(() => {});
+    cachedFetch<Record<string, string>>(`${API_BASE}/api/disease-names-zh`)
+      .then(setDiseaseZh)
+      .catch(() => {});
+    cachedFetch<{ countries: string[] }>(`${API_BASE}/api/filter-options`)
+      .then((payload) => setCountries(payload.countries ?? []))
+      .catch(() => {});
+  }, []);
+
+  const sortedDiseases = useMemo(() => sortDiseaseItemsByName(diseases), [diseases]);
+  const canCompare = Boolean(disease && disease.trim() && disease.toUpperCase() !== "NC");
+
+  useEffect(() => {
+    if (!canCompare && viewMode === "compare") {
+      setViewMode("area");
+    }
+  }, [canCompare, viewMode]);
+
+  useEffect(() => {
+    setLoading(true);
+    setError("");
+    setIsolatedGenus(null);
+
+    const params = new URLSearchParams();
+    if (disease) params.set("disease", disease);
+    if (country) params.set("country", country);
+    params.set("top_genera", topN.toString());
+
+    const run = async () => {
+      if (viewMode === "compare" && canCompare) {
+        const response = await cachedFetch<LifecycleDualData>(`${API_BASE}/api/lifecycle-compare?${params.toString()}`);
+        setDualData(response);
+        setData(null);
+        return;
+      }
+
+      const response = await cachedFetch<LifecycleData>(`${API_BASE}/api/lifecycle?${params.toString()}`);
+      setData(response);
+      setDualData(null);
+    };
+
+    run()
+      .catch((err) => {
+        setData(null);
+        setDualData(null);
+        setError(locale === "zh" ? "后端未启动或生命周期接口不可用" : `Lifecycle API error: ${(err as Error).message}`);
+      })
+      .finally(() => setLoading(false));
+  }, [canCompare, country, disease, locale, topN, viewMode]);
+
+  const lifecycleColorMap = useMemo(() => {
+    if (viewMode === "compare" && dualData) {
+      return buildLifecycleColorMap([dualData.disease_data, dualData.nc_data]);
+    }
+    return data ? buildLifecycleColorMap([data]) : {};
+  }, [data, dualData, viewMode]);
+  const legendData = viewMode === "compare" ? dualData?.disease_data : data;
+
+  useEffect(() => {
+    if (viewMode !== "area" || !singleSvgRef.current || !data || data.data.length === 0) return;
+    drawStackedArea(singleSvgRef.current, data, locale, isolatedGenus, ageLabel, lifecycleColorMap);
+  }, [ageLabel, data, isolatedGenus, lifecycleColorMap, locale, viewMode]);
+
+  useEffect(() => {
+    if (viewMode !== "compare" || !dualData) return;
+    if (compareDiseaseSvgRef.current && dualData.disease_data.data.length > 0) {
+      drawStackedArea(compareDiseaseSvgRef.current, dualData.disease_data, locale, isolatedGenus, ageLabel, lifecycleColorMap);
+    }
+    if (compareNcSvgRef.current && dualData.nc_data.data.length > 0) {
+      drawStackedArea(compareNcSvgRef.current, dualData.nc_data, locale, isolatedGenus, ageLabel, lifecycleColorMap);
+    }
+  }, [ageLabel, dualData, isolatedGenus, lifecycleColorMap, locale, viewMode]);
+
+  const exportLifecycleTable = (payload: LifecycleData, fileName: string) => {
+    exportTable(
+      payload.data.map((row) => {
+        const result: Record<string, number | string> = {
+          age_group: row.age_group,
+          sample_count: row.sample_count,
+          shannon_mean: row.shannon_mean,
+          shannon_sd: row.shannon_sd,
+          simpson_mean: row.simpson_mean,
+          simpson_sd: row.simpson_sd,
+        };
+        payload.genera.forEach((genus) => {
+          result[genus] = row[genus] ?? 0;
+        });
+        return result;
+      }),
+      fileName,
+    );
+  };
+
+  const renderLegend = (payload: LifecycleData) => (
+    <div className={classes.legend}>
+      {payload.genera.map((genus) => {
+        const active = isolatedGenus === genus;
+        const dimmed = isolatedGenus != null && !active;
+        const swatch = lifecycleColorMap[genus] ?? (genus === "Other" ? "#cbd5e1" : phylumColor(payload.phylum_map[genus] ?? "Unknown"));
+        return (
+          <button
+            key={genus}
+            type="button"
+            className={`${classes.legendItem} ${active ? classes.legendItemActive : ""} ${dimmed ? classes.legendItemDimmed : ""}`}
+            onClick={() => setIsolatedGenus((prev) => (prev === genus ? null : genus))}
+          >
+            <span className={classes.legendDot} style={{ background: swatch }} />
+            <span className={classes.legendName} style={{ fontStyle: genus === "Other" ? "normal" : "italic" }}>
+              {genus === "Other" ? (locale === "zh" ? "其他" : "Other") : genus}
+            </span>
+            {genus !== "Other" ? (
+              <span className={classes.legendPhylum}>({payload.phylum_map[genus] ?? "Unknown"})</span>
+            ) : null}
+          </button>
+        );
+      })}
+    </div>
+  );
+
+  const renderSignificantCard = (payload: LifecycleData, label: string) => {
+    const rows = payload.kruskal_results
+      .filter((item) => item.significant)
+      .sort((a, b) => a.adjusted_p - b.adjusted_p);
+
+    const spearmanMap: Record<string, LifecycleSpearman> = {};
+    if (payload.spearman_results) {
+      for (const sp of payload.spearman_results) {
+        spearmanMap[sp.genus] = sp;
+      }
+    }
+
+    return (
+      <div className={classes.chartCard}>
+        <div className={classes.cardHeader}>
+          <div>
+            <h3>{t("lifecycle.kruskalSig")}</h3>
+            <p>{label}</p>
+          </div>
+          <div className={classes.statBadge}>{rows.length}</div>
+        </div>
+        {rows.length === 0 ? (
+          <div className={classes.emptyHint}>
+            {locale === "zh" ? "当前筛选下没有 FDR < 0.05 的显著年龄变化属。" : "No genus reaches FDR < 0.05 for age variation under the current filters."}
+          </div>
+        ) : (
+          <div className={classes.sigChips}>
+            {rows.map((row) => {
+              const sp = spearmanMap[row.genus];
+              const rhoStr = sp ? `, ρ=${sp.rho > 0 ? "+" : ""}${sp.rho.toFixed(2)}` : "";
+              return (
+                <button
+                  key={row.genus}
+                  type="button"
+                  className={classes.sigChip}
+                  onClick={() => setIsolatedGenus((prev) => (prev === row.genus ? null : row.genus))}
+                  title={`H=${row.kruskal_h.toFixed(2)}, adj.p=${fmtP(row.adjusted_p)}${row.eta_squared != null ? `, η²=${row.eta_squared.toFixed(3)}` : ""}${rhoStr}`}
+                >
+                  <span className={classes.sigChipName}>{row.genus}</span>
+                  <span className={classes.sigChipMeta}>
+                    H={row.kruskal_h.toFixed(1)}, η²={row.eta_squared != null ? row.eta_squared.toFixed(3) : "–"}{rhoStr}, p={fmtP(row.adjusted_p)}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  return (
+    <div className={classes.page}>
+      <div className={classes.topBar}>
+        <Link to="/" className={classes.back}>{t("lifecycle.back")}</Link>
+        <h1>{t("lifecycle.title")}</h1>
+        <p>{t("lifecycle.subtitle")}</p>
+      </div>
+
+      <div className={classes.notice}>
+        {locale === "zh"
+          ? "该模块展示按年龄分层的分类学丰度轨迹与非参数统计，反映群体级年龄梯度，不等同于个体纵向随访。"
+          : "This module shows age-stratified taxonomic trajectories and non-parametric statistics at the cohort level. It is not an individual longitudinal follow-up trace."}
+      </div>
+
+      <div className={classes.controls}>
+        <div className={classes.field}>
+          <label>{t("lifecycle.filterDisease")}</label>
+          <select className={classes.select} value={disease} onChange={(e) => setDisease(e.target.value)}>
+            <option value="">{t("lifecycle.allDiseases")}</option>
+            {sortedDiseases.map((item) => (
+              <option key={item.name} value={item.name}>
+                {`${diseaseLabel(item.name)} (${item.sample_count.toLocaleString()})`}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div className={classes.field}>
+          <label>{t("lifecycle.filterCountry")}</label>
+          <select className={classes.select} value={country} onChange={(e) => setCountry(e.target.value)}>
+            <option value="">{t("lifecycle.allCountries")}</option>
+            {countries.map((code) => {
+              const display = countryName(code, locale);
+              const showCode = display !== code && code !== "unknown" && code.length <= 3;
+              return (
+                <option key={code} value={code}>
+                  {showCode ? `${display} (${code})` : display}
+                </option>
+              );
+            })}
+          </select>
+        </div>
+
+        <div className={classes.field}>
+          <label>{`${t("lifecycle.topN")}: ${topN}`}</label>
+          <input
+            className={classes.slider}
+            type="range"
+            min={5}
+            max={30}
+            step={5}
+            value={topN}
+            onChange={(e) => setTopN(parseInt(e.target.value, 10))}
+          />
+        </div>
+
+        <div className={classes.field}>
+          <label>{t("lifecycle.viewMode")}</label>
+          <select className={classes.select} value={viewMode} onChange={(e) => setViewMode(e.target.value as "area" | "compare")}>
+            <option value="area">{t("lifecycle.modeNormal")}</option>
+            <option value="compare" disabled={!canCompare}>{t("lifecycle.modeCompare")}</option>
+          </select>
+        </div>
+      </div>
+
+      {loading ? <div className={classes.loading}>{t("search.searching")}</div> : null}
+      {error ? <div className={classes.error}>{error}</div> : null}
+
+      {!loading && !error && legendData ? (
+        <>
+          {(() => {
+            const msg = viewMode === "compare"
+              ? underpoweredMessage(dualData?.disease_data)
+              : underpoweredMessage(data);
+            return msg ? <div className={classes.noticeWarn}>{msg}</div> : null;
+          })()}
+          <div className={classes.summaryRow}>
+            <div className={classes.summaryCard}>
+              <span className={classes.summaryLabel}>{t("lifecycle.sampleCount")}</span>
+              <strong>{legendData.total_samples.toLocaleString()}</strong>
+              {legendData.total_samples_all && legendData.total_samples_all !== legendData.total_samples ? (
+                <span className={classes.summarySubtext}>{locale === "zh" ? `（共 ${legendData.total_samples_all.toLocaleString()}）` : ` of ${legendData.total_samples_all.toLocaleString()}`}</span>
+              ) : null}
+            </div>
+            <div className={classes.summaryCard}>
+              <span className={classes.summaryLabel}>{t("lifecycle.topN")}</span>
+              <strong>{legendData.genera.filter((genus) => genus !== "Other").length}</strong>
+            </div>
+            <div className={classes.summaryCard}>
+              <span className={classes.summaryLabel}>{t("lifecycle.kruskalSig")}</span>
+              <strong>{legendData.kruskal_results.filter((row) => row.significant).length}</strong>
+            </div>
+            {legendData.permanova?.r_squared != null ? (
+              <div className={classes.summaryCard}>
+                <span className={classes.summaryLabel}>PERMANOVA R²</span>
+                <strong>{legendData.permanova.r_squared.toFixed(3)}</strong>
+                <span className={classes.summarySubtext}>P{legendData.permanova.p_value <= 0.001 ? " < 0.001" : ` = ${legendData.permanova.p_value.toFixed(3)}`}, n={legendData.permanova.n_samples_used.toLocaleString()}</span>
+              </div>
+            ) : (
+              <div className={classes.summaryCard}>
+                <span className={classes.summaryLabel}>{t("lifecycle.viewMode")}</span>
+                <strong>{viewMode === "compare" ? t("lifecycle.modeCompare") : t("lifecycle.modeNormal")}</strong>
+              </div>
+            )}
+            {(() => {
+              const a = legendData.alpha_diversity_stats;
+              if (!a || typeof a.shannon_spearman_rho !== "number") return null;
+              return (
+                <div className={classes.summaryCard}>
+                  <span className={classes.summaryLabel}>{locale === "zh" ? "Shannon 年龄趋势" : "Shannon age trend"}</span>
+                  <strong>ρ = {a.shannon_spearman_rho > 0 ? "+" : ""}{a.shannon_spearman_rho.toFixed(3)}</strong>
+                  <span className={classes.summarySubtext}>η²={(a.shannon_eta_squared ?? 0).toFixed(3)}, P{(a.shannon_spearman_p ?? 1) < 0.001 ? " < 0.001" : ` = ${(a.shannon_spearman_p ?? 1).toFixed(3)}`}</span>
+                </div>
+              );
+            })()}
+          </div>
+
+          {viewMode === "area" && data ? (
+            <>
+              <div className={classes.chartCard}>
+                <div className={classes.cardHeader}>
+                  <div>
+                    <h3>{t("lifecycle.stackedArea")}</h3>
+                    <p>
+                      {`${diseaseLabel(data.disease)} · ${country ? countryName(country, locale) : t("lifecycle.allCountries")} · ${data.total_samples.toLocaleString()} ${locale === "zh" ? "个样本（已知年龄）" : "age-annotated samples"}${data.total_samples_all && data.total_samples_all !== data.total_samples ? (locale === "zh" ? `（共 ${data.total_samples_all.toLocaleString()}）` : ` of ${data.total_samples_all.toLocaleString()} total`) : ""}`}
+                    </p>
+                  </div>
+                  <div className={classes.actionRow}>
+                    <button type="button" onClick={() => exportLifecycleTable(data, `lifecycle_${Date.now()}`)}>{t("export.csv")}</button>
+                    <button type="button" onClick={() => singleFigureRef.current && exportElementSVG(singleFigureRef.current, `lifecycle_${Date.now()}`)}>{t("export.svg")}</button>
+                    <button type="button" onClick={() => singleFigureRef.current && exportElementPNG(singleFigureRef.current, `lifecycle_${Date.now()}`)}>{t("export.png")}</button>
+                  </div>
+                </div>
+                <div ref={singleFigureRef} className={classes.exportSurface}>
+                  <svg ref={singleSvgRef} className={classes.chart} />
+                  {renderLegend(data)}
+                </div>
+              </div>
+
+              <div className={classes.chartCard}>
+                <div className={classes.cardHeader}>
+                  <div>
+                    <h3>{t("lifecycle.alphaDiversity")}</h3>
+                    <p>{locale === "zh" ? "按年龄段展示 Shannon / Simpson 均值与标准差。" : "Age-group mean diversity with one-standard-deviation error bars."}</p>
+                    {(() => {
+                      const a = data?.alpha_diversity_stats;
+                      if (!a) return null;
+                      const isSh = diversityMetric === "shannon";
+                      const h = isSh ? a.shannon_kw_h : a.simpson_kw_h;
+                      const eta = isSh ? a.shannon_eta_squared : a.simpson_eta_squared;
+                      const rho = isSh ? a.shannon_spearman_rho : a.simpson_spearman_rho;
+                      const sp = isSh ? a.shannon_spearman_p : a.simpson_spearman_p;
+                      if (typeof h !== "number" || typeof rho !== "number") return null;
+                      return (
+                        <p style={{ fontSize: "0.78rem", color: "#93c5fd", marginTop: "0.3rem" }}>
+                          Kruskal–Wallis H={h.toFixed(1)}, η²={(eta ?? 0).toFixed(3)} · Spearman ρ={rho > 0 ? "+" : ""}{rho.toFixed(3)}, P{(sp ?? 1) < 0.001 ? " < 0.001" : ` = ${(sp ?? 1).toFixed(3)}`}
+                        </p>
+                      );
+                    })()}
+                  </div>
+                  <div className={classes.metricToggle}>
+                    <button
+                      type="button"
+                      className={diversityMetric === "shannon" ? classes.metricButtonActive : classes.metricButton}
+                      onClick={() => setDiversityMetric("shannon")}
+                    >
+                      Shannon
+                    </button>
+                    <button
+                      type="button"
+                      className={diversityMetric === "simpson" ? classes.metricButtonActive : classes.metricButton}
+                      onClick={() => setDiversityMetric("simpson")}
+                    >
+                      Simpson
+                    </button>
+                  </div>
+                </div>
+                <AlphaDiversityChart data={data.data} locale={locale} metric={diversityMetric} />
+              </div>
+
+              <TransitionPanel transitions={data.transitions} locale={locale} />
+              {renderSignificantCard(data, diseaseLabel(data.disease))}
+            </>
+          ) : null}
+
+          {viewMode === "compare" && dualData ? (
+            <>
+              <div className={classes.compareGrid}>
+                <div className={classes.chartCard}>
+                  <div className={classes.cardHeader}>
+                    <div>
+                      <h3>{diseaseLabel(dualData.disease_data.disease)}</h3>
+                      <p>{`${dualData.disease_data.total_samples.toLocaleString()} ${locale === "zh" ? "个样本（已知年龄）" : "age-annotated"}${dualData.disease_data.total_samples_all && dualData.disease_data.total_samples_all !== dualData.disease_data.total_samples ? (locale === "zh" ? `（共 ${dualData.disease_data.total_samples_all.toLocaleString()}）` : ` of ${dualData.disease_data.total_samples_all.toLocaleString()}`) : ""}`}</p>
+                    </div>
+                    <div className={classes.actionRow}>
+                      <button type="button" onClick={() => exportLifecycleTable(dualData.disease_data, `lifecycle_disease_${Date.now()}`)}>{t("export.csv")}</button>
+                      <button type="button" onClick={() => compareDiseaseSvgRef.current && exportSVG(compareDiseaseSvgRef.current, `lifecycle_disease_${Date.now()}`)}>{t("export.svg")}</button>
+                      <button type="button" onClick={() => compareDiseaseSvgRef.current && exportPNG(compareDiseaseSvgRef.current, `lifecycle_disease_${Date.now()}`)}>{t("export.png")}</button>
+                    </div>
+                  </div>
+                  <svg ref={compareDiseaseSvgRef} className={classes.chart} />
+                </div>
+
+                <div className={classes.chartCard}>
+                  <div className={classes.cardHeader}>
+                    <div>
+                      <h3>{locale === "zh" ? "健康对照 (NC)" : "Healthy (NC)"}</h3>
+                      <p>{`${dualData.nc_data.total_samples.toLocaleString()} ${locale === "zh" ? "个样本（已知年龄）" : "age-annotated"}${dualData.nc_data.total_samples_all && dualData.nc_data.total_samples_all !== dualData.nc_data.total_samples ? (locale === "zh" ? `（共 ${dualData.nc_data.total_samples_all.toLocaleString()}）` : ` of ${dualData.nc_data.total_samples_all.toLocaleString()}`) : ""}`}</p>
+                    </div>
+                    <div className={classes.actionRow}>
+                      <button type="button" onClick={() => exportLifecycleTable(dualData.nc_data, `lifecycle_nc_${Date.now()}`)}>{t("export.csv")}</button>
+                      <button type="button" onClick={() => compareNcSvgRef.current && exportSVG(compareNcSvgRef.current, `lifecycle_nc_${Date.now()}`)}>{t("export.svg")}</button>
+                      <button type="button" onClick={() => compareNcSvgRef.current && exportPNG(compareNcSvgRef.current, `lifecycle_nc_${Date.now()}`)}>{t("export.png")}</button>
+                    </div>
+                  </div>
+                  <svg ref={compareNcSvgRef} className={classes.chart} />
+                </div>
+              </div>
+
+              {renderLegend(dualData.disease_data)}
+
+              <div className={classes.compareGrid}>
+                <div className={classes.chartCard}>
+                  <div className={classes.cardHeader}>
+                    <div>
+                      <h3>{`${diseaseLabel(dualData.disease_data.disease)} · ${t("lifecycle.alphaDiversity")}`}</h3>
+                    </div>
+                    <div className={classes.metricToggle}>
+                      <button
+                        type="button"
+                        className={diversityMetric === "shannon" ? classes.metricButtonActive : classes.metricButton}
+                        onClick={() => setDiversityMetric("shannon")}
+                      >
+                        Shannon
+                      </button>
+                      <button
+                        type="button"
+                        className={diversityMetric === "simpson" ? classes.metricButtonActive : classes.metricButton}
+                        onClick={() => setDiversityMetric("simpson")}
+                      >
+                        Simpson
+                      </button>
+                    </div>
+                  </div>
+                  <AlphaDiversityChart data={dualData.disease_data.data} locale={locale} metric={diversityMetric} />
+                </div>
+
+                <div className={classes.chartCard}>
+                  <div className={classes.cardHeader}>
+                    <div>
+                      <h3>{`${locale === "zh" ? "健康对照 (NC)" : "Healthy (NC)"} · ${t("lifecycle.alphaDiversity")}`}</h3>
+                    </div>
+                  </div>
+                  <AlphaDiversityChart data={dualData.nc_data.data} locale={locale} metric={diversityMetric} />
+                </div>
+              </div>
+
+              <div className={classes.compareGrid}>
+                <TransitionPanel transitions={dualData.disease_data.transitions} locale={locale} heading={diseaseLabel(dualData.disease_data.disease)} />
+                <TransitionPanel transitions={dualData.nc_data.transitions} locale={locale} heading={locale === "zh" ? "健康对照 (NC)" : "Healthy (NC)"} />
+              </div>
+
+              <div className={classes.compareGrid}>
+                {renderSignificantCard(dualData.disease_data, diseaseLabel(dualData.disease_data.disease))}
+                {renderSignificantCard(dualData.nc_data, locale === "zh" ? "健康对照 (NC)" : "Healthy (NC)")}
+              </div>
+            </>
+          ) : null}
+        </>
+      ) : null}
+    </div>
+  );
+};
+
+export default LifecyclePage;
+
+const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
+
+const GENUS_COLOR_VARIANTS = [
+  { hue: 0, saturation: 0, lightness: -0.2 },
+  { hue: -12, saturation: 0.04, lightness: -0.08 },
+  { hue: 12, saturation: -0.03, lightness: 0.02 },
+  { hue: -24, saturation: 0.07, lightness: 0.12 },
+  { hue: 24, saturation: 0.02, lightness: -0.02 },
+  { hue: -34, saturation: -0.02, lightness: 0.18 },
+  { hue: 34, saturation: 0.05, lightness: -0.12 },
+  { hue: 42, saturation: -0.06, lightness: 0.08 },
+  { hue: -42, saturation: 0.05, lightness: -0.04 },
+];
+
+function buildLifecycleColorMap(payloads: LifecycleData[]): Record<string, string> {
+  const grouped = new Map<string, Set<string>>();
+
+  payloads.forEach((payload) => {
+    payload.genera.forEach((genus) => {
+      if (genus === "Other") return;
+      const phylum = payload.phylum_map[genus] ?? "Unknown";
+      if (!grouped.has(phylum)) {
+        grouped.set(phylum, new Set());
+      }
+      grouped.get(phylum)?.add(genus);
+    });
+  });
+
+  const colorMap: Record<string, string> = { Other: "#cbd5e1" };
+
+  grouped.forEach((generaSet, phylum) => {
+    const genera = [...generaSet].sort((left, right) => left.localeCompare(right));
+    const base = d3.hsl(phylumColor(phylum));
+
+    genera.forEach((genus, index) => {
+      const variant = GENUS_COLOR_VARIANTS[index % GENUS_COLOR_VARIANTS.length] ?? GENUS_COLOR_VARIANTS[0]!;
+      const cycle = Math.floor(index / GENUS_COLOR_VARIANTS.length);
+      const hue = (base.h + variant.hue + cycle * 7 + 360) % 360;
+      const saturation = clamp(base.s + variant.saturation - cycle * 0.03, 0.36, 0.95);
+      const lightness = clamp(base.l + variant.lightness + cycle * 0.04, 0.24, 0.78);
+      colorMap[genus] = d3.hsl(hue, saturation, lightness).formatHex();
+    });
+  });
+
+  return colorMap;
+}
+
+function drawStackedArea(
+  svgEl: SVGSVGElement,
+  lifecycle: LifecycleData,
+  locale: string,
+  isolatedGenus: string | null,
+  ageLabel: (name: string) => string,
+  colorMap: Record<string, string>,
+) {
+  const svg = d3.select(svgEl);
+  svg.selectAll("*").remove();
+
+  if (!lifecycle.data.length) {
+    svg.attr("viewBox", "0 0 840 200");
+    svg.append("text")
+      .attr("x", 24)
+      .attr("y", 96)
+      .attr("fill", "currentColor")
+      .attr("font-size", 14)
+      .text(locale === "zh" ? "暂无生命周期轨迹数据" : "No lifecycle trajectory data available");
+    return;
+  }
+
+  const margin = { top: 58, right: 20, bottom: 72, left: 56 };
+  const width = 860;
+  const height = 430;
+  const innerWidth = width - margin.left - margin.right;
+  const innerHeight = height - margin.top - margin.bottom;
+  svg.attr("viewBox", `0 0 ${width} ${height}`);
+
+  const rows = lifecycle.data;
+  const genera = lifecycle.genera;
+  const ageGroups = rows.map((row) => row.age_group);
+  const firstAgeGroup = ageGroups[0];
+  if (!firstAgeGroup) {
+    return;
+  }
+  const xScale = d3.scalePoint<string>()
+    .domain(ageGroups)
+    .range([0, innerWidth])
+    .padding(0.28);
+  const yScale = d3.scaleLinear()
+    .domain([0, 100])
+    .range([innerHeight, 0]);
+
+  const stack = d3.stack<LifecycleRow>()
+    .keys(genera)
+    .value((row, key) => Number(row[key] ?? 0));
+
+  const series = stack(rows);
+  const tooltip = d3.select("body")
+    .selectAll(".lifecycle-tooltip")
+    .data([null])
+    .join("div")
+    .attr("class", "lifecycle-tooltip")
+    .style("position", "absolute")
+    .style("pointer-events", "none")
+    .style("opacity", 0)
+    .style("background", "rgba(255,255,255,0.98)")
+    .style("border", "1px solid #dbe3ef")
+    .style("border-radius", "10px")
+    .style("padding", "10px 12px")
+    .style("font-size", "0.8rem")
+    .style("line-height", "1.45")
+    .style("color", "#0f172a")
+    .style("box-shadow", "0 12px 28px rgba(15, 23, 42, 0.18)")
+    .style("z-index", "1000");
+
+  const area = d3.area<d3.SeriesPoint<LifecycleRow>>()
+    .x((point) => xScale(point.data.age_group) ?? 0)
+    .y0((point) => yScale(point[0]))
+    .y1((point) => yScale(point[1]))
+    .curve(d3.curveMonotoneX);
+
+  const chartRoot = svg.append("g").attr("transform", `translate(${margin.left},${margin.top})`);
+
+  chartRoot.append("g")
+    .selectAll(".grid-line")
+    .data([0, 20, 40, 60, 80, 100])
+    .join("line")
+    .attr("x1", 0)
+    .attr("x2", innerWidth)
+    .attr("y1", (tick) => yScale(tick))
+    .attr("y2", (tick) => yScale(tick))
+    .attr("stroke", "rgba(148, 163, 184, 0.18)")
+    .attr("stroke-dasharray", "4,4");
+
+  const nearestAgeGroup = (mouseX: number) => ageGroups.reduce((best, current) => {
+    const bestDist = Math.abs((xScale(best) ?? 0) - mouseX);
+    const currentDist = Math.abs((xScale(current) ?? 0) - mouseX);
+    return currentDist < bestDist ? current : best;
+  }, firstAgeGroup);
+
+  const fillFor = (key: string) => colorMap[key] ?? (key === "Other" ? "#cbd5e1" : phylumColor(lifecycle.phylum_map[key] ?? "Unknown"));
+  const opacityFor = (key: string) => {
+    if (!isolatedGenus) return key === "Other" ? 0.68 : 0.9;
+    return isolatedGenus === key ? 0.98 : 0.12;
+  };
+  const strokeFor = (key: string) => (isolatedGenus === key ? "#f8fafc" : "transparent");
+  const strokeWidthFor = (key: string) => (isolatedGenus === key ? 1.2 : 0);
+  const hoverHandler = function onMove(this: SVGElement, event: MouseEvent, layer: { key: string }) {
+    const [pointerX] = d3.pointer(event, svgEl);
+    const localX = Math.max(0, Math.min(innerWidth, pointerX - margin.left));
+    const nearest = nearestAgeGroup(localX);
+    const row = rows.find((item) => item.age_group === nearest);
+    if (!row) return;
+    const abundance = Number(row[layer.key] ?? 0);
+    const phylum = layer.key === "Other" ? "Other" : (lifecycle.phylum_map[layer.key] ?? "Unknown");
+    tooltip
+      .html([
+        `<strong>${ageLabel(nearest)}</strong>`,
+        layer.key === "Other" ? (locale === "zh" ? "其他属汇总" : "Other genera aggregate") : `<i>${layer.key}</i>`,
+        `${locale === "zh" ? "门" : "Phylum"}: ${phylum}`,
+        `${locale === "zh" ? "相对丰度" : "Relative abundance"}: ${abundance.toFixed(2)}%`,
+        `${locale === "zh" ? "样本量" : "Sample count"}: ${row.sample_count.toLocaleString()}`,
+        `${locale === "zh" ? "Shannon 均值" : "Mean Shannon"}: ${row.shannon_mean.toFixed(3)}`,
+      ].join("<br/>"))
+      .style("left", `${event.pageX + 14}px`)
+      .style("top", `${event.pageY - 24}px`)
+      .style("opacity", 1);
+  };
+  const mouseOutHandler = () => { tooltip.style("opacity", 0); };
+
+  if (ageGroups.length === 1) {
+    // Single-stage degradation: D3 area needs >=2 x points, draw a stacked bar instead
+    const centerX = xScale(firstAgeGroup) ?? innerWidth / 2;
+    const barWidth = Math.min(140, Math.max(80, innerWidth * 0.3));
+    chartRoot.selectAll(".layer")
+      .data(series)
+      .join("rect")
+      .attr("class", "layer")
+      .attr("x", centerX - barWidth / 2)
+      .attr("y", (layer) => yScale(layer[0][1]))
+      .attr("width", barWidth)
+      .attr("height", (layer) => Math.max(0, yScale(layer[0][0]) - yScale(layer[0][1])))
+      .attr("fill", (layer) => fillFor(layer.key))
+      .attr("opacity", (layer) => opacityFor(layer.key))
+      .attr("stroke", (layer) => strokeFor(layer.key))
+      .attr("stroke-width", (layer) => strokeWidthFor(layer.key))
+      .on("mousemove", hoverHandler)
+      .on("mouseout", mouseOutHandler);
+  } else {
+    chartRoot.selectAll(".layer")
+      .data(series)
+      .join("path")
+      .attr("class", "layer")
+      .attr("d", area)
+      .attr("fill", (layer) => fillFor(layer.key))
+      .attr("opacity", (layer) => opacityFor(layer.key))
+      .attr("stroke", (layer) => strokeFor(layer.key))
+      .attr("stroke-width", (layer) => strokeWidthFor(layer.key))
+      .on("mousemove", hoverHandler)
+      .on("mouseout", mouseOutHandler);
+  }
+
+  const sampleBadges = chartRoot.selectAll(".sample-badge")
+    .data(rows)
+    .join("g")
+    .attr("class", "sample-badge")
+    .attr("transform", (row) => `translate(${xScale(row.age_group) ?? 0},-18)`);
+
+  sampleBadges.each(function appendBadge(row) {
+    const group = d3.select(this);
+    const label = `n=${Number(row.sample_count).toLocaleString()}`;
+    const badgeWidth = Math.max(40, label.length * 6.3 + 12);
+    group.append("rect")
+      .attr("x", -badgeWidth / 2)
+      .attr("y", -11)
+      .attr("width", badgeWidth)
+      .attr("height", 18)
+      .attr("rx", 9)
+      .attr("fill", "rgba(15, 23, 42, 0.9)")
+      .attr("stroke", "rgba(148, 163, 184, 0.45)");
+    group.append("text")
+      .attr("text-anchor", "middle")
+      .attr("y", 2)
+      .attr("fill", "#f8fafc")
+      .attr("font-size", 9)
+      .text(label);
+  });
+
+  chartRoot.append("g")
+    .attr("transform", `translate(0,${innerHeight})`)
+    .call(d3.axisBottom(xScale).tickFormat((value) => ageLabel(value)))
+    .attr("font-size", 10)
+    .selectAll("text")
+    .attr("transform", "rotate(-22)")
+    .style("text-anchor", "end");
+
+  chartRoot.append("g")
+    .call(d3.axisLeft(yScale).ticks(5).tickFormat((value) => `${value}%`))
+    .attr("font-size", 10);
+
+  chartRoot.append("text")
+    .attr("x", innerWidth / 2)
+    .attr("y", innerHeight + 58)
+    .attr("fill", "currentColor")
+    .attr("font-size", 11)
+    .attr("text-anchor", "middle")
+    .text(locale === "zh" ? "年龄阶段" : "Age group");
+
+  chartRoot.append("text")
+    .attr("transform", `translate(-42,${innerHeight / 2}) rotate(-90)`)
+    .attr("fill", "currentColor")
+    .attr("font-size", 11)
+    .attr("text-anchor", "middle")
+    .text(locale === "zh" ? "相对丰度 (%)" : "Relative abundance (%)");
+}

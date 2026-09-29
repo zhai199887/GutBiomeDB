@@ -1,0 +1,490 @@
+/* MetabolismPage.module.css */
+
+.page {
+  min-height: 100vh;
+  background: var(--black);
+  color: var(--white);
+}
+
+.loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 240px;
+  color: var(--light-gray);
+}
+
+.errorBanner {
+  margin-top: 16px;
+  padding: 14px 16px;
+  border: 1px solid color-mix(in hsl, var(--primary), var(--white) 18%);
+  background: color-mix(in hsl, var(--primary), var(--black) 80%);
+  border-radius: 10px;
+  color: var(--white);
+  line-height: 1.6;
+}
+
+.errorBanner code {
+  font-family: monospace;
+  font-size: 0.84rem;
+}
+
+.header {
+  padding: 34px 40px 24px;
+  background: color-mix(in hsl, var(--black), var(--white) 5%);
+  border-bottom: 1px solid var(--dark-gray);
+}
+
+.back {
+  display: inline-block;
+  margin-bottom: 12px;
+  color: var(--primary);
+  text-decoration: none;
+  font-size: 0.86rem;
+  opacity: 0.9;
+}
+
+.back:hover {
+  opacity: 1;
+}
+
+.header h1 {
+  margin: 0 0 8px;
+  font-size: 1.7rem;
+  font-weight: 700;
+}
+
+.header p {
+  margin: 0;
+  max-width: 860px;
+  color: var(--light-gray);
+  line-height: 1.65;
+}
+
+.disclaimer {
+  margin-top: 14px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 1px solid color-mix(in hsl, var(--secondary), var(--white) 18%);
+  background: color-mix(in hsl, var(--secondary), var(--black) 84%);
+  color: var(--secondary-light);
+  font-size: 0.9rem;
+  line-height: 1.6;
+}
+
+.searchBox {
+  margin-top: 18px;
+  max-width: 520px;
+}
+
+.searchInput {
+  width: 100%;
+  border: 1px solid var(--gray);
+  border-radius: 10px;
+  background: color-mix(in hsl, var(--black), var(--white) 7%);
+  color: var(--white);
+  padding: 11px 14px;
+  font: inherit;
+}
+
+.searchInput:focus {
+  outline: none;
+  border-color: var(--primary);
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: 300px 1fr;
+  min-height: calc(100vh - 210px);
+}
+
+.sidebar {
+  padding: 20px 14px 24px;
+  border-right: 1px solid var(--dark-gray);
+  background: color-mix(in hsl, var(--black), var(--white) 3%);
+  overflow-y: auto;
+}
+
+.sideTitle {
+  margin: 0 0 14px 6px;
+  color: var(--light-gray);
+  font-size: 0.78rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.sidebarControls {
+  display: grid;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.globalOverviewButton {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--gray);
+  border-radius: 10px;
+  background: transparent;
+  color: var(--white);
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+}
+
+.globalOverviewButton[data-active="true"] {
+  border-color: var(--secondary);
+  background: color-mix(in hsl, var(--secondary), var(--black) 80%);
+}
+
+.sortLabel {
+  display: grid;
+  gap: 6px;
+  color: var(--light-gray);
+  font-size: 0.8rem;
+}
+
+.sortSelect {
+  width: 100%;
+  border: 1px solid var(--gray);
+  border-radius: 10px;
+  background: color-mix(in hsl, var(--black), var(--white) 6%);
+  color: var(--white);
+  padding: 10px 12px;
+  font: inherit;
+}
+
+.categoryCard {
+  display: flex;
+  gap: 10px;
+  width: 100%;
+  margin-bottom: 6px;
+  padding: 11px 12px;
+  border: 1px solid transparent;
+  border-radius: 12px;
+  background: transparent;
+  color: var(--white);
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+  transition: background var(--fast), border-color var(--fast);
+}
+
+.categoryCard:hover {
+  border-color: var(--gray);
+  background: color-mix(in hsl, var(--black), var(--white) 8%);
+}
+
+.categoryCard[data-active="true"] {
+  border-color: var(--primary);
+  background: color-mix(in hsl, var(--primary), var(--black) 80%);
+}
+
+.catIcon {
+  font-size: 1.35rem;
+  line-height: 1;
+}
+
+.catInfo {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.catName {
+  font-size: 0.88rem;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.catZh {
+  color: var(--light-gray);
+  font-size: 0.78rem;
+}
+
+.catCount {
+  color: var(--gray);
+  font-size: 0.75rem;
+}
+
+.detail {
+  padding: 30px 40px 36px;
+  overflow-y: auto;
+}
+
+.detailPanel {
+  display: grid;
+  gap: 20px;
+}
+
+.tabBar {
+  display: flex;
+  gap: 10px;
+}
+
+.tabButton {
+  padding: 10px 14px;
+  border: 1px solid var(--gray);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--light-gray);
+  font: inherit;
+  cursor: pointer;
+}
+
+.tabButton[data-active="true"] {
+  border-color: var(--primary);
+  background: color-mix(in hsl, var(--primary), var(--black) 82%);
+  color: var(--white);
+}
+
+.catHeader {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.detailIcon {
+  font-size: 2.5rem;
+  line-height: 1;
+}
+
+.detailName {
+  margin: 0 0 4px;
+  font-size: 1.45rem;
+  font-weight: 700;
+}
+
+.detailZh {
+  margin: 0;
+  color: var(--light-gray);
+}
+
+.detailDesc {
+  margin: 0;
+  max-width: 1000px;
+  color: var(--light-gray);
+  line-height: 1.75;
+}
+
+.summaryRow {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.summaryCard {
+  display: grid;
+  gap: 8px;
+  padding: 14px 16px;
+  border: 1px solid var(--dark-gray);
+  border-radius: 12px;
+  background: color-mix(in hsl, var(--black), var(--white) 4%);
+}
+
+.summaryCard strong {
+  font-size: 1.2rem;
+  font-weight: 700;
+}
+
+.summaryLabel {
+  color: var(--light-gray);
+  font-size: 0.8rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.subtleText {
+  margin: 0;
+  color: var(--light-gray);
+  font-size: 0.86rem;
+  line-height: 1.6;
+}
+
+.infoBlock,
+.relevanceBlock,
+.chartBlock,
+.refBlock {
+  padding: 18px 20px;
+  border: 1px solid var(--dark-gray);
+  border-radius: 14px;
+  background: color-mix(in hsl, var(--black), var(--white) 4%);
+}
+
+.infoBlock h4,
+.relevanceBlock h4,
+.chartBlock h4,
+.refBlock h4 {
+  margin: 0 0 12px;
+  color: var(--light-gray);
+  font-size: 0.8rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.relevanceBlock p {
+  margin: 0;
+  line-height: 1.7;
+}
+
+.chartHeaderRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.metricChart {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-width: 100%;
+}
+
+.plotLegend {
+  display: flex;
+  gap: 16px;
+  margin: 8px 0 12px;
+  flex-wrap: wrap;
+}
+
+.legendItem {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--light-gray);
+  font-size: 0.82rem;
+}
+
+.legendSwatch {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border-radius: 999px;
+}
+
+.legendSwatch[data-tone="disease"] {
+  background: var(--primary);
+}
+
+.legendSwatch[data-tone="control"] {
+  background: var(--secondary);
+}
+
+.taxaGrid,
+.metaboliteList,
+.pathwayList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.taxonTag {
+  padding: 4px 10px;
+  border: 1px solid var(--secondary);
+  border-radius: 999px;
+  background: color-mix(in hsl, var(--secondary), var(--black) 82%);
+  color: var(--secondary-light);
+  text-decoration: none;
+  font-size: 0.83rem;
+}
+
+.taxonTag:visited {
+  color: var(--secondary-light);
+}
+
+.metaboliteTag {
+  padding: 4px 10px;
+  border: 1px solid var(--primary);
+  border-radius: 999px;
+  background: color-mix(in hsl, var(--primary), var(--black) 82%);
+  color: var(--primary-light);
+  font-size: 0.83rem;
+}
+
+.pathwayTag {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border: 1px solid var(--gray);
+  border-radius: 999px;
+  background: color-mix(in hsl, var(--black), var(--white) 6%);
+  color: var(--white);
+  font-size: 0.82rem;
+}
+
+.pathwayLinks {
+  display: inline-flex;
+  gap: 6px;
+}
+
+.externalLink {
+  color: var(--secondary-light);
+  text-decoration: none;
+  font-size: 0.78rem;
+}
+
+.externalLink:hover {
+  text-decoration: underline;
+}
+
+.refBlock {
+  display: grid;
+  gap: 8px;
+}
+
+.ref {
+  color: var(--light-gray);
+  font-size: 0.82rem;
+  line-height: 1.6;
+  word-break: break-word;
+}
+
+.emptyState {
+  padding: 18px 16px;
+  border: 1px dashed var(--gray);
+  border-radius: 12px;
+  color: var(--light-gray);
+  line-height: 1.6;
+}
+
+@media (max-width: 1100px) {
+  .layout {
+    grid-template-columns: 1fr;
+  }
+
+  .sidebar {
+    border-right: none;
+    border-bottom: 1px solid var(--dark-gray);
+  }
+}
+
+@media (max-width: 820px) {
+  .header,
+  .detail {
+    padding-left: 18px;
+    padding-right: 18px;
+  }
+
+  .summaryRow {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .tabBar {
+    flex-wrap: wrap;
+  }
+}
+
+@media (max-width: 560px) {
+  .summaryRow {
+    grid-template-columns: 1fr;
+  }
+
+  .chartBlock,
+  .infoBlock,
+  .relevanceBlock,
+  .refBlock {
+    padding: 16px 14px;
+  }
+}

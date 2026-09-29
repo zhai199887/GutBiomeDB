@@ -1,0 +1,377 @@
+.page {
+  --download-border: rgba(15, 23, 42, 0.12);
+  --download-panel: rgba(255, 255, 255, 0.92);
+  --download-subtle: #64748b;
+  --download-ink: #122033;
+  max-width: 1460px;
+  margin: 0 auto;
+  padding: 2rem 1.5rem 4rem;
+}
+
+.topBar {
+  display: grid;
+  gap: 0.6rem;
+  margin-bottom: 1.5rem;
+}
+
+.topBar h1 {
+  margin: 0;
+  font-size: clamp(2rem, 4vw, 2.8rem);
+  color: inherit;
+}
+
+.topBar p {
+  margin: 0;
+  max-width: 72ch;
+  color: inherit;
+  opacity: 0.82;
+  line-height: 1.7;
+}
+
+.back {
+  color: var(--accent);
+  text-decoration: none;
+  font-size: 0.95rem;
+}
+
+.back:hover {
+  text-decoration: underline;
+}
+
+.warningBanner {
+  margin-bottom: 2rem;
+  padding: 1rem 1.15rem;
+  border: 1px solid rgba(180, 83, 9, 0.2);
+  border-radius: 16px;
+  background:
+    linear-gradient(135deg, rgba(255, 251, 235, 0.95), rgba(254, 243, 199, 0.82));
+  color: #92400e;
+  line-height: 1.7;
+}
+
+.section {
+  margin-top: 2.5rem;
+}
+
+.warningBanner a {
+  color: inherit;
+}
+
+.datasetDownload {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+}
+
+.sectionHeader {
+  display: grid;
+  gap: 0.45rem;
+  margin-bottom: 1.2rem;
+}
+
+.sectionHeader span {
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.sectionHeader h2 {
+  margin: 0;
+  font-size: 1.55rem;
+  color: inherit;
+}
+
+.sectionHeader p {
+  margin: 0;
+  color: inherit;
+  opacity: 0.82;
+  line-height: 1.7;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1rem;
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  min-height: 100%;
+  padding: 1.25rem;
+  border: 1px solid var(--download-border);
+  border-radius: 18px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(248, 250, 252, 0.96));
+  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.06);
+}
+
+.cardHeader {
+  display: grid;
+  gap: 0.4rem;
+}
+
+.cardHeader h3 {
+  margin: 0;
+  font-size: 1.08rem;
+  color: var(--download-ink);
+}
+
+.cardHeader p {
+  margin: 0;
+  color: var(--download-subtle);
+  line-height: 1.6;
+  font-size: 0.94rem;
+}
+
+.cardBody {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.field {
+  display: grid;
+  gap: 0.4rem;
+}
+
+.field span {
+  display: inline-flex;
+  gap: 0.35rem;
+  align-items: center;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--download-ink);
+}
+
+.field em {
+  font-style: normal;
+  font-size: 0.72rem;
+  color: #0f766e;
+}
+
+.select,
+.input,
+.comboboxInput {
+  width: 100%;
+  padding: 0.72rem 0.82rem;
+  border: 1px solid rgba(148, 163, 184, 0.34);
+  border-radius: 12px;
+  background: #fff;
+  color: var(--download-ink);
+  font-size: 0.92rem;
+}
+
+.select:focus,
+.input:focus,
+.comboboxInput:focus {
+  outline: none;
+  border-color: rgba(14, 116, 144, 0.5);
+  box-shadow: 0 0 0 4px rgba(14, 116, 144, 0.12);
+}
+
+.inlineFields {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 0.75rem;
+}
+
+.downloadButton,
+.secondaryButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  min-height: 44px;
+  padding: 0.72rem 1rem;
+  border-radius: 12px;
+  font-size: 0.92rem;
+  font-weight: 700;
+  text-decoration: none;
+  cursor: pointer;
+  transition:
+    transform 120ms ease,
+    opacity 120ms ease,
+    box-shadow 120ms ease;
+}
+
+.downloadButton {
+  border: none;
+  background: linear-gradient(135deg, #0f766e, #155e75);
+  color: #fff;
+  box-shadow: 0 14px 30px rgba(15, 118, 110, 0.18);
+}
+
+.secondaryButton {
+  border: 1px solid rgba(14, 116, 144, 0.22);
+  background: rgba(241, 245, 249, 0.9);
+  color: #0f172a;
+}
+
+.downloadButton:hover,
+.secondaryButton:hover {
+  transform: translateY(-1px);
+  opacity: 0.95;
+}
+
+.downloadButton:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+  transform: none;
+  box-shadow: none;
+}
+
+.helperText {
+  margin: 0;
+  color: #475569;
+  font-size: 0.82rem;
+  line-height: 1.6;
+}
+
+.combobox {
+  position: relative;
+}
+
+.comboboxFrame {
+  position: relative;
+}
+
+.comboboxInput {
+  padding-right: 2.4rem;
+}
+
+.clearButton {
+  position: absolute;
+  top: 50%;
+  right: 0.65rem;
+  transform: translateY(-50%);
+  border: none;
+  background: transparent;
+  color: #64748b;
+  font-size: 1rem;
+  cursor: pointer;
+}
+
+.comboboxMenu {
+  position: absolute;
+  z-index: 20;
+  inset: calc(100% + 0.35rem) 0 auto;
+  max-height: 260px;
+  overflow-y: auto;
+  border: 1px solid var(--download-border);
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 0 24px 48px rgba(15, 23, 42, 0.16);
+}
+
+.comboboxOption,
+.emptyOption {
+  display: grid;
+  width: 100%;
+  padding: 0.75rem 0.85rem;
+  border: none;
+  background: transparent;
+  text-align: left;
+}
+
+.comboboxOption {
+  cursor: pointer;
+}
+
+.comboboxOption:hover {
+  background: rgba(15, 118, 110, 0.08);
+}
+
+.comboboxOption small {
+  color: #64748b;
+  font-size: 0.76rem;
+}
+
+.emptyOption {
+  color: #64748b;
+  font-size: 0.86rem;
+}
+
+.codeGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 1rem;
+}
+
+.codeCard {
+  padding: 1rem;
+  border: 1px solid var(--download-border);
+  border-radius: 18px;
+  background: var(--download-panel);
+  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.06);
+}
+
+.codeHeader {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: baseline;
+}
+
+.codeHeader h3 {
+  margin: 0;
+  color: var(--download-ink);
+}
+
+.codeHeader span {
+  color: #0f766e;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.endpointLine {
+  margin: 0.6rem 0 0.85rem;
+  color: #475569;
+  font-family: var(--mono, monospace);
+  font-size: 0.84rem;
+  word-break: break-all;
+}
+
+.codeBlock {
+  margin: 0;
+  overflow-x: auto;
+  border-radius: 14px;
+  background: #0f172a;
+  color: #e2e8f0;
+  padding: 1rem;
+  font-size: 0.82rem;
+  line-height: 1.6;
+  white-space: pre;
+}
+
+.publicNote {
+  margin: 0.95rem 0 0;
+  color: #92400e;
+  font-size: 0.88rem;
+  line-height: 1.6;
+}
+
+.docsRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.85rem;
+  margin-top: 1rem;
+}
+
+@media (max-width: 720px) {
+  .page {
+    padding: 1.5rem 1rem 3rem;
+  }
+
+  .grid,
+  .codeGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .inlineFields {
+    grid-template-columns: 1fr;
+  }
+}

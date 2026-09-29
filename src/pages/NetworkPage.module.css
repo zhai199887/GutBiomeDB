@@ -1,0 +1,214 @@
+.page {
+  min-height: 100vh;
+  background: var(--black);
+  color: var(--white);
+}
+
+.topBar {
+  padding: 22px 40px 18px;
+  background: color-mix(in hsl, var(--black), var(--white) 6%);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.back {
+  color: var(--primary);
+  text-decoration: none;
+  font-size: 0.85rem;
+  opacity: 0.82;
+}
+
+.back:hover {
+  opacity: 1;
+}
+
+.topBar h1 {
+  margin: 10px 0 6px;
+  font-size: 1.8rem;
+}
+
+.topBar p {
+  margin: 0;
+  max-width: 980px;
+  color: var(--light-gray);
+  font-size: 0.92rem;
+}
+
+.tabs {
+  display: flex;
+  gap: 4px;
+  margin: 0 40px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.tab {
+  padding: 0.95rem 1.1rem;
+  border: none;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  color: var(--light-gray);
+  cursor: pointer;
+  font: inherit;
+}
+
+.tab:hover {
+  color: var(--white);
+}
+
+.tabActive {
+  composes: tab;
+  color: var(--primary);
+  border-bottom-color: var(--primary);
+}
+
+.associationPanel {
+  padding: 1.25rem 40px 32px;
+}
+
+.summaryGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.summaryCard {
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+  padding: 0.95rem 1rem;
+  background: color-mix(in hsl, var(--black), var(--white) 6%);
+}
+
+.summaryValue {
+  font-size: 1.2rem;
+  font-weight: 700;
+}
+
+.summaryLabel {
+  margin-top: 0.15rem;
+  color: var(--light-gray);
+  font-size: 0.8rem;
+}
+
+.graphContainer {
+  position: relative;
+  min-height: 860px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 18px;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at top, rgba(78, 205, 196, 0.08), transparent 36%),
+    linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0));
+}
+
+.graphContainer svg {
+  width: 100%;
+  height: 860px;
+  display: block;
+}
+
+.legend {
+  position: absolute;
+  top: 18px;
+  right: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.8rem 0.95rem;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(9, 10, 14, 0.76);
+  z-index: 2;
+}
+
+.legendItem {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  color: var(--light-gray);
+  font-size: 0.8rem;
+}
+
+.legendDot {
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.legendLine {
+  width: 16px;
+  height: 0;
+  border-top: 2px solid rgba(255, 255, 255, 0.55);
+}
+
+.exportRow {
+  position: absolute;
+  left: 18px;
+  top: 18px;
+  display: flex;
+  gap: 0.45rem;
+  z-index: 2;
+}
+
+.exportBtn {
+  min-height: 36px;
+  padding: 0.45rem 0.8rem;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(9, 10, 14, 0.76);
+  color: var(--white);
+  cursor: pointer;
+}
+
+.exportBtn:hover {
+  border-color: rgba(255, 255, 255, 0.22);
+}
+
+.loading,
+.error {
+  margin: 1rem 40px;
+  padding: 1rem;
+  border-radius: 14px;
+  text-align: center;
+  color: var(--light-gray);
+  border: 1px dashed rgba(255, 255, 255, 0.12);
+}
+
+.error {
+  color: #fca5a5;
+  border-color: rgba(248, 113, 113, 0.26);
+}
+
+@media (max-width: 1080px) {
+  .topBar,
+  .associationPanel,
+  .tabs {
+    margin: 0;
+    padding-left: 20px;
+    padding-right: 20px;
+  }
+
+  .legend {
+    right: 14px;
+    left: 14px;
+    top: auto;
+    bottom: 14px;
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+}
+
+@media (max-width: 720px) {
+  .graphContainer {
+    min-height: 560px;
+  }
+
+  .graphContainer svg {
+    height: 560px;
+  }
+
+  .exportRow {
+    position: static;
+    padding: 0.8rem 0.8rem 0;
+  }
+}

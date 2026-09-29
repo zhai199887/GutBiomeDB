@@ -1,0 +1,14 @@
+[
+  {
+    "question": "Does this platform redistribute raw sequencing reads?",
+    "answer": "No. The platform serves processed, study-level statistics and interactive visualizations. Raw reads remain in their original repositories and under the original accession-specific terms."
+  },
+  {
+    "question": "Can the results be used for clinical diagnosis?",
+    "answer": "No. GutBiomeDB is a research platform for exploratory analysis and hypothesis generation. It is not a medical device and should not be used for diagnosis, treatment selection, or patient management."
+  },
+  {
+    "question": "What is the biological resolution of the current database?",
+    "answer": "The main analytic layer is currently genus-level. Several interfaces historically used the word species, but the implemented statistics, search, and network layers are anchored to verified genus-level abundance data."
+  }
+]

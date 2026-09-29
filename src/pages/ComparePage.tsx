@@ -1,0 +1,661 @@
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Link, useSearchParams } from "react-router-dom";
+
+import { useI18n } from "@/i18n";
+import "@/components/tooltip";
+import { cachedFetch } from "@/util/apiCache";
+import { exportPNG, exportSVG } from "@/util/chartExport";
+import { exportTable } from "@/util/export";
+import {
+  getAnalysisJob,
+  submitAnalysisJob,
+  type AnalysisJobKind,
+  type AnalysisJobStatus,
+} from "@/util/analysisJobs";
+
+import classes from "./ComparePage.module.css";
+import AlphaBoxChart from "./compare/AlphaBoxChart";
+import BetaPCoAChart from "./compare/BetaPCoAChart";
+import CrossStudyPanel from "./compare/CrossStudyPanel";
+import DiffBarChart from "./compare/DiffBarChart";
+import DiffHeatmap from "./compare/DiffHeatmap";
+import GroupFilterPanel from "./compare/GroupFilterPanel";
+import SpearmanChart from "./compare/SpearmanChart";
+import StackedBarChart from "./compare/StackedBarChart";
+import VolcanoChart from "./compare/VolcanoChart";
+import {
+  API_BASE,
+  METHODS,
+  TAXONOMY_LEVELS,
+  type DiffResult,
+  type FilterOptions,
+  type GroupFilter,
+  type SampleCountResult,
+  type SpearmanResult,
+  type Tab,
+  type TaxonomyLevel,
+} from "./compare/types";
+
+const ComparePage = () => {
+  const { t, locale } = useI18n();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [filterOptions, setFilterOptions] = useState<FilterOptions | null>(null);
+  const [filterLoading, setFilterLoading] = useState(true);
+  const [groupA, setGroupA] = useState<GroupFilter>({ country: "", disease: "", age_group: "", sex: "" });
+  const [groupB, setGroupB] = useState<GroupFilter>({ country: "", disease: "", age_group: "", sex: "" });
+  const sampleCountRequestRef = useRef(0);
+  const [sampleCounts, setSampleCounts] = useState<SampleCountResult | null>(null);
+  const [sampleCountLoading, setSampleCountLoading] = useState(false);
+  const [taxLevel, setTaxLevel] = useState<TaxonomyLevel>("genus");
+  const [method, setMethod] = useState<(typeof METHODS)[number]>("wilcoxon");
+  const [result, setResult] = useState<DiffResult | null>(null);
+  const [spearman, setSpearman] = useState<SpearmanResult | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [spearmanLoading, setSpearmanLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [analysisJobId, setAnalysisJobId] = useState<string | null>(null);
+  const [analysisJobStatus, setAnalysisJobStatus] = useState<AnalysisJobStatus | null>(null);
+  const [spearmanJobId, setSpearmanJobId] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<Tab>(
+    searchParams.get("tab") === "crossstudy" ? "crossstudy" : "bar",
+  );
+
+  useEffect(() => {
+    cachedFetch<FilterOptions>(`${API_BASE}/api/filter-options`)
+      .then((data) => setFilterOptions(data))
+      .catch(() => setError(t("compare.backendError")))
+      .finally(() => setFilterLoading(false));
+  }, [t]);
+
+  useEffect(() => {
+    const requestedId = searchParams.get("job_id");
+    const requestedKind = searchParams.get("job_kind") as AnalysisJobKind | null;
+    if (requestedId && requestedKind === "spearman-analysis") {
+      setAnalysisJobId(null);
+      setSpearmanJobId(requestedId);
+      setActiveTab("correlation");
+      return;
+    }
+    if (requestedId && requestedKind === "diff-analysis") {
+      setSpearmanJobId(null);
+      setAnalysisJobId(requestedId);
+      setActiveTab("bar");
+      return;
+    }
+    if (requestedKind === "cross-study") return;
+  }, [searchParams]);
+
+  useEffect(() => {
+    if (!analysisJobId) return;
+    setLoading(true);
+    let cancelled = false;
+    let timer: number | undefined;
+    const poll = async () => {
+      try {
+        const job = await getAnalysisJob<DiffResult>(analysisJobId);
+        if (cancelled) return;
+        setAnalysisJobStatus(job.status);
+        if (job.status === "completed") {
+          const loaded = job.result ?? null;
+          setResult(loaded);
+          if (loaded) {
+            const restoredMethod = loaded.summary.method as (typeof METHODS)[number];
+            if (METHODS.includes(restoredMethod)) {
+              setMethod(restoredMethod);
+              setActiveTab(
+                restoredMethod === "lefse"
+                  ? "lefse"
+                  : restoredMethod === "permanova"
+                    ? "permanova"
+                    : "bar",
+              );
+            } else {
+              setActiveTab("bar");
+            }
+            const restoredTaxLevel = loaded.summary.taxonomy_level as TaxonomyLevel;
+            if (TAXONOMY_LEVELS.includes(restoredTaxLevel)) setTaxLevel(restoredTaxLevel);
+          } else {
+            setActiveTab("bar");
+          }
+          setLoading(false);
+          return;
+        }
+        if (job.status === "failed") {
+          setError(job.error ?? "Analysis job failed");
+          setLoading(false);
+          return;
+        }
+        timer = window.setTimeout(poll, 1000);
+      } catch (unknownError) {
+        if (!cancelled) {
+          setError(unknownError instanceof Error ? unknownError.message : String(unknownError));
+          setLoading(false);
+        }
+      }
+    };
+    void poll();
+    return () => {
+      cancelled = true;
+      if (timer !== undefined) window.clearTimeout(timer);
+    };
+  }, [analysisJobId]);
+
+  useEffect(() => {
+    if (!spearmanJobId) return;
+    setSpearmanLoading(true);
+    let cancelled = false;
+    let timer: number | undefined;
+    const poll = async () => {
+      try {
+        const job = await getAnalysisJob<SpearmanResult>(spearmanJobId);
+        if (cancelled) return;
+        if (job.status === "completed") {
+          setSpearman(job.result ?? null);
+          setSpearmanLoading(false);
+          return;
+        }
+        if (job.status === "failed") {
+          setError(job.error ?? "Spearman analysis failed");
+          setSpearmanLoading(false);
+          return;
+        }
+        timer = window.setTimeout(poll, 1000);
+      } catch (unknownError) {
+        if (!cancelled) {
+          setError(unknownError instanceof Error ? unknownError.message : String(unknownError));
+          setSpearmanLoading(false);
+        }
+      }
+    };
+    void poll();
+    return () => {
+      cancelled = true;
+      if (timer !== undefined) window.clearTimeout(timer);
+    };
+  }, [spearmanJobId]);
+
+  useEffect(() => {
+    if (searchParams.get("tab") === "crossstudy") {
+      setActiveTab("crossstudy");
+      return;
+    }
+    if (activeTab === "crossstudy") {
+      setActiveTab("bar");
+    }
+  }, [activeTab, searchParams]);
+
+  useEffect(() => {
+    if (filterLoading) return;
+    const requestId = ++sampleCountRequestRef.current;
+    let cancelled = false;
+    setSampleCountLoading(true);
+    const timer = window.setTimeout(async () => {
+      try {
+        const response = await fetch(`${API_BASE}/api/estimate-sample-count`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            group_a_filter: groupA,
+            group_b_filter: groupB,
+          }),
+        });
+        if (!response.ok) return;
+        const nextCounts = await response.json();
+        if (!cancelled && requestId === sampleCountRequestRef.current) {
+          setSampleCounts(nextCounts);
+        }
+      } catch {
+        // keep workspace usable even if preview requests fail
+      } finally {
+        if (!cancelled && requestId === sampleCountRequestRef.current) {
+          setSampleCountLoading(false);
+        }
+      }
+    }, 250);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [filterLoading, groupA, groupB]);
+
+  useEffect(() => {
+    if (!sampleCounts) return;
+    const normalize = (group: GroupFilter, options: typeof sampleCounts.group_a.options) => {
+      if (!options || Object.keys(options).length === 0) return group;
+      const next = { ...group };
+      (Object.keys(next) as (keyof GroupFilter)[]).forEach((field) => {
+        const selected = next[field];
+        if (!selected) return;
+        const option = options[field]?.find((item) => item.value === selected);
+        if (option && option.abundance_n === 0) next[field] = "";
+      });
+      return next;
+    };
+    const nextA = normalize(groupA, sampleCounts.group_a.options);
+    const nextB = normalize(groupB, sampleCounts.group_b.options);
+    if (JSON.stringify(nextA) !== JSON.stringify(groupA)) setGroupA(nextA);
+    if (JSON.stringify(nextB) !== JSON.stringify(groupB)) setGroupB(nextB);
+  }, [groupA, groupB, sampleCounts]);
+
+  const setWorkspaceTab = (tab: Tab) => {
+    setActiveTab(tab);
+    const next = new URLSearchParams(searchParams);
+    if (tab === "crossstudy") {
+      next.set("tab", "crossstudy");
+    } else {
+      next.delete("tab");
+    }
+    setSearchParams(next, { replace: true });
+    if (tab === "correlation" && !spearmanJobId) {
+      setSpearmanLoading(true);
+      void submitAnalysisJob("spearman-analysis", {
+        group_a_filter: groupA,
+        group_b_filter: groupB,
+        taxonomy_level: taxLevel,
+        max_taxa: 16,
+      })
+        .then((job) => setSpearmanJobId(job.job_id))
+        .catch((unknownError) => {
+          setError(unknownError instanceof Error ? unknownError.message : String(unknownError));
+          setSpearmanLoading(false);
+        });
+    }
+  };
+
+  const runAnalysis = async () => {
+    setLoading(true);
+    setError(null);
+    setResult(null);
+    setAnalysisJobId(null);
+    setAnalysisJobStatus(null);
+    setSpearman(null);
+    setSpearmanJobId(null);
+    // A task opened from Jobs carries a deep-link query.  Starting a new
+    // analysis must leave that historical job behind; otherwise a later tab
+    // navigation can re-apply the old query and hijack the new workspace.
+    const nextSearchParams = new URLSearchParams(searchParams);
+    nextSearchParams.delete("job_id");
+    nextSearchParams.delete("job_kind");
+    setSearchParams(nextSearchParams, { replace: true });
+    try {
+      const diffPayload = {
+        group_a_filter: groupA,
+        group_b_filter: groupB,
+        taxonomy_level: taxLevel,
+        method,
+      };
+      const job = await submitAnalysisJob("diff-analysis", diffPayload);
+      setAnalysisJobId(job.job_id);
+      setAnalysisJobStatus(job.status);
+    } catch (unknownError) {
+      setError(unknownError instanceof Error ? unknownError.message : String(unknownError));
+      setLoading(false);
+      setSpearmanLoading(false);
+    }
+  };
+
+  const exportCsv = () => {
+    if (!result) return;
+    exportTable(
+      result.diff_taxa.map((taxon) => ({
+        Genus: taxon.taxon,
+        Phylum: taxon.phylum,
+        Mean_A_Percent: taxon.mean_a,
+        Mean_B_Percent: taxon.mean_b,
+        Prevalence_A: taxon.prevalence_a,
+        Prevalence_B: taxon.prevalence_b,
+        Log2FC: taxon.log2fc,
+        P_Value: taxon.p_value,
+        Adjusted_P: taxon.adjusted_p,
+        Effect_Size: taxon.effect_size,
+      })),
+      `compare_${taxLevel}_${Date.now()}`,
+    );
+  };
+
+  const exportSvgChart = () => {
+    const svgElement = document.querySelector<SVGSVGElement>(".compare-chart");
+    if (svgElement) exportSVG(svgElement, `compare_${activeTab}_${Date.now()}`);
+  };
+
+  const exportPngChart = () => {
+    const svgElement = document.querySelector<SVGSVGElement>(".compare-chart");
+    if (svgElement) exportPNG(svgElement, `compare_${activeTab}_${Date.now()}`);
+  };
+
+  const tabs = useMemo(() => {
+    const nextTabs: Array<[Tab, string]> = [
+      ["bar", t("compare.tab.bar")],
+      ["volcano", t("compare.tab.volcano")],
+      ["alpha", t("compare.tab.alpha")],
+      ["beta", t("compare.tab.beta")],
+      ["composition", locale === "zh" ? "组成结构" : "Composition"],
+      ["heatmap", locale === "zh" ? "差异热图" : "Heatmap"],
+      ["correlation", "Spearman"],
+      ["crossstudy", t("compare.tab.crossStudy")],
+    ];
+    if (result?.lefse_results) nextTabs.push(["lefse", t("compare.tab.lefse")]);
+    if (result?.lmm_results) nextTabs.push(["lmm", "LMM"]);
+    if (result?.permanova) nextTabs.push(["permanova", t("compare.tab.permanova")]);
+    return nextTabs;
+  }, [locale, result?.lefse_results, result?.lmm_results, result?.permanova, t]);
+
+  const renderActivePanel = () => {
+    if (activeTab === "crossstudy") {
+      return <CrossStudyPanel taxonomyLevel={taxLevel} />;
+    }
+
+    // Spearman is an independent analysis job.  A job opened from the task
+    // center can contain a Spearman result without a preceding differential
+    // result, so it must render before the generic `!result` guard below.
+    if (activeTab === "correlation") {
+      return spearmanLoading ? (
+        <div className={classes.emptyPanel}>
+          {locale === "zh" ? "正在计算 Spearman 结构…" : "Computing Spearman structure..."}
+        </div>
+      ) : spearman ? (
+        <SpearmanChart result={spearman} />
+      ) : (
+        <div className={classes.emptyPanel}>
+          {locale === "zh"
+            ? "暂无 Spearman 结果；请先运行分析或从任务中心打开已完成任务。"
+            : "No Spearman result yet; run the analysis or open a completed task from the Jobs center."}
+        </div>
+      );
+    }
+
+    if (!result) {
+      return (
+        <div className={classes.emptyPanel}>
+          {locale === "zh"
+            ? "先定义 Group A / Group B 并运行差异分析；如果你要直接做跨研究元分析，切到 Cross-study。"
+            : "Define Group A / Group B and run differential analysis first, or switch to Cross-study for project-level meta-analysis."}
+        </div>
+      );
+    }
+
+    if (activeTab === "bar") return <DiffBarChart result={result} />;
+    if (activeTab === "volcano") return <VolcanoChart result={result} />;
+    if (activeTab === "alpha") return <AlphaBoxChart result={result} />;
+    if (activeTab === "beta") return <BetaPCoAChart result={result} />;
+    if (activeTab === "composition") return <StackedBarChart result={result} />;
+    if (activeTab === "heatmap") return <DiffHeatmap result={result} />;
+    if (activeTab === "lefse") return <LefseResults result={result} />;
+    if (activeTab === "lmm") return <LmmResults result={result} />;
+    if (activeTab === "permanova") return <PermanovaResults result={result} />;
+    return null;
+  };
+
+  return (
+    <div className={classes.page}>
+      <div className={classes.nav}>
+        <Link to="/" className={classes.back}>{t("compare.back")}</Link>
+        <h1 className={classes.title}>{t("compare.title")}</h1>
+        <span className={classes.subtitle}>
+          {locale === "zh"
+            ? "按真实样本规模预估、双组差异、alpha/beta 多样性、组成结构和跨研究证据逐层查看。"
+            : "Inspect sample size, differential taxa, alpha/beta diversity, composition, and cross-study evidence in one workspace."}
+        </span>
+      </div>
+
+      <section className={classes.filterSection}>
+        {filterLoading ? (
+          <p className={classes.hint}>{t("compare.loading")}</p>
+        ) : (
+          <div className={classes.filterGrid}>
+            <GroupFilterPanel
+              label={t("compare.groupA")}
+              color="var(--secondary)"
+              value={groupA}
+              onChange={setGroupA}
+              options={filterOptions}
+              dynamicOptions={sampleCounts?.group_a.options ?? null}
+              sampleCount={sampleCounts?.group_a ?? null}
+              optionsLoading={sampleCountLoading}
+            />
+            <GroupFilterPanel
+              label={t("compare.groupB")}
+              color="var(--primary)"
+              value={groupB}
+              onChange={setGroupB}
+              options={filterOptions}
+              dynamicOptions={sampleCounts?.group_b.options ?? null}
+              sampleCount={sampleCounts?.group_b ?? null}
+              optionsLoading={sampleCountLoading}
+            />
+          </div>
+        )}
+
+        <div className={classes.controls}>
+          <div className={classes.control}>
+            <label>{t("compare.taxLevel")}</label>
+            <div className={classes.btnGroup}>
+              {TAXONOMY_LEVELS.map((level) => (
+                <button
+                  key={level}
+                  type="button"
+                  className={classes.ctrlBtn}
+                  data-active={taxLevel === level}
+                  onClick={() => setTaxLevel(level)}
+                >
+                  {level}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className={classes.control}>
+            <label>{t("compare.statTest")}</label>
+            <div className={classes.btnGroup}>
+              {METHODS.map((item) => (
+                <button
+                  key={item}
+                  type="button"
+                  className={classes.ctrlBtn}
+                  data-active={method === item}
+                  onClick={() => setMethod(item)}
+                >
+                  {item === "lefse" ? "LEfSe" : item === "lmm" ? "LMM" : item === "permanova" ? "PERMANOVA" : item}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className={classes.previewMeta}>
+            {sampleCountLoading ? (
+              <span>{locale === "zh" ? "正在预估样本量..." : "Estimating sample counts..."}</span>
+            ) : (
+              <>
+                <span>A: {sampleCounts?.group_a.abundance_n ?? 0}</span>
+                <span>B: {sampleCounts?.group_b.abundance_n ?? 0}</span>
+              </>
+            )}
+          </div>
+
+          <button className={classes.analyzeBtn} type="button" onClick={runAnalysis} disabled={loading}>
+            {loading ? t("compare.analyzing") : t("compare.run")}
+          </button>
+          {analysisJobId ? (
+            <span className={classes.meta} title={analysisJobId}>
+              {locale === "zh" ? "任务 ID" : "Job ID"}: <code>{analysisJobId}</code> · {analysisJobStatus ?? "queued"}
+            </span>
+          ) : null}
+          {spearmanJobId ? (
+            <span className={classes.meta} title={spearmanJobId}>
+              Spearman ID: <code>{spearmanJobId}</code>
+            </span>
+          ) : null}
+        </div>
+      </section>
+
+      {error ? <div className={classes.error}>{error}</div> : null}
+
+      <section className={classes.resultSection}>
+        {result && activeTab !== "crossstudy" ? (
+          <div className={classes.workspaceHeader}>
+            <div className={classes.summaryCard}>
+              <span>{locale === "zh" ? "工作台摘要" : "Workspace summary"}</span>
+              <strong>{result.summary.group_a_name} vs {result.summary.group_b_name}</strong>
+              <small>{taxLevel} / {method}</small>
+            </div>
+            <div className={classes.summaryCard}>
+              <span>{locale === "zh" ? "匹配样本" : "Matched samples"}</span>
+              <strong>{result.summary.group_a_n} / {result.summary.group_b_n}</strong>
+              <small>A / B</small>
+            </div>
+            {(() => {
+              const lvl = (result.summary.taxonomy_level || "").toLowerCase();
+              const totalEn = lvl === "phylum" ? "Total phyla" : lvl === "family" ? "Total families" : "Total genera";
+              const totalZh = lvl === "phylum" ? "总门数" : lvl === "family" ? "总科数" : "总属数";
+              const sigEn = lvl === "phylum" ? "Significant phyla" : lvl === "family" ? "Significant families" : "Significant genera";
+              const sigZh = lvl === "phylum" ? "显著门" : lvl === "family" ? "显著科" : "显著属";
+              return (
+                <>
+                  <div className={classes.summaryCard}>
+                    <span>{locale === "zh" ? totalZh : totalEn}</span>
+                    <strong>{result.summary.total_taxa}</strong>
+                    <small>{result.summary.taxonomy_level}</small>
+                  </div>
+                  <div className={classes.summaryCard}>
+                    <span>{locale === "zh" ? sigZh : sigEn}</span>
+                    <strong>{result.summary.significant_taxa}</strong>
+                    <small>adj. p &lt; 0.05</small>
+                  </div>
+                </>
+              );
+            })()}
+          </div>
+        ) : null}
+
+        <div className={classes.tabs}>
+          {tabs.map(([tabId, label]) => (
+            <button
+              key={tabId}
+              type="button"
+              className={classes.tab}
+              data-active={activeTab === tabId}
+              onClick={() => setWorkspaceTab(tabId)}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+
+        <div className={classes.chartArea}>{renderActivePanel()}</div>
+
+        {result && activeTab !== "crossstudy" ? (
+          <div className={classes.exportRow}>
+            <button className={classes.exportBtn} type="button" onClick={exportCsv}>{t("export.csv")}</button>
+            <button className={classes.exportBtn} type="button" onClick={exportSvgChart}>{t("export.svg")}</button>
+            <button className={classes.exportBtn} type="button" onClick={exportPngChart}>{t("export.png")}</button>
+          </div>
+        ) : null}
+      </section>
+    </div>
+  );
+};
+
+const LefseResults = ({ result }: { result: DiffResult }) => {
+  const { locale } = useI18n();
+  if (!result.lefse_results?.length) {
+    return <div className={classes.emptyPanel}>{locale === "zh" ? "没有显著 LEfSe 特征" : "No significant LEfSe features found"}</div>;
+  }
+
+  return (
+    <div className={classes.simpleTableWrap}>
+      <table className={classes.simpleTable}>
+        <thead>
+          <tr>
+            <th>{locale === "zh" ? "属" : "Genus"}</th>
+            <th>LDA</th>
+            <th>p</th>
+            <th>{locale === "zh" ? "富集组" : "Enriched in"}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {result.lefse_results.map((row) => (
+            <tr key={row.taxon}>
+              <td>{row.taxon}</td>
+              <td>{row.lda_score.toFixed(2)}</td>
+              <td>{row.p_value.toExponential(2)}</td>
+              <td>{row.enriched_group}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+};
+
+const LmmResults = ({ result }: { result: DiffResult }) => {
+  const { locale } = useI18n();
+  const payload = result.lmm_results;
+  if (!payload) {
+    return <div className={classes.emptyPanel}>{locale === "zh" ? "没有 LMM 结果" : "No LMM result available"}</div>;
+  }
+
+  return (
+    <div className={classes.simpleTableWrap}>
+      <div className={classes.groupMeta}>
+        <div>{locale === "zh" ? "模型" : "Model"}: <code>{payload.formula}</code></div>
+        <div>
+          {locale === "zh" ? "样本" : "Samples"}: {payload.n_samples.toLocaleString()} · {locale === "zh" ? "拟合" : "Fitted"}: {payload.n_fitted.toLocaleString()} · {locale === "zh" ? "显著" : "Significant"}: {payload.n_significant.toLocaleString()}
+        </div>
+      </div>
+      <table className={classes.simpleTable}>
+        <thead>
+          <tr>
+            <th>{locale === "zh" ? "分类单元" : "Taxon"}</th>
+            <th>Estimate</th>
+            <th>SE</th>
+            <th>p</th>
+            <th>BH-FDR</th>
+            <th>{locale === "zh" ? "富集组" : "Enriched in"}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {payload.results.slice(0, 200).map((row) => (
+            <tr key={row.taxon}>
+              <td>{row.taxon}</td>
+              <td>{row.estimate.toFixed(4)}</td>
+              <td>{row.std_error.toFixed(4)}</td>
+              <td>{row.p_value.toExponential(2)}</td>
+              <td>{row.adjusted_p.toExponential(2)}</td>
+              <td>{row.enriched_in ?? (row.estimate > 0 ? "A" : "B")}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+};
+
+const PermanovaResults = ({ result }: { result: DiffResult }) => {
+  const { locale } = useI18n();
+  if (!result.permanova) {
+    return <div className={classes.emptyPanel}>{locale === "zh" ? "没有 PERMANOVA 结果" : "No PERMANOVA result available"}</div>;
+  }
+
+  return (
+    <div className={classes.permanovaBox}>
+      <div>
+        <span>pseudo-F</span>
+        <strong>{result.permanova.f_statistic.toFixed(4)}</strong>
+      </div>
+      <div>
+        <span>p-value</span>
+        <strong>{result.permanova.p_value.toFixed(4)}</strong>
+      </div>
+      <div>
+        <span>R²</span>
+        <strong>{result.permanova.r_squared.toFixed(4)}</strong>
+      </div>
+      <div>
+        <span>{locale === "zh" ? "置换次数" : "Permutations"}</span>
+        <strong>{result.permanova.permutations}</strong>
+      </div>
+    </div>
+  );
+};
+
+export default ComparePage;

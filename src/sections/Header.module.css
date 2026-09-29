@@ -1,0 +1,240 @@
+.header {
+  position: relative;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding-top: 92px;
+  padding-bottom: 64px;
+}
+
+.heroShell {
+  display: block;
+  width: 100%;
+}
+
+.heroCopy {
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 24px;
+  background: linear-gradient(180deg, rgba(18, 26, 49, 0.92), rgba(14, 22, 43, 0.84));
+  box-shadow: 0 24px 80px rgba(5, 10, 24, 0.28);
+  backdrop-filter: blur(14px);
+}
+
+.heroCopy {
+  display: flex;
+  flex-direction: column;
+  gap: 2.2rem;
+  min-height: 100%;
+  padding: 2.7rem 3rem;
+}
+
+.heroTop {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: center;
+}
+
+.heroActions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.jobsLink {
+  border: 1px solid rgba(99, 225, 255, 0.35);
+  border-radius: 999px;
+  padding: 0.35rem 0.75rem;
+  color: #7ee8ff;
+  font-size: 0.8rem;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.jobsLink:hover {
+  background: rgba(99, 225, 255, 0.12);
+}
+
+.kicker {
+  width: fit-content;
+  border: 1px solid rgba(99, 225, 255, 0.35);
+  border-radius: 999px;
+  padding: 0.35rem 0.8rem;
+  color: #7ee8ff;
+  font-size: 0.8rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.title {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+}
+
+.logo {
+  flex: 0 0 auto;
+  width: 104px;
+  height: 104px !important;
+}
+
+.divider {
+  width: 1px;
+  align-self: stretch;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.85), rgba(99, 225, 255, 0.25));
+}
+
+.brandCopy {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  min-width: 0;
+}
+
+.h1 {
+  max-width: none;
+  margin: 0;
+  font-size: clamp(2.55rem, 3.8vw, 4.35rem);
+  line-height: 1.02;
+  letter-spacing: 0.02em;
+}
+
+.subtitle {
+  max-width: 1080px;
+  margin: 0;
+  color: rgba(231, 236, 245, 0.84);
+  font-size: 1.15rem;
+  line-height: 1.78;
+}
+
+.navLink,
+.groupLink,
+.actionLink {
+  text-decoration: none;
+  transition:
+    transform 0.18s ease,
+    border-color 0.18s ease,
+    background 0.18s ease;
+}
+
+.actionLink:hover,
+.groupLink:hover,
+.navLink:hover {
+  transform: translateY(-1px);
+}
+
+.buttons {
+  display: none;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.navLink {
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  border-radius: 10px;
+  padding: 0.55rem 0.95rem;
+  color: var(--white);
+  background: rgba(255, 255, 255, 0.04);
+  font-size: 0.96rem;
+}
+
+.navLink:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.hamburger {
+  display: none;
+  align-self: flex-start;
+  flex-direction: column;
+  gap: 5px;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  border-radius: 10px;
+  padding: 8px 10px;
+  background: rgba(12, 20, 38, 0.9);
+  cursor: pointer;
+}
+
+.hamburgerLine {
+  display: block;
+  width: 22px;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--white);
+  transition: transform 0.25s ease, opacity 0.25s ease;
+}
+
+.hamburgerOpen:nth-child(1) {
+  transform: rotate(45deg) translate(3px, 5px);
+}
+
+.hamburgerOpen:nth-child(2) {
+  opacity: 0;
+}
+
+.hamburgerOpen:nth-child(3) {
+  transform: rotate(-45deg) translate(3px, -5px);
+}
+
+@media (max-width: 960px) {
+  .header {
+    padding-top: 60px;
+    padding-bottom: 56px;
+  }
+
+  .heroShell {
+    gap: 1.2rem;
+  }
+
+  .hamburger {
+    display: flex;
+  }
+
+  .buttons {
+    display: none;
+    flex-direction: column;
+    width: 100%;
+    gap: 0.65rem;
+  }
+
+  .buttonsOpen {
+    display: flex;
+  }
+
+  .navLink {
+    width: 100%;
+    text-align: center;
+  }
+}
+
+@media (max-width: 640px) {
+  .heroCopy {
+    padding: 1.35rem;
+  }
+
+  .h1 {
+    font-size: clamp(2rem, 9vw, 2.8rem);
+  }
+
+  .title {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .divider {
+    width: 100%;
+    height: 1px;
+  }
+
+  .heroTop {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
+
+@media (max-width: 420px) {
+  .logo {
+    width: 72px;
+    height: 72px !important;
+  }
+}
