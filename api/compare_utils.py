@@ -600,9 +600,10 @@ def run_lefse_analysis(
 
     rscript = _resolve_lefse_rscript()
     alpha = float(os.getenv("LEFSE_ALPHA", "0.05"))
-    # Use Benjamini-Hochberg FDR for the platform's multi-feature screening.
-    # Set LEFSE_P_ADJUST=none to reproduce the original LEfSe strict=0 mode.
-    p_adjust_method = os.getenv("LEFSE_P_ADJUST", "fdr").strip().lower() or "fdr"
+    # Match the original LEfSe strict=0 default. The adjusted p-value is the
+    # raw KW p-value under this setting; an explicit LEFSE_P_ADJUST=fdr can be
+    # supplied for a separate corrected-screening run.
+    p_adjust_method = os.getenv("LEFSE_P_ADJUST", "none").strip().lower() or "none"
     if p_adjust_method not in {"none", "fdr", "BH", "bonferroni", "holm"}:
         raise ValueError("LEFSE_P_ADJUST must be a valid R p.adjust method")
     # Match the official LEfSe default: 30 bootstrap LDA iterations and a
@@ -706,6 +707,8 @@ def run_lefse_analysis(
         "n_input_features": int(len(taxa)),
         "kw_filter": summary.get("kw_filter", "p_adjusted < alpha"),
         "n_kw_passed": int(summary.get("n_kw_passed", summary.get("n_output_rows", len(rows)))),
+        "n_top20": int(summary.get("n_top20", min(20, len(rows)))),
+        "feature_selection": "top20_by_kw_adjusted_p",
         "n_output_rows": int(len(rows)),
         "results": rows,
         "r_summary": summary,

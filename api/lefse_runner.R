@@ -39,10 +39,35 @@ sample_table$group <- as.character(sample_table$group)
 sample_table$group <- factor(sample_table$group,
                              levels = unique(sample_table$group))
 
+# Apply the official screening order explicitly before the LDA stage. The
+# platform keeps the top 20 eligible features for the plot/result payload;
+# this is a deliberate report-size limit, while the KW gate remains first.
+unknown_pattern <- "__$|uncultured$|Incertae..edis$|_sp$"
+keep_features <- !grepl(unknown_pattern, rownames(otu), ignore.case = TRUE)
+otu <- otu[keep_features, , drop = FALSE]
+tax_table <- tax_table[rownames(otu), , drop = FALSE]
+sample_totals <- colSums(otu, na.rm = TRUE)
+sample_totals[sample_totals <= 0] <- 1
+kw_abund <- sweep(as.matrix(otu), 2, sample_totals, "/") * 1e6
+kw_abund[!is.finite(kw_abund)] <- 0
+kw_p_raw <- vapply(seq_len(nrow(kw_abund)), function(i) {
+  suppressWarnings(kruskal.test(kw_abund[i, ], sample_table$group)$p.value)
+}, numeric(1))
+kw_p_adj <- p.adjust(kw_p_raw, method = p_adjust_method)
+eligible <- which(!is.na(kw_p_adj) & kw_p_adj < alpha)
+eligible <- eligible[order(kw_p_adj[eligible], kw_p_raw[eligible],
+                           rownames(otu)[eligible])]
+top_idx <- head(eligible, 20L)
+if (length(top_idx) == 0L) {
+  stop("No features passed the Kruskal-Wallis p_adjusted < alpha filter")
+}
+otu_top <- otu[top_idx, , drop = FALSE]
+tax_top <- tax_table[rownames(otu_top), , drop = FALSE]
+
 dataset <- microtable$new(
   sample_table = sample_table,
-  otu_table = otu,
-  tax_table = tax_table
+  otu_table = otu_top,
+  tax_table = tax_top
 )
 dataset <- tidy_taxonomy(dataset)
 
@@ -51,8 +76,10 @@ result <- trans_diff$new(
   method = "lefse",
   group = "group",
   taxa_level = taxa_level,
-  p_adjust_method = p_adjust_method,
-  alpha = alpha,
+  # Screening was performed above; alpha=1 prevents a second different gate
+  # from discarding the selected top-20 features before bootstrap LDA.
+  p_adjust_method = "none",
+  alpha = 1,
   lefse_norm = 1e6,
   nresam = nresam,
   boots = boots,
@@ -71,7 +98,8 @@ summary_lines <- c(
   paste0("boots\t", boots),
   paste0("nresam\t", format(nresam, digits = 12)),
   paste0("n_input_features\t", nrow(otu)),
-  paste0("n_kw_passed\t", nrow(result$res_diff)),
+  paste0("n_kw_passed\t", length(eligible)),
+  paste0("n_top20\t", nrow(otu_top)),
   paste0("n_output_rows\t", nrow(result$res_diff)),
   paste0("hierarchical_wilcoxon\t", "not_run_without_lefse_subgroup")
 )
