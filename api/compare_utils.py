@@ -857,6 +857,7 @@ def run_compare_analysis(
     columns = abundance_df.columns.tolist()
     raw_a = abundance_df.loc[list(valid_a)].values.astype(float)
     raw_b = abundance_df.loc[list(valid_b)].values.astype(float)
+    lefse_payload: dict | None = None
 
     # LEfSe's R implementation needs the aggregated count matrix, but does not
     # need the Python relative-abundance copies while its bootstrap/LDA pass is
