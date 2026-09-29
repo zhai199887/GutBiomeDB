@@ -1,3 +1,4 @@
+import gc
 import math
 import os
 import re
@@ -847,13 +848,38 @@ def run_compare_analysis(
     raw_a = abundance_df.loc[list(valid_a)].values.astype(float)
     raw_b = abundance_df.loc[list(valid_b)].values.astype(float)
 
-    rel_a = relative_abundance_matrix(raw_a)
-    rel_b = relative_abundance_matrix(raw_b)
-
-    rel_agg_a, taxa, phylum_map = aggregate_by_level(rel_a, columns, taxonomy_level)
-    rel_agg_b, _, _ = aggregate_by_level(rel_b, columns, taxonomy_level)
-    raw_agg_a, _, _ = aggregate_by_level(raw_a, columns, taxonomy_level)
-    raw_agg_b, _, _ = aggregate_by_level(raw_b, columns, taxonomy_level)
+    # LEfSe's R implementation needs the aggregated count matrix, but does not
+    # need the Python relative-abundance copies while its bootstrap/LDA pass is
+    # running.  Holding raw, relative, and both aggregated matrices at once
+    # multiplies the memory footprint for large groups.  Build only the count
+    # matrices first, release the source copies, run LEfSe, then reconstruct
+    # the display/statistics matrices after R exits.
+    if method == "lefse":
+        raw_agg_a, taxa, phylum_map = aggregate_by_level(raw_a, columns, taxonomy_level)
+        raw_agg_b, _, _ = aggregate_by_level(raw_b, columns, taxonomy_level)
+        del raw_a, raw_b
+        gc.collect()
+        lefse_payload = run_lefse_analysis(
+            raw_a=raw_agg_a,
+            raw_b=raw_agg_b,
+            taxa=taxa,
+            taxonomy_level=taxonomy_level,
+        )
+        raw_a = abundance_df.loc[list(valid_a)].values.astype(float)
+        raw_b = abundance_df.loc[list(valid_b)].values.astype(float)
+        rel_a = relative_abundance_matrix(raw_a)
+        rel_b = relative_abundance_matrix(raw_b)
+        # Aggregating counts before within-sample normalization is algebraically
+        # equivalent to aggregating relative abundance for each sample.
+        rel_agg_a = relative_abundance_matrix(raw_agg_a)
+        rel_agg_b = relative_abundance_matrix(raw_agg_b)
+    else:
+        rel_a = relative_abundance_matrix(raw_a)
+        rel_b = relative_abundance_matrix(raw_b)
+        rel_agg_a, taxa, phylum_map = aggregate_by_level(rel_a, columns, taxonomy_level)
+        rel_agg_b, _, _ = aggregate_by_level(rel_b, columns, taxonomy_level)
+        raw_agg_a, _, _ = aggregate_by_level(raw_a, columns, taxonomy_level)
+        raw_agg_b, _, _ = aggregate_by_level(raw_b, columns, taxonomy_level)
 
     lmm_payload: dict | None = None
     if method == "lmm":
@@ -864,15 +890,6 @@ def run_compare_analysis(
             metadata_df=metadata_df,
             valid_a=valid_a,
             valid_b=valid_b,
-            taxonomy_level=taxonomy_level,
-        )
-
-    lefse_payload: dict | None = None
-    if method == "lefse":
-        lefse_payload = run_lefse_analysis(
-            raw_a=raw_agg_a,
-            raw_b=raw_agg_b,
-            taxa=taxa,
             taxonomy_level=taxonomy_level,
         )
 
