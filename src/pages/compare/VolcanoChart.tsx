@@ -66,7 +66,9 @@ const VolcanoChart = ({ result }: { result: DiffResult }) => {
           enriched_in: taxon.enriched_in,
         }));
     const xThreshold = isLefse ? 2 : 1;
-    const xLabel = isLefse ? "LDA score (log10)" : "log2 Fold Change";
+    const xLabel = isLefse
+      ? (locale === "zh" ? "LDA 得分 (log10)" : "LDA score (log10)")
+      : (locale === "zh" ? "log2 差异倍数" : "log2 Fold Change");
     const margin = { top: 34, right: 120, bottom: 72, left: 74 };
     const width = 980;
     const height = 560;
@@ -176,8 +178,8 @@ const VolcanoChart = ({ result }: { result: DiffResult }) => {
 
     const legend = svg.append("g").attr("transform", `translate(${width - 178},${margin.top + 6})`);
     [
-      { label: locale === "zh" ? "疾病组富集" : "Disease enriched", color: "var(--secondary)" },
-      { label: locale === "zh" ? "对照组富集" : "Control enriched", color: "var(--primary)" },
+      { label: `${result.summary.group_a_name} ${locale === "zh" ? "富集" : "enriched"}`, color: "var(--secondary)" },
+      { label: `${result.summary.group_b_name} ${locale === "zh" ? "富集" : "enriched"}`, color: "var(--primary)" },
       { label: locale === "zh" ? "未达阈值" : "Below threshold", color: "var(--gray)" },
     ].forEach((item, index) => {
       const y = index * 18;
@@ -191,7 +193,7 @@ const VolcanoChart = ({ result }: { result: DiffResult }) => {
       .attr("text-anchor", "middle")
       .attr("fill", "currentColor")
       .attr("font-size", 13)
-      .text(locale === "zh" ? (isLefse ? "LDA 得分 (log10)" : "log2 差异倍数") : xLabel);
+      .text(xLabel);
 
     svg.append("text")
       .attr("transform", `translate(14,${height / 2}) rotate(-90)`)
