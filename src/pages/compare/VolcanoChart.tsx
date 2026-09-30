@@ -48,13 +48,16 @@ const VolcanoChart = ({ result }: { result: DiffResult }) => {
     const data: PlotPoint[] = isLefse
       ? (result.lefse_results ?? []).map((feature) => {
           const adjustedP = feature.adjusted_p ?? feature.p_value;
-          const rawNegLogP = adjustedP > 0 && Number.isFinite(adjustedP) ? -Math.log10(adjustedP) : 50;
+          // A zero p-value is an underflowed value from the statistical engine,
+          // not an exact zero. Use the smallest representable double scale as
+          // a plotting floor so zero-p rows can still be separated from the
+          // finite (but extremely small) p-values.
+          const rawNegLogP = adjustedP > 0 && Number.isFinite(adjustedP) ? -Math.log10(adjustedP) : 323;
           return {
             taxon: feature.taxon,
             x: signedLda(feature),
             adjusted_p: adjustedP,
-            // Keep zero/underflow p values visible without letting one point flatten the whole chart.
-            neg_log10_p: Math.min(50, Math.max(0, rawNegLogP)),
+            neg_log10_p: Math.max(0, rawNegLogP),
             enriched_in: feature.enriched_group,
           };
         })
@@ -82,11 +85,17 @@ const VolcanoChart = ({ result }: { result: DiffResult }) => {
     const negLogP = data.map((point) => point.neg_log10_p);
     const pThreshold = -Math.log10(0.05);
     const observedYMax = d3.max(negLogP) ?? 0;
-    const yMax = Math.max(Math.min(observedYMax, isLefse ? 50 : observedYMax), pThreshold, 4) * 1.08;
+    const observedYMin = d3.min(negLogP) ?? 0;
+    const yPadding = Math.max(5, (observedYMax - observedYMin) * 0.08);
+    const yMax = isLefse ? observedYMax + yPadding : Math.max(observedYMax, pThreshold, 4) * 1.08;
+    const yMin = isLefse ? Math.max(0, observedYMin - yPadding) : 0;
 
     const xScale = d3.scaleLinear().domain([-xExtent, xExtent]).range([0, innerWidth]);
-    // Compress extreme adjusted-p values while keeping the significance region readable.
-    const yScale = d3.scalePow().exponent(1 / 3).domain([0, yMax]).range([innerHeight, 0]);
+    // LEfSe p-values can all be far below floating-point precision. Zoom to
+    // the observed range while retaining the actual -log10(p) tick values.
+    const yScale = isLefse
+      ? d3.scaleLinear().domain([yMin, yMax]).range([innerHeight, 0])
+      : d3.scalePow().exponent(1 / 3).domain([0, yMax]).range([innerHeight, 0]);
 
     const getColor = (point: PlotPoint) => {
       const significant = point.adjusted_p < 0.05 && Math.abs(point.x) > xThreshold;
@@ -94,22 +103,24 @@ const VolcanoChart = ({ result }: { result: DiffResult }) => {
       return point.enriched_in === "A" ? "var(--secondary)" : "var(--primary)";
     };
 
-    group.append("line")
-      .attr("x1", 0)
-      .attr("x2", innerWidth)
-      .attr("y1", yScale(pThreshold))
-      .attr("y2", yScale(pThreshold))
-      .attr("stroke", "var(--light-gray)")
-      .attr("stroke-dasharray", "4,3")
-      .attr("opacity", 0.6);
+    if (!isLefse || (pThreshold >= yMin && pThreshold <= yMax)) {
+      group.append("line")
+        .attr("x1", 0)
+        .attr("x2", innerWidth)
+        .attr("y1", yScale(pThreshold))
+        .attr("y2", yScale(pThreshold))
+        .attr("stroke", "var(--light-gray)")
+        .attr("stroke-dasharray", "4,3")
+        .attr("opacity", 0.6);
 
-    group.append("text")
-      .attr("x", innerWidth - 2)
-      .attr("y", yScale(pThreshold) - 4)
-      .attr("text-anchor", "end")
-      .attr("font-size", 9)
-      .attr("fill", "var(--light-gray)")
-      .text("adj.p=0.05");
+      group.append("text")
+        .attr("x", innerWidth - 2)
+        .attr("y", yScale(pThreshold) - 4)
+        .attr("text-anchor", "end")
+        .attr("font-size", 9)
+        .attr("fill", "var(--light-gray)")
+        .text("adj.p=0.05");
+    }
 
     [-xThreshold, xThreshold].forEach((threshold) => {
       group.append("line")
@@ -162,7 +173,10 @@ const VolcanoChart = ({ result }: { result: DiffResult }) => {
       .join("text")
       .attr("class", "label")
       .attr("x", (point) => xScale(point.x) + 6)
-      .attr("y", (point) => Math.max(10, yScale(Math.min(point.neg_log10_p, yMax)) - 4))
+      .attr("y", (point, index) => Math.max(
+        10,
+        yScale(Math.min(point.neg_log10_p, yMax)) - 4 - (isLefse ? (index % 4) * 12 : 0),
+      ))
       .attr("font-size", 10)
       .attr("fill", "var(--white)")
       .text((point) => (point.taxon.length > 22 ? `${point.taxon.slice(0, 20)}...` : point.taxon));
@@ -176,7 +190,8 @@ const VolcanoChart = ({ result }: { result: DiffResult }) => {
       .call(d3.axisLeft(yScale).ticks(6))
       .attr("font-size", 12);
 
-    const legend = svg.append("g").attr("transform", `translate(${width - 178},${margin.top + 6})`);
+    const legendY = isLefse ? height - margin.bottom - 54 : margin.top + 6;
+    const legend = svg.append("g").attr("transform", `translate(${width - 178},${legendY})`);
     [
       { label: `${result.summary.group_a_name} ${locale === "zh" ? "富集" : "enriched"}`, color: "var(--secondary)" },
       { label: `${result.summary.group_b_name} ${locale === "zh" ? "富集" : "enriched"}`, color: "var(--primary)" },
@@ -207,3 +222,4 @@ const VolcanoChart = ({ result }: { result: DiffResult }) => {
 };
 
 export default VolcanoChart;
+
