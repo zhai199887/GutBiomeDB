@@ -51,8 +51,11 @@ export interface DiffTaxon {
 export interface LefseFeature {
   taxon: string;
   lda_score: number;
+  signed_lda_score?: number;
   p_value: number;
+  adjusted_p?: number;
   enriched_group: "A" | "B";
+  significance?: string;
 }
 
 export interface PermanovaResult {

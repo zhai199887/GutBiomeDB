@@ -6,7 +6,7 @@ import * as d3 from "d3";
 import { useI18n } from "@/i18n";
 
 import classes from "../ComparePage.module.css";
-import type { DiffResult, DiffTaxon } from "./types";
+import type { DiffResult, DiffTaxon, LefseFeature } from "./types";
 
 const formatPValue = (pValue: number, negLog10P: number | undefined, locale: string) => {
   if (!Number.isFinite(pValue)) return locale === "zh" ? "不可用" : "Unavailable";
@@ -24,6 +24,17 @@ const getNegLog10AdjustedP = (taxon: DiffTaxon) =>
     ? Math.max(0, taxon.neg_log10_adjusted_p!)
     : -Math.log10(Math.max(taxon.adjusted_p, 1e-300));
 
+type PlotPoint = {
+  taxon: string;
+  x: number;
+  adjusted_p: number;
+  neg_log10_p: number;
+  enriched_in: "A" | "B";
+};
+
+const signedLda = (feature: LefseFeature) =>
+  feature.signed_lda_score ?? (feature.enriched_group === "A" ? feature.lda_score : -feature.lda_score);
+
 const VolcanoChart = ({ result }: { result: DiffResult }) => {
   const { locale } = useI18n();
   const svgRef = useRef<SVGSVGElement>(null);
@@ -33,7 +44,29 @@ const VolcanoChart = ({ result }: { result: DiffResult }) => {
     const svg = d3.select(svgRef.current);
     svg.selectAll("*").remove();
 
-    const data = result.diff_taxa;
+    const isLefse = result.summary.method === "lefse" && Boolean(result.lefse_results?.length);
+    const data: PlotPoint[] = isLefse
+      ? (result.lefse_results ?? []).map((feature) => {
+          const adjustedP = feature.adjusted_p ?? feature.p_value;
+          const rawNegLogP = adjustedP > 0 && Number.isFinite(adjustedP) ? -Math.log10(adjustedP) : 50;
+          return {
+            taxon: feature.taxon,
+            x: signedLda(feature),
+            adjusted_p: adjustedP,
+            // Keep zero/underflow p values visible without letting one point flatten the whole chart.
+            neg_log10_p: Math.min(50, Math.max(0, rawNegLogP)),
+            enriched_in: feature.enriched_group,
+          };
+        })
+      : result.diff_taxa.map((taxon) => ({
+          taxon: taxon.taxon,
+          x: taxon.log2fc,
+          adjusted_p: taxon.adjusted_p,
+          neg_log10_p: getNegLog10AdjustedP(taxon),
+          enriched_in: taxon.enriched_in,
+        }));
+    const xThreshold = isLefse ? 2 : 1;
+    const xLabel = isLefse ? "LDA score (log10)" : "log2 Fold Change";
     const margin = { top: 34, right: 120, bottom: 72, left: 74 };
     const width = 980;
     const height = 560;
@@ -43,20 +76,20 @@ const VolcanoChart = ({ result }: { result: DiffResult }) => {
 
     svg.attr("viewBox", `0 0 ${width} ${height}`);
 
-    const xExtent = Math.max(d3.max(data, (taxon) => Math.abs(taxon.log2fc)) ?? 0, 1) * 1.08;
-    const negLogP = data.map(getNegLog10AdjustedP);
+    const xExtent = Math.max(d3.max(data, (point) => Math.abs(point.x)) ?? 0, xThreshold) * 1.08;
+    const negLogP = data.map((point) => point.neg_log10_p);
     const pThreshold = -Math.log10(0.05);
     const observedYMax = d3.max(negLogP) ?? 0;
-    const yMax = Math.max(observedYMax, pThreshold, 4) * 1.08;
+    const yMax = Math.max(Math.min(observedYMax, isLefse ? 50 : observedYMax), pThreshold, 4) * 1.08;
 
     const xScale = d3.scaleLinear().domain([-xExtent, xExtent]).range([0, innerWidth]);
     // Compress extreme adjusted-p values while keeping the significance region readable.
     const yScale = d3.scalePow().exponent(1 / 3).domain([0, yMax]).range([innerHeight, 0]);
 
-    const getColor = (taxon: DiffTaxon) => {
-      const significant = taxon.adjusted_p < 0.05 && Math.abs(taxon.log2fc) > 1;
+    const getColor = (point: PlotPoint) => {
+      const significant = point.adjusted_p < 0.05 && Math.abs(point.x) > xThreshold;
       if (!significant) return "var(--gray)";
-      return taxon.log2fc > 0 ? "var(--secondary)" : "var(--primary)";
+      return point.enriched_in === "A" ? "var(--secondary)" : "var(--primary)";
     };
 
     group.append("line")
@@ -76,7 +109,7 @@ const VolcanoChart = ({ result }: { result: DiffResult }) => {
       .attr("fill", "var(--light-gray)")
       .text("adj.p=0.05");
 
-    [-1, 1].forEach((threshold) => {
+    [-xThreshold, xThreshold].forEach((threshold) => {
       group.append("line")
         .attr("x1", xScale(threshold))
         .attr("x2", xScale(threshold))
@@ -92,49 +125,45 @@ const VolcanoChart = ({ result }: { result: DiffResult }) => {
         .attr("text-anchor", threshold < 0 ? "end" : "start")
         .attr("font-size", 9)
         .attr("fill", "var(--light-gray)")
-        .text("|log2FC|=1");
+        .text(isLefse ? `|LDA|=${xThreshold}` : "|log2FC|=1");
     });
 
     group.selectAll(".dot")
       .data(data)
       .join("circle")
       .attr("class", "dot")
-      .attr("cx", (taxon) => xScale(taxon.log2fc))
-      .attr("cy", (_, index) => yScale(Math.min(negLogP[index]!, yMax)))
-      .attr("r", (taxon) => taxon.adjusted_p < 0.05 && Math.abs(taxon.log2fc) > 1 ? 5 : 3)
+      .attr("cx", (point) => xScale(point.x))
+      .attr("cy", (point) => yScale(Math.min(point.neg_log10_p, yMax)))
+      .attr("r", (point) => point.adjusted_p < 0.05 && Math.abs(point.x) > xThreshold ? 5 : 3)
       .attr("fill", getColor)
       .attr("opacity", 0.8)
       .attr("role", "graphics-symbol")
-      .attr("data-tooltip", (taxon, index) =>
+      .attr("data-tooltip", (point) =>
         renderToString(
           <div className="tooltip-table">
-            <span>{locale === "zh" ? "属" : "Genus"}</span><span>{taxon.taxon}</span>
-            <span>log2FC</span><span>{taxon.log2fc.toFixed(3)}</span>
-            <span>-log10(adj.p)</span><span>{negLogP[index]!.toFixed(2)}</span>
+            <span>{locale === "zh" ? "属" : "Genus"}</span><span>{point.taxon}</span>
+            <span>{xLabel}</span><span>{point.x.toFixed(3)}</span>
+            <span>-log10(adj.p)</span><span>{point.neg_log10_p.toFixed(2)}</span>
             <span>{locale === "zh" ? "校正 p 值" : "adj.p"}</span>
-            <span>{formatPValue(taxon.adjusted_p, taxon.neg_log10_adjusted_p, locale)}</span>
+            <span>{formatPValue(point.adjusted_p, point.neg_log10_p, locale)}</span>
           </div>,
         )
       );
 
     const topSignificant = data
-      .filter((taxon) => taxon.adjusted_p < 0.05 && Math.abs(taxon.log2fc) > 1)
-      .sort((left, right) => {
-        const leftScore = left.neg_log10_adjusted_p ?? getNegLog10AdjustedP(left);
-        const rightScore = right.neg_log10_adjusted_p ?? getNegLog10AdjustedP(right);
-        return rightScore - leftScore;
-      })
+      .filter((point) => point.adjusted_p < 0.05 && Math.abs(point.x) > xThreshold)
+      .sort((left, right) => right.neg_log10_p - left.neg_log10_p)
       .slice(0, 8);
 
     group.selectAll(".label")
       .data(topSignificant)
       .join("text")
       .attr("class", "label")
-      .attr("x", (taxon) => xScale(taxon.log2fc) + 6)
-      .attr("y", (taxon) => Math.max(10, yScale(Math.min(getNegLog10AdjustedP(taxon), yMax)) - 4))
+      .attr("x", (point) => xScale(point.x) + 6)
+      .attr("y", (point) => Math.max(10, yScale(Math.min(point.neg_log10_p, yMax)) - 4))
       .attr("font-size", 10)
       .attr("fill", "var(--white)")
-      .text((taxon) => (taxon.taxon.length > 22 ? `${taxon.taxon.slice(0, 20)}...` : taxon.taxon));
+      .text((point) => (point.taxon.length > 22 ? `${point.taxon.slice(0, 20)}...` : point.taxon));
 
     group.append("g")
       .attr("transform", `translate(0,${innerHeight})`)
@@ -162,7 +191,7 @@ const VolcanoChart = ({ result }: { result: DiffResult }) => {
       .attr("text-anchor", "middle")
       .attr("fill", "currentColor")
       .attr("font-size", 13)
-      .text(locale === "zh" ? "log2 差异倍数" : "log2 Fold Change");
+      .text(locale === "zh" ? (isLefse ? "LDA 得分 (log10)" : "log2 差异倍数") : xLabel);
 
     svg.append("text")
       .attr("transform", `translate(14,${height / 2}) rotate(-90)`)

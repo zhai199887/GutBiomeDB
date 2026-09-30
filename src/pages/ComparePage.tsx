@@ -576,7 +576,7 @@ const LefseResults = ({ result }: { result: DiffResult }) => {
           {result.lefse_results.map((row) => (
             <tr key={row.taxon}>
               <td>{row.taxon}</td>
-              <td>{row.lda_score.toFixed(2)}</td>
+              <td>{(row.signed_lda_score ?? (row.enriched_group === "A" ? row.lda_score : -row.lda_score)).toFixed(2)}</td>
               <td>{row.p_value.toExponential(2)}</td>
               <td>{row.enriched_group}</td>
             </tr>
