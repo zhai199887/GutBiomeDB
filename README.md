@@ -2,7 +2,7 @@
 
 An Integrated Human Gut Microbiome Database.
 
-**168,464 samples | 4,680 taxa (3,142 genera) | 72 countries | 224 condition categories | 7 life stages**
+**168,464 samples | 4,680 taxa (3,142 genera) | 72 countries | 225 condition categories | 7 life stages**
 
 ## Features
 
