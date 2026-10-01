@@ -1,92 +1,166 @@
 # GutBiomeDB
 
-An Integrated Human Gut Microbiome Database.
+GutBiomeDB integrates human gut microbiome profiles with curated sample metadata for comparisons across countries, health conditions, age groups, and sex.
 
-**168,464 samples | 4,680 taxa (3,142 genera) | 72 countries | 225 condition categories | 7 life stages**
+**168,464 samples | 482 projects | 72 countries | 225 condition categories | 4,680 taxonomic features (3,142 genera) | 7 life stages**
+
+Website: [gutbiomedb.online](https://gutbiomedb.online)
+
+The condition count includes the healthy-control category. The seven named life stages are accompanied by an Unknown category for samples without an age-stage assignment.
 
 ## Features
 
-- **Differential Analysis** — Wilcoxon rank-sum, t-test, LEfSe (LDA effect size), PERMANOVA with BH FDR correction
-- **Cross-Study Meta-Analysis** — Inverse-variance weighted random effects model (DerSimonian-Laird) with I² heterogeneity assessment
-- **GutBiomeDB Health Index (GBHI)** — Universal 9-disease softmax classifier health-score system (0–100), validated by leave-one-cohort-out across 168K samples
-- **Lifecycle Atlas** — Age-stratified microbiome composition across 7 life stages (unique feature)
-- **Species Profiling** — Genus-level abundance across diseases, countries, age groups, and sex
-- **Biomarker Discovery** — Mann–Whitney U + custom effect score + BH FDR for differential taxa identification
-- **Co-occurrence Network** — Spearman correlation-based microbial interaction networks
-- **Chord Diagram** — Disease-microbe association visualization
-- **Sample Similarity Search** — Bray-Curtis / Jaccard distance-based sample matching
-- **Metabolic Function Browser** — Microbiota organized by metabolic role and clinical relevance
-- **RESTful API** — Swagger/ReDoc documentation with Python/R code examples
-- **Data Export** — CSV/TSV/JSON download + SVG/PNG chart export
-- **Bilingual i18n** — English and Chinese interface
+- **Differential Analysis** — Mann–Whitney U (Wilcoxon rank-sum), Welch’s t-test, linear mixed models (LMM), LEfSe, and Bray–Curtis PERMANOVA.
+- **Cross-Study Meta-Analysis** — Inverse-variance-weighted DerSimonian–Laird random-effects meta-analysis with I² heterogeneity estimates.
+- **GutBiomeDB Health Index (GBHI)** — A 0–100 score defined as 100 × P(NC), where NC denotes healthy controls, from a multinomial softmax classifier distinguishing NC from nine disease/condition classes.
+- **Lifecycle Atlas** — Age-stratified microbiome composition and diversity across seven named life stages.
+- **Genus Profiling** — Abundance and prevalence profiles across conditions, countries, age groups, and sex.
+- **Biomarker Discovery** — Mann–Whitney U testing with BH correction and a custom effect score.
+- **Co-occurrence Networks** — Genus-level associations inferred using SparCC via FastSpar by default, with Spearman correlation available as an alternative.
+- **Chord Diagrams** — Visualisation of condition–microbe associations.
+- **Sample Similarity Search** — Sample matching using Bray–Curtis or Jaccard distance.
+- **Metabolic Function Browser** — Literature-curated genus-to-function annotations and abundance summaries.
+- **REST API** — Interactive Swagger UI and ReDoc documentation, with Python and R examples below.
+- **Data Export** — Summary statistics and analysis results in CSV, TSV, or JSON, with SVG and PNG chart export.
+- **Bilingual Interface** — English and Chinese.
+
+## Analysis methods
+
+The Compare workspace supports user-defined groups and genus, family, or phylum aggregation. Default statistical settings are summarised below.
+
+| Method | Test or model | Multiple-testing correction |
+|---|---|---|
+| Wilcoxon | Two-sided Mann–Whitney U test | Benjamini–Hochberg (BH) across taxa |
+| t-test | Welch’s independent two-sample t-test | BH across taxa |
+| LMM | Group as a fixed effect, with random intercepts for project, amplicon, read length, and instrument | BH across fitted taxa |
+| LEfSe | Two-group analysis using `microeco::trans_diff(method="lefse")`, with Kruskal–Wallis screening and bootstrap LDA | None by default |
+| PERMANOVA | Bray–Curtis distance-based group comparison with 999 permutations, using at most 300 randomly selected samples per group | Unadjusted permutation p-value |
+
+The LEfSe option screens features at Kruskal–Wallis p < 0.05 and selects up to 20 features, ordered by screening p-value, before fitting LDA. It uses 30 bootstrap iterations with a sampling fraction of 0.6667. The two-group interface does not supply subclasses, so subclass-level Wilcoxon testing is not performed. Positive and negative LDA values in the plots indicate enrichment in groups A and B, respectively.
+
+Compare also reports alpha diversity, Bray–Curtis or Aitchison PCoA, taxonomic composition, and a separate Spearman correlation analysis. These summaries depend on the selected samples rather than the differential test. PCoA uses up to 150 samples per group, and Compare's Spearman analysis uses up to 2,000 matched samples. PERMANOVA reports an overall community comparison; the accompanying taxon-wise panels use Wilcoxon results.
+
+LMM coefficients are estimated on transformed and standardised abundance data. The LMM table reports these coefficients, whereas the common abundance bar chart and volcano plot use descriptive log2 fold changes. The separate Biomarker Discovery module uses a custom effect score rather than the LEfSe LDA score.
 
 ## Tech Stack
 
 | Layer | Technology |
 |-------|-----------|
 | Frontend | React 19, TypeScript 5, Vite 6, D3.js 7 |
-| Backend | FastAPI, Python, NumPy, SciPy, pandas |
+| Backend | FastAPI, Python, NumPy, SciPy, pandas; R for LEfSe and LMM |
 | Styling | CSS Modules |
-| Deployment | Vercel (frontend) + FastAPI (backend) |
-| Rate Limiting | slowapi (120/min general, 20/min analysis) |
+| Deployment | Vercel frontend and a FastAPI backend on JD Cloud |
+| Rate Limiting | Endpoint-specific limits implemented with slowapi |
 
 ## Quick Start
 
 ### Prerequisites
 
-- Node.js v18+ or Bun v1+
+- Node.js 20+ and Bun 1+
 - Python 3.10+
+- R and `Rscript` for LEfSe and LMM
+- FastSpar with compatible command wrappers for SparCC network analysis
 
-### Frontend
+### Data and configuration
 
-```bash
-bun install
-bun run dev       # development server
-bun run build     # production build
+Dataset links and exports of summary statistics and analysis results are provided on the [Download page](https://gutbiomedb.online/download).
+
+For a local deployment, obtain the sample metadata and taxonomic count matrix and create `.env.local` in the project root:
+
+```dotenv
+METADATA_PATH=/path/to/metadata.csv
+ABUNDANCE_PATH=/path/to/unfiltered_abundance.csv
+VITE_API_URL=http://localhost:8000
 ```
+
+The input files must use the platform's sample identifiers and taxonomy-column format. Data files and pretrained GBHI assets are not included in this source repository. GBHI additionally requires scikit-learn and the model and feature-cache files configured in `api/main.py`. GBHI population-distribution views also require `openpyxl` and the precomputed sample-score workbook specified by `SUPP_TABLE6_XLSX` in `api/main.py`.
+
+If `Rscript` is not on the system path, set `LEFSE_RSCRIPT` and `LMM_RSCRIPT` to its full executable path. For a production backend, set `DEBUG=false` and `FRONTEND_URL` to the allowed frontend origin. Administrative endpoints use `ADMIN_TOKEN`.
 
 ### Backend
 
 ```bash
+python -m pip install -r api/requirements.txt
+```
+
+Install the R packages used by the analysis runners:
+
+```r
+install.packages(c("microeco", "data.table", "lme4", "lmerTest", "emmeans"))
+```
+
+SparCC uses [FastSpar](https://github.com/scwatts/fastspar). The current source adapter expects Windows/WSL command wrappers named `fastspar.cmd`, `fastspar_bootstrap.cmd`, and `fastspar_pvalues.cmd` in `FASTSPAR_DIR`. Configure these wrappers for the local FastSpar installation and set `FASTSPAR_DIR` in the process environment before starting the API; they are required for the SparCC option.
+
+Start the API:
+
+```bash
 cd api
-pip install fastapi uvicorn pandas numpy scipy slowapi python-dotenv
-python main.py    # starts on http://localhost:8000
+python main.py
 ```
 
-### Environment Variables
+The development API listens on `http://localhost:8000`.
 
-Create `.env.local` in the project root:
+### Frontend
 
+In a second terminal, run from the project root:
+
+```bash
+bun install
+bun run dev
 ```
-METADATA_PATH=/path/to/metadata.csv
-ABUNDANCE_PATH=/path/to/abundance.csv
-ADMIN_TOKEN=your_admin_token
-VITE_API_URL=http://localhost:8000
+
+To build the frontend:
+
+```bash
+bun run build
 ```
 
 ## API Documentation
 
 Interactive API documentation is available at:
-- Swagger UI: `/api/docs`
-- ReDoc: `/api/redoc`
-- OpenAPI spec: `/api/openapi.json`
+
+- [Swagger UI](https://gutbiomedb.online/api/docs)
+- [ReDoc](https://gutbiomedb.online/api/redoc)
+- [OpenAPI specification](https://gutbiomedb.online/api/openapi.json)
 
 ### Example (Python)
+
+Install `requests` to run the Python example.
 
 ```python
 import requests
 
-# Species profile
-profile = requests.get("https://your-api/api/species-profile?genus=Bacteroides").json()
+base = "https://gutbiomedb.online"
+
+response = requests.get(
+    f"{base}/api/species-profile",
+    params={"genus": "Bacteroides"},
+    timeout=60,
+)
+response.raise_for_status()
+profile = response.json()
 print(f"Prevalence: {profile['prevalence']:.1%}")
 
-# Differential analysis
-result = requests.post("https://your-api/api/diff-analysis", json={
-    "group_a_filter": {"disease": "IBD"},
-    "group_b_filter": {"disease": "NC"},
-    "method": "wilcoxon"
-}).json()
+# Submit an analysis job, as used by the web interface.
+response = requests.post(
+    f"{base}/api/analysis-jobs",
+    json={
+        "kind": "diff-analysis",
+        "payload": {
+            "group_a_filter": {"disease": "IBD"},
+            "group_b_filter": {"disease": "NC"},
+            "taxonomy_level": "genus",
+            "method": "wilcoxon",
+        },
+    },
+    timeout=60,
+)
+response.raise_for_status()
+job_id = response.json()["job_id"]
+print(f"Job status and result: {base}/api/analysis-jobs/{job_id}")
 ```
+
+Retrieve the job URL to check its status. Completed jobs include their analysis output in the `result` field.
 
 ### Example (R)
 
@@ -94,20 +168,23 @@ result = requests.post("https://your-api/api/diff-analysis", json={
 library(httr)
 library(jsonlite)
 
-profile <- fromJSON(content(
-  GET("https://your-api/api/species-profile", query = list(genus = "Bacteroides")), "text"))
-cat("Prevalence:", profile$prevalence, "\n")
+response <- GET(
+  "https://gutbiomedb.online/api/species-profile",
+  query = list(genus = "Bacteroides"),
+  timeout(60)
+)
+stop_for_status(response)
+profile <- fromJSON(content(response, "text", encoding = "UTF-8"))
+cat("Prevalence (%):", 100 * profile$prevalence, "\n")
 ```
 
 ## Figure code
 
-Scripts that reproduce every main and Extended Data figure in the paper
-are kept in a separate repo:
+Scripts for the manuscript figures and source-data tables are maintained in a separate repository:
 
 https://github.com/zhai199887/gutbiomedb-paper-code
 
-Those scripts import from this platform's `api/` package, so both repos
-need to be on `PYTHONPATH` when reproducing figures.
+Follow that repository's setup and run-order instructions. Scripts that import the platform backend require its project root or `api/` directory on `PYTHONPATH`, depending on the import statement.
 
 ## Citation
 
