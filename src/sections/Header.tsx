@@ -4,12 +4,13 @@ import { Link } from "react-router-dom";
 import Logo from "@/assets/logo.svg?react";
 import LangSwitch from "@/components/LangSwitch";
 import { useI18n } from "@/i18n";
+import { GUTBIOMEDB_CITATION, GUTBIOMEDB_DOI_URL } from "@/util/citation";
 
 import HeaderBg from "./HeaderBg";
 import classes from "./Header.module.css";
 
 const Header = () => {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const [menuOpen, setMenuOpen] = useState(false);
 
   useEffect(() => {
@@ -51,6 +52,15 @@ const Header = () => {
             <div className={classes.heroActions}>
               <Link to="/analysis-jobs" className={classes.jobsLink}>{t("nav.jobs")}</Link>
               <LangSwitch />
+              <a
+                href={GUTBIOMEDB_DOI_URL}
+                className={classes.jobsLink}
+                target="_blank"
+                rel="noopener noreferrer"
+                title={GUTBIOMEDB_CITATION}
+              >
+                {locale === "zh" ? "引用 GutBiomeDB" : "Cite GutBiomeDB"}
+              </a>
             </div>
           </div>
 

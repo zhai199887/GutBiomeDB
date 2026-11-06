@@ -180,6 +180,30 @@
   cursor: pointer;
 }
 
+.citationBlock {
+  padding: 3.4rem 1.1rem 1.1rem;
+  font-family: inherit;
+  font-size: 0.95rem;
+  text-align: left;
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+
+.citationLinks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem 1.4rem;
+  margin-top: 0.75rem;
+  padding: 0.85rem 1.1rem;
+  border-radius: 12px;
+  background: #131921;
+}
+
+.citationLinks a {
+  color: #7ee8ff;
+  overflow-wrap: anywhere;
+}
+
 .note {
   margin: 0.4rem 0 0;
   padding: 0.9rem 1rem;

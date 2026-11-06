@@ -5,25 +5,11 @@ import { useI18n } from "@/i18n";
 import Footer from "@/sections/Footer";
 import { cachedFetch } from "@/util/apiCache";
 import { API_BASE } from "@/util/apiBase";
+import { GUTBIOMEDB_CITATION, GUTBIOMEDB_DOI_URL, GUTBIOMEDB_PUBMED_URL } from "@/util/citation";
 
 import faqEn from "./faq.en.json";
 import faqZh from "./faq.zh.json";
 import classes from "../CitePage.module.css";
-
-const PAPER_BIBTEX = `@unpublished{zhai2026gutbiomedb,
-  title   = {GutBiomeDB: An Integrated Human Gut Microbiome Database},
-  author  = {Zhai, Jinxia and Li, Yingjie and Liu, Jiameng and Su, Xinyi and Cui, Runze and Zheng, Dianyu and Sun, Yuhan and Dai, Cong},
-  note    = {Manuscript in preparation},
-  year    = {2026}
-}`;
-
-const SOFTWARE_BIBTEX = `@software{gutbiomedb2026,
-  title   = {GutBiomeDB},
-  author  = {Zhai, Jinxia and Dai, Cong and collaborators},
-  year    = {2026},
-  url     = {https://github.com/zhai199887/GutBiomeDB},
-  note    = {Research platform source code}
-}`;
 
 type StatsPayload = {
   total_samples?: number;
@@ -109,10 +95,10 @@ const COPY: Record<"en" | "zh", Copy> = {
     pipelineLabel: "Processing Pipeline",
     statsLabel: "Current Dataset Snapshot",
     citeIntro:
-      "Use the paper citation for manuscripts describing the database scientifically, and the software citation for workflows or reproducible computational use of the platform.",
+      "Please cite the following published article when using the GutBiomeDB database or analysis platform.",
     paper: "Paper",
     software: "Software",
-    copy: "Copy BibTeX",
+    copy: "Copy Citation",
     copied: "Copied",
     fundingText:
       "This work was supported by the National Natural Science Foundation of China (grant No. 82270571 and No. 82570632 to Cong Dai).",
@@ -196,10 +182,10 @@ const COPY: Record<"en" | "zh", Copy> = {
     pipelineLabel: "处理流程",
     statsLabel: "当前数据快照",
     citeIntro:
-      "若论文描述的是数据库本身，请使用论文引用；若引用的是平台工作流、程序化访问或复现实验，请同时给出软件引用。",
+      "使用 GutBiomeDB 数据库或分析平台时，请统一引用以下已发表论文。",
     paper: "论文引用",
     software: "软件引用",
-    copy: "复制 BibTeX",
+    copy: "复制引用",
     copied: "已复制",
     fundingText:
       "本研究获得国家自然科学基金资助（Cong Dai：82270571、82570632）。",
@@ -325,8 +311,6 @@ const AboutPageContent = () => {
       .catch(() => {});
   }, []);
 
-  const activeBibtex = citationTab === "paper" ? PAPER_BIBTEX : SOFTWARE_BIBTEX;
-
   const statRows = useMemo(
     () =>
       text.statsCards.map((item) => ({
@@ -342,7 +326,7 @@ const AboutPageContent = () => {
   );
 
   const handleCopy = async () => {
-    await navigator.clipboard.writeText(activeBibtex);
+    await navigator.clipboard.writeText(GUTBIOMEDB_CITATION);
     setCopied(true);
     window.setTimeout(() => setCopied(false), 1500);
   };
@@ -430,10 +414,14 @@ const AboutPageContent = () => {
             </button>
           </div>
           <div className={classes.codeWrap}>
-            <pre className={classes.codeBlock}>{activeBibtex}</pre>
+            <p className={`${classes.codeBlock} ${classes.citationBlock}`}>{GUTBIOMEDB_CITATION}</p>
             <button type="button" className={classes.copyBtn} onClick={handleCopy}>
               {copied ? text.copied : text.copy}
             </button>
+            <div className={classes.citationLinks}>
+              <a href={GUTBIOMEDB_DOI_URL} target="_blank" rel="noopener noreferrer">DOI: 10.1093/nar/gkag1125</a>
+              <a href={GUTBIOMEDB_PUBMED_URL} target="_blank" rel="noopener noreferrer">PubMed: 42984449</a>
+            </div>
           </div>
         </section>
 
