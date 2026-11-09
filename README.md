@@ -188,18 +188,28 @@ Follow that repository's setup and run-order instructions. Scripts that import t
 
 ## Citation
 
-Zhai J, Li Y, Liu J, Su X, Cui R, Zheng D, Sun Y, Yu J, Dai C.
-GutBiomeDB: an integrated human gut microbiome database of 168,464 samples.
-Manuscript, 2026.
+Please cite the published article when using GutBiomeDB:
+
+Zhai J, Liu BH, Guo LY, Li Y, Liu J, Su X, Cui R, Zheng D, Sun Y, Dai C.
+GutBiomeDB: an integrated human gut microbiome database of 168 464 samples.
+*Nucleic Acids Res.* 2026 Nov 5:gkag1125.
+doi: [10.1093/nar/gkag1125](https://doi.org/10.1093/nar/gkag1125).
+Epub ahead of print. PMID: [42984449](https://pubmed.ncbi.nlm.nih.gov/42984449/).
 
 ```bibtex
-@unpublished{zhai2026gutbiomedb,
-  title  = {GutBiomeDB: an integrated human gut microbiome database of 168,464 samples},
-  author = {Zhai, Jinxia and Li, Yingjie and Liu, Jiameng and Su, Xinyi
-            and Cui, Runze and Zheng, Dianyu and Sun, Yuhan and Yu, Jingsheng
-            and Dai, Cong},
-  year   = {2026},
-  note   = {Manuscript}
+@article{zhai2026gutbiomedb,
+  title   = {{GutBiomeDB}: an integrated human gut microbiome database of 168\,464 samples},
+  author  = {Zhai, Jinxia and Liu, Bao-Hai and Guo, Lian-Yi and Li, Yingjie
+             and Liu, Jiameng and Su, Xinyi and Cui, Runze and Zheng, Dianyu
+             and Sun, Yuhan and Dai, Cong},
+  journal = {Nucleic Acids Research},
+  year    = {2026},
+  month   = nov,
+  eid     = {gkag1125},
+  doi     = {10.1093/nar/gkag1125},
+  url     = {https://doi.org/10.1093/nar/gkag1125},
+  pmid    = {42984449},
+  note    = {Published online 5 November 2026; Epub ahead of print}
 }
 ```
 
