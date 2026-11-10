@@ -38,6 +38,31 @@ interface OptionItem {
   hint?: string;
 }
 
+type OptionsStatus = "loading" | "ready" | "error";
+
+function useDownloadOptions<T>(path: string) {
+  const [state, setState] = useState<{ status: OptionsStatus; data?: T }>({
+    status: "loading",
+  });
+
+  useEffect(() => {
+    let active = true;
+    cachedFetch<T>(ACTIVE_API_BASE + path).then(
+      (data) => {
+        if (active) setState({ status: "ready", data });
+      },
+      () => {
+        if (active) setState({ status: "error" });
+      },
+    );
+    return () => {
+      active = false;
+    };
+  }, [path]);
+
+  return state;
+}
+
 const copy = {
   en: {
     back: "Back to Home",
@@ -126,6 +151,8 @@ const copy = {
     },
     emptyState: {
       noMatches: "No matches",
+      loading: "Loading options…",
+      loadFailed: "Could not load options. Refresh the page to retry.",
       chooseDisease: "Select a disease first",
       chooseGenus: "Select a genus first",
     },
@@ -215,6 +242,8 @@ const copy = {
     },
     emptyState: {
       noMatches: "没有匹配项",
+      loading: "正在加载选项…",
+      loadFailed: "选项加载失败，请刷新页面重试。",
       chooseDisease: "请先选择疾病",
       chooseGenus: "请先选择菌属",
     },
@@ -371,9 +400,10 @@ const DownloadPage = () => {
   const text = copy[locale];
 
   const [formats, setFormats] = useState<Record<string, DownloadFormat>>({});
-  const [diseases, setDiseases] = useState<DiseaseItem[]>([]);
-  const [genera, setGenera] = useState<string[]>([]);
-  const [countries, setCountries] = useState<string[]>([]);
+  const diseases = useDownloadOptions<DiseaseListResponse>("/api/disease-list");
+  const genera = useDownloadOptions<GenusNamesResponse>("/api/download/genus-list?format=json");
+  const filters = useDownloadOptions<FilterOptionsResponse>("/api/filter-options");
+  const countries = filters.data?.countries ?? [];
 
   const [diseaseProfileDisease, setDiseaseProfileDisease] = useState("");
   const [diffDisease, setDiffDisease] = useState("");
@@ -388,37 +418,29 @@ const DownloadPage = () => {
   const [minR, setMinR] = useState("0.3");
   const [lifecycleTopGenera, setLifecycleTopGenera] = useState("15");
 
-  useEffect(() => {
-    Promise.all([
-      cachedFetch<DiseaseListResponse>(`${ACTIVE_API_BASE}/api/disease-list`),
-      cachedFetch<GenusNamesResponse>(`${ACTIVE_API_BASE}/api/download/genus-list?format=json`),
-      cachedFetch<FilterOptionsResponse>(`${ACTIVE_API_BASE}/api/filter-options`),
-    ])
-      .then(([diseasePayload, genusPayload, filterPayload]) => {
-        setDiseases(diseasePayload.diseases ?? []);
-        setGenera(genusPayload.genera ?? []);
-        setCountries(filterPayload.countries ?? []);
-      })
-      .catch(() => {});
-  }, []);
+  const emptyOptionLabel = (status: OptionsStatus) => {
+    if (status === "loading") return text.emptyState.loading;
+    if (status === "error") return text.emptyState.loadFailed;
+    return text.emptyState.noMatches;
+  };
 
   const diseaseOptions = useMemo(
     () =>
-      sortDiseaseItemsByName(diseases).map((item) => ({
+      sortDiseaseItemsByName(diseases.data?.diseases ?? []).map((item) => ({
         value: item.name,
         label: diseaseDisplayNameI18n(item.name, locale),
         hint: typeof item.sample_count === "number" ? `n=${item.sample_count}` : undefined,
       })),
-    [diseases, locale],
+    [diseases.data, locale],
   );
 
   const genusOptions = useMemo(
     () =>
-      genera.map((genus) => ({
+      (genera.data?.genera ?? []).map((genus) => ({
         value: genus,
         label: genus,
       })),
-    [genera],
+    [genera.data],
   );
 
   const getFormat = (key: string) => formats[key] ?? "csv";
@@ -579,7 +601,7 @@ curl -s "${ACTIVE_API_BASE}/api/openapi.json" -o gut_microbiome_atlas_openapi.js
               <span>{text.labels.disease} <em>{text.labels.required}</em></span>
               <SearchCombobox
                 ariaLabel={text.labels.disease}
-                emptyLabel={text.emptyState.noMatches}
+                emptyLabel={emptyOptionLabel(diseases.status)}
                 onChange={setDiseaseProfileDisease}
                 options={diseaseOptions}
                 placeholder={text.labels.searchDisease}
@@ -610,7 +632,7 @@ curl -s "${ACTIVE_API_BASE}/api/openapi.json" -o gut_microbiome_atlas_openapi.js
               <span>{text.labels.genus} <em>{text.labels.required}</em></span>
               <SearchCombobox
                 ariaLabel={text.labels.genus}
-                emptyLabel={text.emptyState.noMatches}
+                emptyLabel={emptyOptionLabel(genera.status)}
                 onChange={setSelectedGenus}
                 options={genusOptions}
                 placeholder={text.labels.searchGenus}
@@ -652,7 +674,7 @@ curl -s "${ACTIVE_API_BASE}/api/openapi.json" -o gut_microbiome_atlas_openapi.js
               <span>{text.labels.disease} <em>{text.labels.required}</em></span>
               <SearchCombobox
                 ariaLabel={text.labels.disease}
-                emptyLabel={text.emptyState.noMatches}
+                emptyLabel={emptyOptionLabel(diseases.status)}
                 onChange={setDiffDisease}
                 options={diseaseOptions}
                 placeholder={text.labels.searchDisease}
@@ -697,7 +719,7 @@ curl -s "${ACTIVE_API_BASE}/api/openapi.json" -o gut_microbiome_atlas_openapi.js
               <span>{text.labels.disease} <em>{text.labels.required}</em></span>
               <SearchCombobox
                 ariaLabel={text.labels.disease}
-                emptyLabel={text.emptyState.noMatches}
+                emptyLabel={emptyOptionLabel(diseases.status)}
                 onChange={setBiomarkerDisease}
                 options={diseaseOptions}
                 placeholder={text.labels.searchDisease}
@@ -743,7 +765,7 @@ curl -s "${ACTIVE_API_BASE}/api/openapi.json" -o gut_microbiome_atlas_openapi.js
               <span>{text.labels.disease} <em>{text.labels.optional}</em></span>
               <SearchCombobox
                 ariaLabel={text.labels.disease}
-                emptyLabel={text.emptyState.noMatches}
+                emptyLabel={emptyOptionLabel(diseases.status)}
                 onChange={setCooccurrenceDisease}
                 options={diseaseOptions}
                 placeholder={text.labels.noFilter}
@@ -789,7 +811,7 @@ curl -s "${ACTIVE_API_BASE}/api/openapi.json" -o gut_microbiome_atlas_openapi.js
               <span>{text.labels.lifecycleDisease} <em>{text.labels.optional}</em></span>
               <SearchCombobox
                 ariaLabel={text.labels.lifecycleDisease}
-                emptyLabel={text.emptyState.noMatches}
+                emptyLabel={emptyOptionLabel(diseases.status)}
                 onChange={setLifecycleDisease}
                 options={diseaseOptions}
                 placeholder={text.labels.noFilter}
